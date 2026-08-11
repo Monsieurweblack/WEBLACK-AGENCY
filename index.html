@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WEBLACK — Sélection 2026 · Paris, 26 septembre</title>
+<meta name="description" content="WEBLACK AFRICA. Sélection ouverte le samedi 26 septembre 2026 à Paris. Sept talents accompagnés pendant un an. Gratuit, sans expérience requise, dès 16 ans.">
+<link rel="canonical" href="https://www.weblack.fr/">
+<meta property="og:title" content="WEBLACK — Sélection 2026">
+<meta property="og:description" content="Paris, samedi 26 septembre. Sept talents. Un an. Gratuit, sans expérience.">
+<meta property="og:url" content="https://www.weblack.fr/">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0A0908">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Italiana&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════ SYSTÈME — jetons ═══════════════ */
+:root{
+  /* Étagement du noir : base argentique, ombre froide, ombre profonde */
+  --noir:#0A0908;
+  --noir-2:#0E0D0C;
+  --ombre-froide:#12161C;
+  /* L'or en quatre états : ombre, corps, lumière, éclat */
+  --or-ombre:#6E5220;
+  --or:#B08D3F;
+  --or-clair:#D9BC7B;
+  --or-eclat:#F0DDB4;
+  /* Lumière */
+  --ivoire:#F2EDE3;
+  --ivoire-2:#E7E0D2;
+  --craie:#A39C8E;
+  --craie-sombre:#6D675C;
+
+  --display:"Bodoni Moda",Cambria,Georgia,serif;
+  --signature:"Italiana",var(--display);
+  --texte:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+
+  --pad:clamp(1.25rem,5vw,4.5rem);
+  --max:1240px;
+
+  /* Courbes maison */
+  --e-entree:cubic-bezier(.16,1,.3,1);
+  --e-camera:cubic-bezier(.65,0,.35,1);
+  --e-sortie:cubic-bezier(.7,0,.84,0);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:auto;background:var(--noir)}
+section[id]{scroll-margin-top:88px}
+body{
+  margin:0;background:var(--noir);color:var(--ivoire);
+  font-family:var(--texte);font-size:clamp(1rem,.95rem + .22vw,1.0625rem);
+  line-height:1.68;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+body.charge-en-cours{overflow:hidden;height:100vh}
+img{max-width:100%;display:block}
+a{color:inherit}
+::selection{background:var(--or);color:var(--noir)}
+:focus-visible{outline:2px solid var(--or-eclat);outline-offset:4px}
+
+/* ═══════════════ PRÉCHARGEMENT ═══════════════ */
+#preload{
+  position:fixed;inset:0;z-index:300;background:var(--noir);
+  display:grid;place-items:center;
+}
+#preload .cadre-svg{width:min(46vw,300px);aspect-ratio:4/5;overflow:visible}
+#preload rect{
+  fill:none;stroke:var(--or);stroke-width:1.25;
+  stroke-dasharray:1000;stroke-dashoffset:1000;
+}
+#preload .marque{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-family:var(--signature);font-size:clamp(1.5rem,5vw,2.4rem);
+  letter-spacing:.42em;color:var(--or-eclat);opacity:0;padding-left:.42em;
+}
+#preload .compteur{
+  position:absolute;right:var(--pad);bottom:calc(var(--pad) - .25rem);
+  font-family:var(--signature);font-size:clamp(2.5rem,9vw,5rem);
+  color:var(--or-ombre);line-height:1;font-variant-numeric:tabular-nums;
+}
+#preload .legende{
+  position:absolute;left:var(--pad);bottom:var(--pad);
+  font-size:.6875rem;letter-spacing:.24em;text-transform:uppercase;color:var(--craie-sombre);
+}
+
+/* rideau de transition */
+#rideau{
+  position:fixed;inset:0;z-index:280;background:var(--noir);
+  transform:scaleY(0);transform-origin:bottom;pointer-events:none;
+}
+
+/* ═══════════════ ATMOSPHÈRE ═══════════════ */
+#scene{position:fixed;inset:0;z-index:0;pointer-events:none;transition:opacity .6s linear}
+.grain{
+  position:fixed;inset:-120%;z-index:2;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain 700ms steps(6) infinite;will-change:transform;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}
+  60%{transform:translate(-2%,-2%)}80%{transform:translate(3%,1%)}100%{transform:translate(0,0)}
+}
+.vignette{
+  position:fixed;inset:0;z-index:3;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%,transparent 42%,rgba(5,4,4,.55) 88%,rgba(5,4,4,.82) 100%);
+}
+.curseur{
+  position:fixed;top:0;left:0;z-index:250;width:26px;height:26px;margin:-13px 0 0 -13px;
+  border:1px solid var(--or);border-radius:50%;pointer-events:none;opacity:0;
+  transition:opacity .3s linear;mix-blend-mode:difference;
+}
+
+/* ═══════════════ TYPOGRAPHIE ═══════════════ */
+.wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--pad)}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0 0 1rem;line-height:1.06}
+h1{font-size:clamp(2.5rem,1.5rem + 4vw,5rem);letter-spacing:-.02em}
+h2{font-size:clamp(2rem,1.3rem + 3vw,3.6rem);letter-spacing:-.015em}
+h3{font-size:clamp(1.15rem,1rem + .6vw,1.45rem)}
+.chapitre{
+  font-family:var(--signature);font-size:clamp(2.5rem,6vw,4rem);
+  color:var(--or-ombre);line-height:1;display:block;margin-bottom:.75rem;
+}
+.eyebrow{
+  font-size:.6875rem;font-weight:600;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--or-clair);margin:0 0 1.5rem;
+}
+.lede{font-size:clamp(1.05rem,1rem + .4vw,1.3rem);color:#C6BEB0;max-width:54ch;margin:0}
+.serif-it{font-family:var(--display);font-style:italic;color:var(--or-clair)}
+
+/* révélation par caractère */
+.rev{display:inline-block;overflow:hidden;vertical-align:bottom}
+.rev>span{display:inline-block;transform:translateY(105%);will-change:transform}
+.monte{opacity:0;transform:translateY(26px);will-change:transform,opacity}
+
+/* ═══════════════ NAVIGATION ═══════════════ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  transition:background .4s var(--e-camera),border-color .4s linear;
+  border-bottom:1px solid transparent;
+}
+.nav.dense{background:rgba(10,9,8,.82);backdrop-filter:blur(14px) saturate(120%);border-color:rgba(176,141,63,.2)}
+.nav__in{display:flex;align-items:center;gap:2rem;min-height:76px;max-width:var(--max);margin:0 auto;padding-inline:var(--pad)}
+.nav__logo{font-family:var(--signature);font-size:1.2rem;letter-spacing:.34em;text-decoration:none;padding-left:.34em}
+.nav__l{display:none;gap:2.25rem;margin-left:auto;align-items:center}
+.lien{
+  position:relative;text-decoration:none;font-size:.8125rem;letter-spacing:.1em;
+  text-transform:uppercase;overflow:hidden;display:inline-block;height:1.2em;
+}
+.lien span{display:block;transition:transform .5s var(--e-entree)}
+.lien span:last-child{position:absolute;top:100%;left:0;color:var(--or-clair)}
+.lien:hover span,.lien:focus-visible span{transform:translateY(-100%)}
+@media(min-width:940px){.nav__l{display:flex}}
+
+/* ═══════════════ BOUTONS ═══════════════ */
+.btn{
+  position:relative;display:inline-flex;align-items:center;gap:.75rem;text-decoration:none;
+  font-size:.75rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  padding:1rem 1.9rem;border:1px solid var(--or);color:var(--or-eclat);
+  background:transparent;overflow:hidden;isolation:isolate;will-change:transform;
+}
+.btn::before{
+  content:"";position:absolute;inset:0;z-index:-1;background:var(--or);
+  transform:scaleX(0);transform-origin:left;transition:transform .55s var(--e-entree);
+}
+.btn:hover,.btn:focus-visible{color:var(--noir)}
+.btn:hover::before,.btn:focus-visible::before{transform:scaleX(1)}
+.btn--plein{background:var(--or);color:var(--noir);border-color:var(--or)}
+.btn--plein::before{background:var(--or-eclat)}
+.btn--plein:hover,.btn--plein:focus-visible{color:var(--noir)}
+.btn--sm{padding:.7rem 1.3rem;font-size:.6875rem}
+
+/* ═══════════════ ACTE I — narration 3D ═══════════════ */
+#acte{position:relative;z-index:5}
+.scene{
+  height:100svh;min-height:560px;display:grid;align-items:center;
+  position:relative;
+}
+#acte .scene{padding-top:76px}
+/* cache de titrage : la zone de lecture est protégée, comme au générique */
+.scene::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:linear-gradient(90deg,rgba(10,9,8,.94) 0%,rgba(10,9,8,.86) 30%,rgba(10,9,8,.42) 52%,transparent 70%);
+}
+.scene--droite::before{
+  background:linear-gradient(270deg,rgba(10,9,8,.94) 0%,rgba(10,9,8,.86) 30%,rgba(10,9,8,.42) 52%,transparent 70%);
+}
+.scene--centre::before{
+  background:radial-gradient(46% 38% at 50% 50%,rgba(10,9,8,.86) 0%,rgba(10,9,8,.6) 60%,transparent 85%);
+}
+.scene__in{position:relative;z-index:1}
+.scene__in{max-width:var(--max);margin:0 auto;padding-inline:var(--pad);width:100%}
+.scene__in{position:relative;z-index:1}
+.scene__txt{max-width:44ch}
+.scene--droite .scene__txt{margin-left:auto;text-align:right}
+.scene--droite .lede{margin-left:auto}
+.scene--centre .scene__in{text-align:center}
+.scene--centre .scene__txt{margin-inline:auto;max-width:36ch}
+.scene--centre .lede{margin-inline:auto}
+.actions{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2.5rem}
+.scene--centre .actions{justify-content:center}
+.micro{
+  margin-top:2rem;padding-top:1.25rem;border-top:1px solid rgba(176,141,63,.26);
+  font-size:.6875rem;letter-spacing:.2em;text-transform:uppercase;color:var(--or-clair);
+}
+.defiler{
+  position:absolute;left:50%;bottom:2.5rem;transform:translateX(-50%);
+  font-size:.625rem;letter-spacing:.3em;text-transform:uppercase;color:var(--craie-sombre);
+  display:grid;justify-items:center;gap:.75rem;
+}
+.defiler i{display:block;width:1px;height:44px;background:linear-gradient(var(--or),transparent);animation:fil 2.4s var(--e-camera) infinite}
+@keyframes fil{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ═══════════════ ACTE II — éditorial ═══════════════ */
+#acte2{position:relative;z-index:5;background:var(--noir)}
+.band{padding-block:clamp(4.5rem,11vw,9rem);position:relative}
+.band--ivoire{background:var(--ivoire);color:var(--noir)}
+.band--ivoire .lede{color:#4A453C}
+.band--ivoire .eyebrow{color:#7E6120}
+.band--ivoire .chapitre{color:rgba(176,141,63,.5)}
+.band--froid{background:linear-gradient(180deg,var(--noir) 0%,var(--ombre-froide) 55%,var(--noir) 100%)}
+
+.fiche{border-top:1px solid rgba(0,0,0,.16);margin-top:3rem}
+.fiche__r{display:grid;grid-template-columns:1fr;gap:.2rem;padding:1.15rem 0;border-bottom:1px solid rgba(0,0,0,.16)}
+@media(min-width:660px){.fiche__r{grid-template-columns:12rem 1fr;gap:2rem;align-items:baseline}}
+.fiche__k{color:#7E6120;font-size:.6875rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+.fiche__v{font-size:1.0625rem}
+
+.grille{display:grid;gap:2rem}
+@media(min-width:740px){.grille--2{grid-template-columns:repeat(2,1fr);gap:3rem}}
+@media(min-width:600px){.grille--3{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.grille--3{grid-template-columns:repeat(3,1fr)}}
+
+.volet{padding-top:1.5rem;border-top:1px solid rgba(176,141,63,.32)}
+.volet__n{font-family:var(--signature);font-size:1.6rem;color:var(--or);display:block;margin-bottom:.6rem;line-height:1}
+.volet p{margin:.5rem 0 0;color:#B6AEA0;font-size:.9375rem}
+
+.jure{text-align:center}
+.jure__c{position:relative;aspect-ratio:1/1;max-width:190px;margin:0 auto 1.15rem;border:1px solid rgba(176,141,63,.55)}
+.jure__c::after{content:"";position:absolute;inset:6px -6px -6px 6px;border:1px solid rgba(176,141,63,.22)}
+.jure__c i{
+  position:absolute;inset:0;display:grid;place-content:center;
+  font-family:var(--signature);font-size:.625rem;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--or-ombre);font-style:normal;line-height:1.9;text-align:center;
+}
+.jure h3{margin:0 0 .3rem;font-size:1.15rem}
+.jure p{margin:0;font-size:.625rem;letter-spacing:.2em;text-transform:uppercase;color:var(--craie-sombre)}
+
+.encart{
+  padding:2rem;border-left:2px solid var(--or);
+  background:linear-gradient(90deg,rgba(176,141,63,.1),rgba(176,141,63,.02));
+}
+.encart p{margin:0;font-size:1.0625rem}
+.encart strong{color:var(--or-eclat)}
+.band--ivoire .encart{background:linear-gradient(90deg,rgba(176,141,63,.14),rgba(176,141,63,.03))}
+.band--ivoire .encart strong{color:#7E6120}
+
+.verif{display:grid;gap:2rem}
+@media(min-width:880px){.verif{grid-template-columns:1fr 1fr;gap:4rem}}
+.verif__b{padding:2rem;border:1px solid rgba(176,141,63,.32)}
+.verif dl{margin:0;display:grid;gap:1.1rem}
+.verif dt{color:var(--or-clair);font-size:.625rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;margin-bottom:.2rem}
+.verif dd{margin:0;font-size:.9375rem;color:#CFC7B8}
+.sig{margin:0;padding:0;list-style:none;display:grid;gap:1.25rem}
+.sig li{padding-left:2rem;position:relative;color:#B6AEA0;font-size:.9375rem}
+.sig li::before{content:"×";position:absolute;left:0;top:-.15rem;color:var(--or);font-family:var(--display);font-size:1.4rem;line-height:1}
+
+.faq{border-top:1px solid rgba(0,0,0,.16);margin-top:3rem}
+.faq details{border-bottom:1px solid rgba(0,0,0,.16)}
+.faq summary{cursor:pointer;list-style:none;padding:1.35rem 3rem 1.35rem 0;position:relative;font-family:var(--display);font-size:clamp(1.05rem,1rem + .3vw,1.25rem)}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";position:absolute;right:.5rem;top:50%;width:14px;height:1px;background:var(--or);transition:transform .4s var(--e-entree)}
+.faq summary::before{content:"";position:absolute;right:.5rem;top:50%;width:14px;height:1px;background:var(--or);transform:rotate(90deg);transition:transform .4s var(--e-entree)}
+.faq details[open] summary::before{transform:rotate(0)}
+.faq p{margin:0 0 1.4rem;color:#4A453C;max-width:66ch}
+
+.final{text-align:center}
+.final h2{max-width:16ch;margin-inline:auto}
+.final .lede{margin-inline:auto;margin-bottom:2.5rem}
+
+.pied{background:var(--noir-2);border-top:1px solid rgba(176,141,63,.2);padding-block:4rem 5rem;position:relative;z-index:5}
+.pied__g{display:grid;gap:2.5rem}
+@media(min-width:800px){.pied__g{grid-template-columns:1.5fr 1fr 1fr}}
+.pied h4{font-size:.625rem;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--or-clair);margin:0 0 1.15rem}
+.pied ul{margin:0;padding:0;list-style:none;display:grid;gap:.7rem}
+.pied a{color:var(--craie);text-decoration:none;font-size:.9375rem;transition:color .3s}
+.pied a:hover{color:var(--ivoire)}
+.pied__l{margin-top:3rem;padding-top:1.75rem;border-top:1px solid rgba(176,141,63,.16);color:var(--craie-sombre);font-size:.8125rem}
+
+.barre{
+  position:fixed;left:0;right:0;bottom:0;z-index:110;display:flex;align-items:center;
+  justify-content:space-between;gap:1rem;padding:.8rem var(--pad);
+  background:rgba(10,9,8,.94);border-top:1px solid rgba(176,141,63,.32);
+  backdrop-filter:blur(12px);transform:translateY(110%);
+}
+.barre__t{font-size:.6875rem;letter-spacing:.14em;text-transform:uppercase;color:var(--or-clair)}
+@media(min-width:940px){.barre{display:none}}
+@media(max-width:939px){.pied{padding-bottom:7.5rem}}
+
+/* repli sans WebGL */
+.sans3d #scene{display:none}
+.sans3d #acte .scene:first-child::after{
+  content:"";position:absolute;right:var(--pad);top:50%;transform:translateY(-50%);
+  width:min(30vw,300px);aspect-ratio:4/5;border:1px solid var(--or);opacity:.5;
+}
+
+@media(prefers-reduced-motion:reduce){
+  .grain{animation:none}
+  .defiler i{animation:none;transform:scaleY(1)}
+  .rev>span{transform:none!important}
+  .monte{opacity:1!important;transform:none!important}
+  .curseur{display:none}
+}
+</style>
+</head>
+<body class="charge-en-cours">
+
+<!-- ─────────── PRÉCHARGEMENT ─────────── -->
+<div id="preload">
+  <svg class="cadre-svg" viewBox="0 0 200 250" aria-hidden="true">
+    <rect x="1" y="1" width="198" height="248"></rect>
+  </svg>
+  <div class="marque">WEBLACK</div>
+  <div class="compteur" aria-hidden="true">00</div>
+  <div class="legende">Sélection 2026 — Paris</div>
+</div>
+<div id="rideau"></div>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="curseur" aria-hidden="true"></div>
+
+<header class="nav">
+  <div class="nav__in">
+    <a class="nav__logo" href="#haut" data-magnetic>WEBLACK</a>
+    <nav class="nav__l" aria-label="Navigation principale">
+      <a class="lien" href="#casting"><span>Le casting</span><span aria-hidden="true">Le casting</span></a>
+      <a class="lien" href="#programme"><span>Le programme</span><span aria-hidden="true">Le programme</span></a>
+      <a class="lien" href="#jury"><span>Le jury</span><span aria-hidden="true">Le jury</span></a>
+      <a class="lien" href="#verifier"><span>Vérifiez-nous</span><span aria-hidden="true">Vérifiez-nous</span></a>
+      <a class="btn btn--sm" href="#inscription" data-magnetic>S’inscrire</a>
+    </nav>
+  </div>
+</header>
+
+<main id="haut">
+
+<!-- ═══════════ ACTE I ═══════════ -->
+<div id="acte">
+
+  <section class="scene" data-scene="0">
+    <div class="scene__in">
+      <div class="scene__txt">
+        <p class="eyebrow monte">WEBLACK Talents — Sélection 2026</p>
+        <h1 data-split>Il manque quelqu’un dans ce cadre.</h1>
+        <p class="lede monte">Samedi 26 septembre, à Paris. Sept personnes seront accompagnées pendant un an. Aucune d’entre elles ne le sait encore.</p>
+        <div class="actions monte">
+          <a class="btn btn--plein" href="#inscription" data-magnetic>S’inscrire — 3 minutes</a>
+          <a class="btn" href="#casting" data-magnetic>Comment ça se passe</a>
+        </div>
+        <p class="micro monte">Gratuit · Sans expérience · Dès 16 ans</p>
+      </div>
+    </div>
+    <div class="defiler"><i></i>Défiler</div>
+  </section>
+
+  <section class="scene scene--droite" data-scene="1">
+    <div class="scene__in">
+      <div class="scene__txt">
+        <span class="chapitre monte">I</span>
+        <h2 data-split>Ils viendront par centaines.</h2>
+        <p class="lede monte">Une seule journée, une seule salle. Tout le monde passe devant le jury — c’est notre engagement, et il ne souffre aucune exception.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene" data-scene="2">
+    <div class="scene__in">
+      <div class="scene__txt">
+        <span class="chapitre monte">II</span>
+        <h2 data-split>Puis vient la planche-contact.</h2>
+        <p class="lede monte">Chaque visage photographié, mesuré, filmé en marche. Trois cents fiches sur une même table, et le silence d’une délibération.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene scene--droite" data-scene="3">
+    <div class="scene__in">
+      <div class="scene__txt">
+        <span class="chapitre monte">III</span>
+        <h2 data-split>Il en restera sept.</h2>
+        <p class="lede monte">Cinq mannequins, deux créateurs. Un an de formation, de direction artistique, de book et de rencontres. Puis un projet commun, porté ensemble.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene scene--centre" data-scene="4">
+    <div class="scene__in">
+      <div class="scene__txt">
+        <span class="chapitre monte">IV</span>
+        <h2 data-split>Et peut-être vous.</h2>
+        <p class="lede monte">Trois minutes pour vous inscrire. Deux photos prises au téléphone. Rien d’autre.</p>
+        <div class="actions monte"><a class="btn btn--plein" href="#inscription" data-magnetic>Entrer dans le cadre</a></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ═══════════ ACTE II ═══════════ -->
+<div id="acte2">
+
+  <section class="band band--ivoire" id="casting">
+    <div class="wrap">
+      <span class="chapitre monte">01</span>
+      <p class="eyebrow monte">La sélection</p>
+      <h2 data-split>Ce qui vous attend le 26.</h2>
+      <p class="lede monte">Vous venez, on vous mesure, on vous photographie, vous marchez, vous parlez deux minutes avec le jury. Comptez une heure sur place. Voilà, c’est tout.</p>
+      <div class="fiche monte">
+        <div class="fiche__r"><span class="fiche__k">Date</span><span class="fiche__v">Samedi 26 septembre 2026, de 10 h à 17 h 30</span></div>
+        <div class="fiche__r"><span class="fiche__k">Lieu</span><span class="fiche__v">Paris — adresse exacte communiquée sur votre convocation</span></div>
+        <div class="fiche__r"><span class="fiche__k">Prix</span><span class="fiche__v">0 €. Inscription, photos, participation : rien n’est payant, ni maintenant ni plus tard</span></div>
+        <div class="fiche__r"><span class="fiche__k">Âge</span><span class="fiche__v">À partir de 16 ans, et jusqu’à 35 ans selon les profils</span></div>
+        <div class="fiche__r"><span class="fiche__k">Expérience</span><span class="fiche__v">Aucune. C’est même le profil que nous cherchons</span></div>
+        <div class="fiche__r"><span class="fiche__k">À apporter</span><span class="fiche__v">Pièce d’identité et confirmation d’inscription. Mineurs : autorisation parentale signée et un adulte accompagnant</span></div>
+        <div class="fiche__r"><span class="fiche__k">Tenue</span><span class="fiche__v">Haut et bas ajustés et unis, peu de maquillage, cheveux dégagés</span></div>
+        <div class="fiche__r"><span class="fiche__k">Réponse</span><span class="fiche__v">Tous les candidats reçoivent une réponse écrite avant le 6 octobre</span></div>
+      </div>
+      <div class="actions monte"><a class="btn" href="#inscription" data-magnetic>S’inscrire pour le 26 septembre</a></div>
+    </div>
+  </section>
+
+  <section class="band band--froid" id="programme">
+    <div class="wrap">
+      <span class="chapitre monte">02</span>
+      <p class="eyebrow monte">Ce qui se passe après</p>
+      <h2 data-split>Sept personnes. Un an.</h2>
+      <p class="lede monte">Le casting n’est pas la fin du parcours, c’est la porte d’entrée. Voici ce que reçoivent les sélectionnés.</p>
+      <div class="grille grille--2 monte" style="margin-top:3.5rem">
+        <div class="volet"><span class="volet__n">i</span><h3>Formation</h3><p>Marche et posture, tenue en casting, gestion de l’image, connaissance des maisons et du marché, anglais professionnel.</p></div>
+        <div class="volet"><span class="volet__n">ii</span><h3>Direction artistique</h3><p>Un accompagnement individuel pour définir ce que votre visage raconte et vers quels débouchés le porter.</p></div>
+        <div class="volet"><span class="volet__n">iii</span><h3>Book professionnel</h3><p>Un shooting dans les trente jours, trois séries : beauté, silhouette, éditorial. Les images vous appartiennent.</p></div>
+        <div class="volet"><span class="volet__n">iv</span><h3>Rencontres</h3><p>Mises en relation avec des créateurs, des photographes, des directeurs de casting et des agences partenaires.</p></div>
+      </div>
+      <div class="encart monte" style="margin-top:3.5rem">
+        <p>Le programme se clôt par un <strong>projet commun</strong> : les cinq mannequins portent les pièces des deux créateurs de la promotion. Vous travaillez ensemble dès le premier mois.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="jury">
+    <div class="wrap">
+      <span class="chapitre monte">03</span>
+      <p class="eyebrow monte">Le jury</p>
+      <h2 data-split>Voici qui vous regardera.</h2>
+      <p class="lede monte">Sept professionnels, révélés un par un d’ici au casting. Vous saurez devant qui vous passez avant de vous déplacer.</p>
+      <div class="grille grille--3 monte" style="margin-top:3.5rem">
+        <div class="jure"><div class="jure__c"><i>Nom<br>sous scellé</i></div><h3>Direction de casting</h3><p>Révélé le 3 septembre</p></div>
+        <div class="jure"><div class="jure__c"><i>Nom<br>sous scellé</i></div><h3>Photographie de mode</h3><p>Révélé le 5 septembre</p></div>
+        <div class="jure"><div class="jure__c"><i>Nom<br>sous scellé</i></div><h3>Création de mode</h3><p>Révélé le 8 septembre</p></div>
+        <div class="jure"><div class="jure__c"><i>Nom<br>sous scellé</i></div><h3>Agence partenaire</h3><p>Révélé le 10 septembre</p></div>
+        <div class="jure"><div class="jure__c"><i>Nom<br>sous scellé</i></div><h3>Maison de luxe</h3><p>Révélé le 12 septembre</p></div>
+        <div class="jure"><div class="jure__c"><i>Nom<br>sous scellé</i></div><h3>Mannequin confirmé</h3><p>Révélé le 15 septembre</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--ivoire" id="agence">
+    <div class="wrap">
+      <span class="chapitre monte">04</span>
+      <p class="eyebrow monte">L’agence</p>
+      <h2 data-split>WEBLACK AFRICA, depuis 2010.</h2>
+      <p class="lede monte">Une agence dédiée à la valorisation des industries culturelles et créatives africaines. Nous travaillons en France et dans plusieurs pays d’Afrique de l’Ouest et d’Afrique centrale francophone, autour de quatre métiers.</p>
+      <div class="grille grille--2 monte" style="margin-top:3.5rem">
+        <div class="volet" style="border-color:rgba(0,0,0,.2)"><span class="volet__n" style="color:#7E6120">i</span><h3>Talents</h3><p style="color:#4A453C">Détection, formation et accompagnement de mannequins et de créateurs.</p></div>
+        <div class="volet" style="border-color:rgba(0,0,0,.2)"><span class="volet__n" style="color:#7E6120">ii</span><h3>Studio</h3><p style="color:#4A453C">Direction artistique, production d’images et de contenus.</p></div>
+        <div class="volet" style="border-color:rgba(0,0,0,.2)"><span class="volet__n" style="color:#7E6120">iii</span><h3>Événements</h3><p style="color:#4A453C">Conception et production d’événements de mode et de création.</p></div>
+        <div class="volet" style="border-color:rgba(0,0,0,.2)"><span class="volet__n" style="color:#7E6120">iv</span><h3>Conseil en image</h3><p style="color:#4A453C">Accompagnement des marques, des créateurs et des personnalités.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--froid" id="verifier">
+    <div class="wrap">
+      <span class="chapitre monte">05</span>
+      <p class="eyebrow monte">Vérifiez-nous</p>
+      <h2 data-split>Ne nous croyez pas sur parole.</h2>
+      <p class="lede monte">Il existe de faux castings qui font payer des gens qui n’en ont pas les moyens. Nous préférons vous donner de quoi nous vérifier avant de vous déplacer — pour nous comme pour n’importe qui d’autre.</p>
+      <div class="encart monte" style="margin:3rem 0 3.5rem">
+        <p><strong>Nous ne vous demanderons jamais d’argent.</strong> Ni inscription, ni frais de dossier, ni photos à acheter, ni « pack book », ni avant, ni après. Si quelqu’un vous réclame un paiement en se réclamant de ce casting, ce n’est pas nous : écrivez-nous, nous le signalerons.</p>
+      </div>
+      <div class="verif monte">
+        <div class="verif__b">
+          <h3 style="margin-top:0">Notre identité</h3>
+          <dl>
+            <div><dt>Raison sociale</dt><dd>[À compléter — dénomination exacte]</dd></div>
+            <div><dt>Immatriculation</dt><dd>[À compléter — SIREN / SIRET]</dd></div>
+            <div><dt>Siège</dt><dd>[À compléter — adresse postale complète]</dd></div>
+            <div><dt>Responsable de la publication</dt><dd>Deo-Gratias Kpodo, fondateur</dd></div>
+            <div><dt>Contact direct</dt><dd><a href="mailto:contact@weblack.fr">contact@weblack.fr</a> · [téléphone]</dd></div>
+          </dl>
+        </div>
+        <div>
+          <h3 style="margin-top:0">Trois signes d’un faux casting</h3>
+          <ul class="sig">
+            <li>On vous demande de payer quoi que ce soit — inscription, book, « frais de dossier », composite.</li>
+            <li>L’organisateur n’a ni adresse, ni identité légale vérifiable, ni jury nommé.</li>
+            <li>On vous demande des photos en sous-vêtements, ou un rendez-vous seul dans un lieu privé.</li>
+          </ul>
+          <p style="color:#B6AEA0;font-size:.9375rem;margin-top:1.75rem">Ces trois règles valent pour tous les castings, pas seulement le nôtre. Gardez-les.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--ivoire" id="questions">
+    <div class="wrap">
+      <span class="chapitre monte">06</span>
+      <p class="eyebrow monte">Questions fréquentes</p>
+      <h2 data-split>Ce qu’on nous demande le plus.</h2>
+      <div class="faq monte">
+        <details open><summary>Le casting est-il vraiment gratuit ?</summary><p>Oui. Ni inscription, ni frais de dossier, ni photos à payer. À aucun moment, ni pendant, ni après. Si vous êtes sélectionné, c’est l’agence qui investit dans votre accompagnement, pas l’inverse.</p></details>
+        <details><summary>Je n’ai aucune expérience et pas de book.</summary><p>Personne n’en a au début. Deux photos prises avec votre téléphone suffisent : un portrait de face sans maquillage et une photo en pied. Elles n’ont pas besoin d’être professionnelles.</p></details>
+        <details><summary>Je ne suis pas assez grand·e.</summary><p>Les tailles que vous voyez circuler sont des repères de marché, pas des conditions d’entrée. Nous recrutons aussi pour la photo et l’éditorial, où la taille compte peu.</p></details>
+        <details><summary>Je suis mineur·e, puis-je venir ?</summary><p>Oui, dès 16 ans, avec une autorisation parentale signée et un adulte qui vous accompagne le jour du casting. Sans accompagnant, nous ne pourrons pas vous recevoir.</p></details>
+        <details><summary>Je n’habite pas à Paris.</summary><p>Vous pouvez venir. Choisissez votre créneau horaire à l’inscription pour organiser votre trajet. Les frais de déplacement restent à votre charge.</p></details>
+        <details><summary>Que deviennent mes photos et mes données ?</summary><p>Elles servent uniquement à la sélection et à votre fiche candidat. Conservation limitée dans le temps, suppression sur simple demande. Le détail figure dans notre politique de confidentialité.</p></details>
+        <details><summary>Combien de places y a-t-il ?</summary><p>Sept dans la promotion : cinq mannequins et deux créateurs. Une vingtaine de profils rejoignent notre vivier et sont rappelés en priorité sur les projets à venir.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="band final" id="inscription">
+    <div class="wrap">
+      <span class="chapitre monte">07</span>
+      <p class="eyebrow monte">Inscription</p>
+      <h2 data-split>Trois minutes. Deux photos.</h2>
+      <p class="lede monte">On vous demandera votre nom, vos coordonnées, votre taille, deux photos prises au téléphone et le créneau qui vous arrange. Rien d’autre.</p>
+      <div class="actions monte" style="justify-content:center"><a class="btn btn--plein" href="#" data-formulaire data-magnetic>Remplir le formulaire</a></div>
+      <p class="monte" style="margin-top:2.5rem;color:var(--craie-sombre);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase">Inscriptions ouvertes jusqu’au 24 septembre à minuit</p>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="pied">
+  <div class="wrap">
+    <div class="pied__g">
+      <div>
+        <p style="font-family:var(--signature);font-size:1.6rem;letter-spacing:.3em;margin:0 0 1rem;padding-left:.3em">WEBLACK</p>
+        <p style="color:var(--craie-sombre);font-size:.9375rem;margin:0;max-width:34ch">Valorisation des industries culturelles et créatives africaines. Depuis 2010.</p>
+      </div>
+      <div><h4>Le casting</h4><ul>
+        <li><a href="#casting">Informations pratiques</a></li>
+        <li><a href="#programme">Le programme</a></li>
+        <li><a href="#jury">Le jury</a></li>
+        <li><a href="#questions">Questions fréquentes</a></li></ul></div>
+      <div><h4>L’agence</h4><ul>
+        <li><a href="#agence">Qui nous sommes</a></li>
+        <li><a href="#verifier">Vérifiez-nous</a></li>
+        <li><a href="mailto:contact@weblack.fr">Nous écrire</a></li>
+        <li><a href="#" data-instagram>Instagram</a></li></ul></div>
+    </div>
+    <div class="pied__l">
+      <a href="#" style="color:var(--craie-sombre)">Mentions légales</a> ·
+      <a href="#" style="color:var(--craie-sombre)">Politique de confidentialité</a> ·
+      <a href="#" style="color:var(--craie-sombre)">Données des candidats</a>
+      <br><br>
+      © 2026 WEBLACK AFRICA — www.weblack.fr. Le casting du 26 septembre 2026 est une sélection d’entrée dans le programme d’accompagnement WEBLACK TALENTS. Participation gratuite.
+    </div>
+  </div>
+</footer>
+
+<div class="barre">
+  <span class="barre__t">26 sept. · Paris · Gratuit</span>
+  <a class="btn btn--sm btn--plein" href="#inscription">S’inscrire</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+'use strict';
+var doux = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var tactile = window.matchMedia('(hover: none)').matches;
+var aGSAP = typeof gsap !== 'undefined';
+if (aGSAP && typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
+
+/* ═══════════ 1. SCÈNE 3D ═══════════════════════════════════════════
+   Récit : un cadre → un couloir de cadres → la planche-contact →
+   sept → un seul. Chaque état est une position mémorisée par cadre ;
+   le défilement interpole entre eux. Rien n'est animé « en boucle ».   */
+var Scene3D = (function(){
+  var api = {pret:false, progres:0};
+  var cv = document.getElementById('scene');
+  if (!cv || typeof THREE === 'undefined') return api;
+  var gl;
+  try { gl = cv.getContext('webgl') || cv.getContext('experimental-webgl'); } catch(e){}
+  if (!gl) { document.body.classList.add('sans3d'); return api; }
+
+  var mobile = window.innerWidth < 760;
+  var N = mobile ? 10 : 20;          // nombre de cadres
+  var GARDE = 7;                     // les sept retenus
+
+  var rendu = new THREE.WebGLRenderer({canvas:cv, antialias:!mobile, alpha:true, powerPreference:'high-performance'});
+  rendu.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
+  rendu.setSize(window.innerWidth, window.innerHeight);
+  rendu.outputEncoding = THREE.sRGBEncoding;
+  rendu.toneMapping = THREE.ACESFilmicToneMapping;
+  rendu.toneMappingExposure = 1.15;
+
+  var scene = new THREE.Scene();
+  var cam = new THREE.PerspectiveCamera(42, window.innerWidth/window.innerHeight, 0.1, 200);
+  cam.position.set(0,0,6);
+
+  /* Environnement : dégradé peint sur canvas → réflexion métallique.
+     Chaud en haut (clé), froid en bas (contre-jour) : l'étalonnage cinéma. */
+  (function(){
+    var c = document.createElement('canvas'); c.width = 32; c.height = 128;
+    var x = c.getContext('2d');
+    var g = x.createLinearGradient(0,0,0,128);
+    g.addColorStop(0,'#3A2C14'); g.addColorStop(.35,'#8A6C2C');
+    g.addColorStop(.62,'#141313'); g.addColorStop(1,'#0B1018');
+    x.fillStyle = g; x.fillRect(0,0,32,128);
+    var tex = new THREE.CanvasTexture(c);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    var pmrem = new THREE.PMREMGenerator(rendu);
+    pmrem.compileEquirectangularShader();
+    scene.environment = pmrem.fromEquirectangular(tex).texture;
+    tex.dispose(); pmrem.dispose();
+  })();
+
+  var cleLum = new THREE.DirectionalLight(0xF0DDB4, 2.1); cleLum.position.set(3,4,5); scene.add(cleLum);
+  var contre  = new THREE.DirectionalLight(0x6E90C8, 1.1); contre.position.set(-4,-2,-3); scene.add(contre);
+  scene.add(new THREE.AmbientLight(0x2A2620, .6));
+
+  var matiere = new THREE.MeshStandardMaterial({
+    color:0xB08D3F, metalness:1, roughness:.24, envMapIntensity:1.6, transparent:true, opacity:1
+  });
+
+  /* un cadre = 4 barres fines */
+  var L = 1.5, H = 1.95, E = .028;
+  function faireCadre(){
+    var g = new THREE.Group();
+    var hz = new THREE.BoxGeometry(L, E, E), vt = new THREE.BoxGeometry(E, H, E);
+    var m = matiere.clone();
+    var a = new THREE.Mesh(hz,m); a.position.y =  H/2;
+    var b = new THREE.Mesh(hz,m); b.position.y = -H/2;
+    var c = new THREE.Mesh(vt,m); c.position.x = -L/2;
+    var d = new THREE.Mesh(vt,m); d.position.x =  L/2;
+    g.add(a,b,c,d); g.userData.mat = m;
+    return g;
+  }
+
+  var groupe = new THREE.Group(); scene.add(groupe);
+  var cadres = [];
+  var cols = mobile ? 3 : 5;
+  for (var i=0;i<N;i++){
+    var f = faireCadre();
+    var r = Math.random();
+    // état A — le couloir : dispersés en profondeur
+    var couloir = new THREE.Vector3((r-.5)*7.5, (Math.random()-.5)*4.6, -6 - i*2.9);
+    // état B — la planche-contact : grille frontale
+    var col = i % cols, lig = Math.floor(i/cols);
+    var nlig = Math.ceil(N/cols);
+    var grille = new THREE.Vector3((col-(cols-1)/2)*2.05, ((nlig-1)/2 - lig)*2.55, 0);
+    // état C — la sélection : sept restent, les autres reculent
+    var garde = i < GARDE;
+    var sel = garde
+      ? new THREE.Vector3((i-(GARDE-1)/2)*2.2, 0, 0)
+      : grille.clone().multiplyScalar(1.9).setZ(-16);
+    // état D — un seul cadre avance et reste vide : la place du visiteur
+    var fin;
+    if (i === 0)      fin = new THREE.Vector3(0, 0, 0);
+    else if (garde)   fin = sel.clone().multiplyScalar(2.2).setZ(-13);
+    else              fin = sel.clone().setZ(-34);
+    f.userData.A = couloir; f.userData.B = grille; f.userData.C = sel; f.userData.D = fin;
+    f.userData.garde = garde;
+    f.userData.tour = (Math.random()-.5)*.5;
+    f.userData.avance = i === 0 ? 0 : 40;   // le cadre d'ouverture reste en place
+    f.position.copy(couloir);
+    groupe.add(f); cadres.push(f);
+  }
+  // le cadre d'ouverture, seul face à l'objectif
+  var solo = cadres[0];
+  solo.userData.A = new THREE.Vector3(mobile ? 0 : 2.05, mobile ? -1.1 : 0, mobile ? -1.2 : 0);
+  solo.position.copy(solo.userData.A);
+
+  function lissage(t){ return t<0?0:t>1?1:t*t*(3-2*t); }
+  function seg(p,a,b){ return lissage((p-a)/(b-a)); }
+  var v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
+
+  api.dessine = function(p, temps){
+    /* Partition du défilement — voir la note de mouvement, section « Actes »
+       0.00→0.16  approche du cadre solitaire (caméra 6 → 3.2)
+       0.16→0.44  traversée du couloir (le groupe vient vers l'objectif)
+       0.44→0.68  couloir → planche-contact (recul caméra 3.2 → 11.5)
+       0.68→0.86  la sélection : sept restent
+       0.86→1.00  convergence sur un seul cadre (caméra 11.5 → 3.4)          */
+    var s1 = seg(p,0,.16), s2 = seg(p,.16,.44), s3 = seg(p,.44,.68),
+        s4 = seg(p,.68,.86), s5 = seg(p,.86,1);
+    var foule = seg(p,.08,.30);   // la multitude émerge du noir
+
+    cam.position.z = 6 - 2.8*s1 + 11.4*s3 - 2.5*s4 - 7.4*s5;
+    cam.position.x = Math.sin(temps*.00013)*.13;
+    cam.position.y = Math.cos(temps*.00011)*.09;
+    cam.lookAt(0,0,0);
+    groupe.rotation.y = (1-s3)*.14;
+
+    for (var i=0;i<cadres.length;i++){
+      var f = cadres[i], u = f.userData;
+      v1.copy(u.A); v1.z += u.avance*s2;          // A — le couloir défile
+      v1.lerp(u.B, s3);                            // B — la planche-contact
+      v2.copy(v1).lerp(u.C, s4);                   // C — la sélection
+      f.position.copy(v2).lerp(u.D, s5);           // D — la convergence
+
+      var op = i === 0 ? 1 : (.05 + .95*foule);
+      if (!u.garde) op *= (1 - .94*s4);
+      else if (i > 0) op *= (1 - .88*s5);        // les six s'effacent, un seul demeure
+      f.scale.setScalar(i === 0 ? 1 + .55*s5 : 1);
+      f.rotation.y = u.tour*(1-s3) + Math.sin(temps*.0002 + i)*.02*(1-s3);
+      f.rotation.z = u.tour*.35*(1-s3);
+      u.mat.opacity = op;
+      u.mat.transparent = op < 1;
+    }
+    rendu.render(scene, cam);
+  };
+
+  api.taille = function(){
+    var w = window.innerWidth, h = window.innerHeight;
+    cam.aspect = w/h; cam.updateProjectionMatrix();
+    rendu.setPixelRatio(Math.min(window.devicePixelRatio, window.innerWidth<760?1.5:2));
+    rendu.setSize(w,h);
+  };
+  api.pret = true;
+  return api;
+})();
+
+/* ═══════════ 2. BOUCLE DE RENDU — arrêtée hors champ ═══════════ */
+var actif = true, visible = true;
+document.addEventListener('visibilitychange', function(){ visible = !document.hidden; });
+if (Scene3D.pret){
+  var acte = document.getElementById('acte');
+  if ('IntersectionObserver' in window){
+    new IntersectionObserver(function(e){ actif = e[0].isIntersecting; }, {rootMargin:'10% 0px'}).observe(acte);
+  }
+  var boucle = function(t){
+    if (actif && visible) Scene3D.dessine(Scene3D.progres, t);
+    requestAnimationFrame(boucle);
+  };
+  requestAnimationFrame(boucle);
+  var minuteur;
+  window.addEventListener('resize', function(){
+    clearTimeout(minuteur); minuteur = setTimeout(Scene3D.taille, 160);
+  });
+}
+
+/* ═══════════ 3. PILOTAGE PAR LE DÉFILEMENT ═══════════ */
+function brancherDefilement(){
+  if (!aGSAP || !Scene3D.pret) return;
+  var acte = document.getElementById('acte');
+  if (doux){ Scene3D.progres = .52; return; }   // état « planche-contact », figé
+  ScrollTrigger.create({
+    trigger: acte, start:'top top', end:'bottom bottom', scrub: 1.1,
+    onUpdate: function(self){ Scene3D.progres = self.progress; }
+  });
+  // le canevas s'efface à l'entrée de l'acte II : la 3D cède la place au fond
+  ScrollTrigger.create({
+    trigger:'#acte2', start:'top 85%', end:'top 45%', scrub:true,
+    onUpdate:function(s){ document.getElementById('scene').style.opacity = String(1 - s.progress); }
+  });
+}
+
+/* ═══════════ 4. RÉVÉLATIONS DE TEXTE ═══════════ */
+function decouper(el){
+  var mots = el.textContent.trim().split(/\s+/);
+  el.textContent = '';
+  var lettres = [];
+  mots.forEach(function(mot, mi){
+    var pm = document.createElement('span');
+    pm.style.display = 'inline-block'; pm.style.whiteSpace = 'nowrap';
+    mot.split('').forEach(function(ch){
+      var masque = document.createElement('span'); masque.className = 'rev';
+      var inner = document.createElement('span'); inner.textContent = ch;
+      masque.appendChild(inner); pm.appendChild(masque); lettres.push(inner);
+    });
+    el.appendChild(pm);
+    if (mi < mots.length-1) el.appendChild(document.createTextNode(' '));
+  });
+  return lettres;
+}
+
+function brancherTexte(){
+  var titres = document.querySelectorAll('[data-split]');
+  titres.forEach(function(t){
+    var lettres = decouper(t);
+    if (!aGSAP || doux){ lettres.forEach(function(l){ l.style.transform='none'; }); return; }
+    // GSAP lit translateY(105%) du CSS comme un décalage en pixels ; on remet
+    // l'état de départ en pourcentage pur, sinon l'animation finit décalée.
+    gsap.set(lettres, {y:0, yPercent:105});
+    gsap.to(lettres, {
+      yPercent:0, duration:.95, ease:'expo.out', stagger:{each:.016, from:'start'},
+      scrollTrigger:{trigger:t, start:'top 84%', once:true}
+    });
+  });
+  var blocs = document.querySelectorAll('.monte');
+  if (!aGSAP || doux){ blocs.forEach(function(b){ b.style.opacity=1; b.style.transform='none'; }); return; }
+  blocs.forEach(function(b){
+    gsap.to(b, {
+      opacity:1, y:0, duration:1.05, ease:'expo.out',
+      scrollTrigger:{trigger:b, start:'top 88%', once:true}
+    });
+  });
+}
+
+/* ═══════════ 5. SURVOL MAGNÉTIQUE + CURSEUR ═══════════ */
+function brancherMagnetique(){
+  if (!aGSAP || doux || tactile) return;
+  var curseur = document.querySelector('.curseur');
+  var cx=0, cy=0, sx=0, sy=0;
+  window.addEventListener('mousemove', function(e){ cx=e.clientX; cy=e.clientY; curseur.style.opacity='1'; });
+  (function suit(){
+    sx += (cx-sx)*.16; sy += (cy-sy)*.16;
+    curseur.style.transform = 'translate('+sx+'px,'+sy+'px)';
+    requestAnimationFrame(suit);
+  })();
+
+  document.querySelectorAll('[data-magnetic]').forEach(function(el){
+    var rayon = 90;
+    el.addEventListener('mousemove', function(e){
+      var r = el.getBoundingClientRect();
+      var dx = e.clientX - (r.left + r.width/2);
+      var dy = e.clientY - (r.top + r.height/2);
+      gsap.to(el, {x:dx*.28, y:dy*.34, duration:.55, ease:'power3.out'});
+    });
+    el.addEventListener('mouseleave', function(){
+      gsap.to(el, {x:0, y:0, duration:.85, ease:'elastic.out(1,.42)'});
+      gsap.to(curseur, {scale:1, duration:.3, ease:'power2.out'});
+    });
+    el.addEventListener('mouseenter', function(){
+      gsap.to(curseur, {scale:2.1, duration:.35, ease:'power2.out'});
+    });
+  });
+}
+
+/* ═══════════ 6. NAVIGATION AU RIDEAU ═══════════ */
+function brancherRideau(){
+  var rideau = document.getElementById('rideau');
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      var cible = document.querySelector(a.getAttribute('href'));
+      if (!cible || a.getAttribute('href') === '#') return;
+      e.preventDefault();
+      if (!aGSAP || doux){ cible.scrollIntoView({behavior:'auto'}); return; }
+      var tl = gsap.timeline();
+      tl.set(rideau, {transformOrigin:'bottom', scaleY:0})
+        .to(rideau, {scaleY:1, duration:.62, ease:'power4.inOut'})
+        .add(function(){ cible.scrollIntoView({behavior:'auto', block:'start'}); ScrollTrigger.refresh(); })
+        .set(rideau, {transformOrigin:'top'})
+        .to(rideau, {scaleY:0, duration:.72, ease:'power4.inOut'}, '+=.06');
+    });
+  });
+}
+
+/* ═══════════ 7. BARRE DE NAVIGATION + BARRE MOBILE ═══════════ */
+function brancherChrome(){
+  var nav = document.querySelector('.nav');
+  var barre = document.querySelector('.barre');
+  var seuil = window.innerHeight * .8;
+  var maj = function(){
+    nav.classList.toggle('dense', window.scrollY > 60);
+    if (aGSAP) gsap.to(barre, {yPercent: window.scrollY > seuil ? 0 : 110, duration:.5, ease:'power3.out'});
+  };
+  window.addEventListener('scroll', maj, {passive:true});
+  maj();
+}
+
+/* ═══════════ 8. PRÉCHARGEMENT CINÉMATOGRAPHIQUE ═══════════
+   Le compteur suit la charge réelle (polices + scripts + première image
+   rendue). Plancher de 1,6 s : en dessous, l'ouverture n'a pas le temps
+   d'exister. Le cadre tracé devient le cadre 3D — raccord dans l'axe.   */
+function prechargement(){
+  var pre = document.getElementById('preload');
+  var rect = pre.querySelector('rect');
+  var compteur = pre.querySelector('.compteur');
+  var marque = pre.querySelector('.marque');
+  var debut = performance.now(), PLANCHER = 1600;
+  var etat = {v:0};
+
+  var polices = document.fonts ? document.fonts.ready : Promise.resolve();
+  var pret = Promise.all([
+    polices,
+    new Promise(function(r){ if (document.readyState === 'complete') r(); else window.addEventListener('load', r); })
+  ]);
+
+  function sortir(){
+    document.body.classList.remove('charge-en-cours');
+    if (!aGSAP || doux){ pre.style.display='none'; brancherTout(); return; }
+    var tl = gsap.timeline({onComplete:function(){ pre.style.display='none'; }});
+    tl.to(compteur, {opacity:0, duration:.3, ease:'power2.in'})
+      .to(marque,   {opacity:0, y:-14, duration:.5, ease:'power3.in'}, '-=.15')
+      .to(pre.querySelector('.legende'), {opacity:0, duration:.3}, '<')
+      // raccord : le cadre tracé s'ouvre vers l'objectif et disparaît
+      .to(pre.querySelector('.cadre-svg'), {scale:1.9, opacity:0, duration:1.05, ease:'power3.inOut'}, '-=.2')
+      .to(pre, {opacity:0, duration:.55, ease:'power2.inOut'}, '-=.55');
+    brancherTout();
+  }
+
+  if (!aGSAP){ pret.then(sortir); return; }
+
+  var tl = gsap.timeline();
+  tl.to(rect, {strokeDashoffset:0, duration:1.35, ease:'power2.inOut'})
+    .to(marque, {opacity:1, duration:.7, ease:'power2.out'}, '-=.55')
+    .to(etat, {
+      v:100, duration:1.5, ease:'power1.inOut',
+      onUpdate:function(){ compteur.textContent = String(Math.round(etat.v)).padStart(2,'0'); }
+    }, 0);
+
+  pret.then(function(){
+    var reste = Math.max(0, PLANCHER - (performance.now() - debut));
+    setTimeout(function(){
+      gsap.to(etat, {v:100, duration:.35, ease:'power2.out',
+        onUpdate:function(){ compteur.textContent = String(Math.round(etat.v)).padStart(2,'0'); },
+        onComplete: sortir});
+    }, reste);
+  });
+}
+
+function brancherTout(){
+  brancherTexte();
+  brancherDefilement();
+  brancherMagnetique();
+  brancherRideau();
+  brancherChrome();
+  if (aGSAP) ScrollTrigger.refresh();
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', prechargement);
+else prechargement();
+})();
+</script>
+</body>
+</html>
