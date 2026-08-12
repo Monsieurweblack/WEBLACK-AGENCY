@@ -14,6 +14,10 @@ export function initContactForm() {
   const submittingText = status.dataset.submittingText || "";
   const successText = status.dataset.successText || "";
   const errorText = status.dataset.errorText || "";
+  const labelName = form.dataset.labelName || "Nom";
+  const labelEmail = form.dataset.labelEmail || "E-mail";
+  const labelOrganisation = form.dataset.labelOrganisation || "Organisation";
+  const labelProfile = form.dataset.labelProfile || "Profil";
 
   function setStatus(kind: "idle" | "submitting" | "success" | "error") {
     if (!status) return;
@@ -36,10 +40,10 @@ export function initContactForm() {
 
     const subject = `[WEBLACK] ${profileLabel} — ${name}`;
     const bodyLines = [
-      `Name: ${name}`,
-      `Email: ${email}`,
-      organisation ? `Organisation: ${organisation}` : null,
-      profileLabel ? `Profile: ${profileLabel}` : null,
+      `${labelName}: ${name}`,
+      `${labelEmail}: ${email}`,
+      organisation ? `${labelOrganisation}: ${organisation}` : null,
+      profileLabel ? `${labelProfile}: ${profileLabel}` : null,
       "",
       message,
     ].filter((line): line is string => line !== null);

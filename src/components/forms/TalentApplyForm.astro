@@ -17,7 +17,24 @@ const categories = ["models", "creatives", "artists", "designers", "photographer
  */
 ---
 
-<form id="talent-apply-form" data-contact-email={CONTACT_EMAIL} class="space-y-6" novalidate>
+<form
+  id="talent-apply-form"
+  data-contact-email={CONTACT_EMAIL}
+  data-subject-prefix={t("talent.apply.emailSubject")}
+  data-label-email={t("talent.apply.email")}
+  data-label-phone={t("talent.apply.phone")}
+  data-label-category={t("talent.apply.category")}
+  data-label-location={t("talent.apply.location")}
+  data-label-portfolio={t("talent.apply.portfolio")}
+  data-label-socials={t("talent.apply.socials")}
+  data-label-experience={t("talent.apply.experience")}
+  data-label-languages={t("talent.apply.languages")}
+  data-label-availability={t("talent.apply.availability")}
+  data-label-mobility={t("talent.apply.mobility")}
+  data-label-message={t("talent.apply.message")}
+  class="space-y-6"
+  novalidate
+>
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div>
       <label for="firstName" class="label-tracked text-(--color-paper)/70">{t("talent.apply.firstName")}</label>

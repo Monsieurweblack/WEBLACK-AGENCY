@@ -1,5 +1,5 @@
 ---
-import { otherLang, switchLocalePath, type Lang } from "../../i18n/utils";
+import { otherLang, switchLocalePath, useTranslations, type Lang } from "../../i18n/utils";
 
 interface Props {
   lang: Lang;
@@ -7,9 +7,11 @@ interface Props {
 }
 
 const { lang, class: className } = Astro.props;
+const t = useTranslations(lang);
 const target = otherLang(lang);
 const href = switchLocalePath(Astro.url.pathname, target);
 const label = target === "fr" ? "FR" : "EN";
+const switchLabel = target === "fr" ? t("common.switchToFr") : t("common.switchToEn");
 ---
 
 <a
@@ -18,7 +20,7 @@ const label = target === "fr" ? "FR" : "EN";
     "label-tracked inline-flex items-center gap-2 border border-(--color-line) px-3 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)",
     className,
   ]}
-  aria-label={`Switch to ${target === "fr" ? "français" : "English"}`}
+  aria-label={switchLabel}
 >
   {label}
 </a>

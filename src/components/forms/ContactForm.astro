@@ -18,7 +18,17 @@ const t = useTranslations(lang);
  */
 ---
 
-<form id="contact-form" data-contact-email={CONTACT_EMAIL} class="space-y-6" novalidate>
+<form
+  id="contact-form"
+  data-contact-email={CONTACT_EMAIL}
+  data-label-name={t("contact.form.mailto.name")}
+  data-label-email={t("contact.form.mailto.email")}
+  data-label-organisation={t("contact.form.mailto.organisation")}
+  data-label-profile={t("contact.form.mailto.profile")}
+  data-label-message={t("contact.form.mailto.message")}
+  class="space-y-6"
+  novalidate
+>
   <input type="hidden" id="contact-profile" name="profile" value="" />
 
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">

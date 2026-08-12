@@ -33,20 +33,21 @@ export function initTalentApplyForm() {
     const fullName = `${firstName} ${lastName}`.trim();
 
     const fields: [string, string][] = [
-      ["Email", String(data.get("email") || "")],
-      ["Phone", String(data.get("phone") || "")],
-      ["Category", String(data.get("category") || "")],
-      ["Location", String(data.get("location") || "")],
-      ["Portfolio", String(data.get("portfolio") || "")],
-      ["Socials", String(data.get("socials") || "")],
-      ["Experience", String(data.get("experience") || "")],
-      ["Languages", String(data.get("languages") || "")],
-      ["Availability", String(data.get("availability") || "")],
-      ["Mobility", String(data.get("mobility") || "")],
-      ["Message", String(data.get("message") || "")],
+      [form?.dataset.labelEmail || "E-mail", String(data.get("email") || "")],
+      [form?.dataset.labelPhone || "Téléphone", String(data.get("phone") || "")],
+      [form?.dataset.labelCategory || "Catégorie", String(data.get("category") || "")],
+      [form?.dataset.labelLocation || "Ville / Pays", String(data.get("location") || "")],
+      [form?.dataset.labelPortfolio || "Portfolio", String(data.get("portfolio") || "")],
+      [form?.dataset.labelSocials || "Réseaux sociaux", String(data.get("socials") || "")],
+      [form?.dataset.labelExperience || "Expérience", String(data.get("experience") || "")],
+      [form?.dataset.labelLanguages || "Langues parlées", String(data.get("languages") || "")],
+      [form?.dataset.labelAvailability || "Disponibilité", String(data.get("availability") || "")],
+      [form?.dataset.labelMobility || "Mobilité", String(data.get("mobility") || "")],
+      [form?.dataset.labelMessage || "Message", String(data.get("message") || "")],
     ];
 
-    const subject = `[WEBLACK — Talent Application] ${fullName}`;
+    const subjectPrefix = form?.dataset.subjectPrefix || "Talent Application";
+    const subject = `[WEBLACK — ${subjectPrefix}] ${fullName}`;
     const bodyLines = fields
       .filter(([, value]) => value.trim().length > 0)
       .map(([label, value]) => `${label}: ${value}`);
