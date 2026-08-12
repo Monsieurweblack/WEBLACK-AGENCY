@@ -1,0 +1,92 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import RemoteImage from "../../components/media/RemoteImage.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import { useTranslations, type UiKey } from "../../i18n/utils";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+const steps = [1, 2, 3, 4, 5] as const;
+---
+
+<BaseLayout lang={lang} title={t("about.hero.title")} description={t("about.intro")}>
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("about.hero.title")}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{t("about.intro")}</p>
+    </div>
+  </section>
+
+  <div class="mx-auto aspect-[21/9] max-w-(--container-content) overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
+    <RemoteImage
+      src="/photos/institut-hero.jpg"
+      alt=""
+      width={1440}
+      height={1791}
+      loading="eager"
+      fetchpriority="high"
+      class="h-full w-full"
+    />
+  </div>
+
+  <section class="bg-(--color-ink) px-6 py-20 md:px-10 md:py-28">
+    <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-16 lg:grid-cols-[1.2fr_1fr]">
+      <div class="space-y-6" data-reveal>
+        <p class="text-lg text-(--color-paper)/80">{t("about.body1")}</p>
+        <p class="text-(--color-paper)/70">{t("about.body2")}</p>
+        <p class="text-(--color-paper)/70">{t("about.body3")}</p>
+      </div>
+      <div class="border-t border-(--color-line) pt-8 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0" data-reveal data-reveal-delay="0.1">
+        <h2 class="font-display text-2xl text-(--color-paper)">{t("about.vision.title")}</h2>
+        <p class="mt-4 text-(--color-paper)/70">{t("about.vision.body")}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-(--color-paper) py-24 md:py-32">
+    <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+      <div class="max-w-2xl" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.method.eyebrow")}</p>
+        <h2 class="font-display mt-4 text-4xl text-(--color-ink) sm:text-5xl">{t("about.method.title")}</h2>
+      </div>
+
+      <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+        {
+          steps.map((step, i) => (
+            <li data-reveal data-reveal-delay={String(i * 0.08)}>
+              <span class="label-tracked text-(--color-ink)/35">0{step}</span>
+              <h3 class="font-display mt-4 text-2xl text-(--color-ink)">
+                {t(`perspective.step${step}.name` as UiKey)}
+              </h3>
+              <p class="mt-2 text-sm text-(--color-ink)/60">{t(`perspective.step${step}.desc` as UiKey)}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="bg-(--color-ink) px-6 py-20 md:px-10 md:py-28">
+    <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-16 border-t border-(--color-line) pt-16 lg:grid-cols-[1fr_1.4fr]">
+      <div data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.founder.eyebrow")}</p>
+        <h2 class="font-display mt-4 text-3xl text-(--color-paper)">{t("about.founder.name")}</h2>
+        <p class="label-tracked mt-2 text-(--color-paper)/50">{t("about.founder.role")}</p>
+      </div>
+      <div data-reveal data-reveal-delay="0.1">
+        <h3 class="font-display text-2xl text-(--color-paper)">{t("about.network.title")}</h3>
+        <p class="mt-4 max-w-xl text-(--color-paper)/70">{t("about.network.body")}</p>
+      </div>
+    </div>
+  </section>
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

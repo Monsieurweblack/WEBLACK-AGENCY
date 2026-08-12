@@ -1,0 +1,106 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { useTranslations, localizedPath } from "../../i18n/utils";
+import { CONTACT_EMAIL } from "../../lib/contact";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t("footer.mentions")}>
+  <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
+      <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.mentions")}</h1>
+
+      <h2>Site publisher</h2>
+      <p>
+        WEBLACK AFRICA<br />
+        Company with a share capital of €100,000<br />
+        Registered office: Paris, France
+      </p>
+      <p>
+        Phone: <a href="tel:+330743700063">+33 07 43 70 00 63</a><br />
+        Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+      </p>
+      <p>
+        Publication director:<br />
+        Deo-Gratias Kpodo, Founder &amp; Creative Director
+      </p>
+
+      <h2>Hosting</h2>
+      <p>This site is hosted by:</p>
+      <p>
+        HOSTINGER INTERNATIONAL LIMITED<br />
+        61 Lordou Vironos Street<br />
+        6023 Larnaca<br />
+        Cyprus
+      </p>
+      <p>
+        Hostinger International Limited is a company incorporated under Cypriot law. Hostinger's
+        current terms identify this entity as the contracting entity for EU countries not covered by
+        their specific regional groupings.
+      </p>
+
+      <h2>Intellectual property</h2>
+      <p>
+        All content on this site, including text, photographs, graphic elements, logos, videos,
+        creative works, trademarks and other visual elements, is protected under applicable
+        intellectual property law.
+      </p>
+      <p>
+        Except with WEBLACK AFRICA's prior written authorisation, any reproduction, representation,
+        modification, adaptation, distribution or exploitation, in whole or in part, of this content
+        is prohibited.
+      </p>
+      <p>
+        The WEBLACK AFRICA trademark, its visual identity, logos and graphic elements are protected
+        and may not be used without authorisation.
+      </p>
+
+      <h2>Liability</h2>
+      <p>
+        WEBLACK AFRICA strives to ensure the accuracy and currency of the information published on
+        the site. However, the agency cannot guarantee the completeness, accuracy or absence of
+        errors in all content offered.
+      </p>
+      <p>
+        WEBLACK AFRICA cannot be held liable for any damages resulting from use of the site or from
+        any temporary inability to access it.
+      </p>
+
+      <h2>Personal data</h2>
+      <p>
+        Any personal data collected through the site is processed in accordance with our{" "}
+        <a href={localizedPath(lang, "/politique-de-confidentialite")}>Privacy Policy</a>.
+      </p>
+      <p>
+        For any question regarding the processing of your personal data or the exercise of your
+        rights, you may contact us at: <a href="mailto:weblackmedias@gmail.com">weblackmedias@gmail.com</a>
+      </p>
+
+      <h2>Intellectual property and infringement</h2>
+      <p>
+        WEBLACK AFRICA owns the intellectual property rights and holds the rights of use over all
+        elements accessible on the website, including text, images, graphics, logos, videos, icons
+        and sounds. Any reproduction, representation, modification, publication or adaptation of all
+        or part of the site's elements, by any means or process whatsoever, is prohibited without the
+        prior written authorisation of{" "}
+        <a href="https://www.weblack.fr" target="_blank" rel="noopener noreferrer">www.weblack.fr</a>.
+        Any unauthorised use of the site or of any of the elements it contains will be considered an
+        infringement and prosecuted in accordance with the provisions of Articles L.335-2 et seq. of
+        the French Intellectual Property Code.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        The site may use cookies or similar technologies necessary for its operation and, where
+        applicable, intended to improve the user experience or measure audience.
+      </p>
+      <p>
+        The terms of use of these technologies are set out in our Cookie Policy.
+      </p>
+
+      <p class="text-sm text-(--color-ink)/50">Last updated: August 2026</p>
+    </div>
+  </section>
+</BaseLayout>

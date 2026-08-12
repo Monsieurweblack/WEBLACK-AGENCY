@@ -1,0 +1,97 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import RemoteImage from "../../components/media/RemoteImage.astro";
+import CardWork from "../../components/cards/CardWork.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import { useTranslations, type UiKey } from "../../i18n/utils";
+import { getFeatured, sortByDateDesc } from "../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+
+const capabilities = [
+  "direction",
+  "artdirection",
+  "campaign",
+  "fashion",
+  "editorial",
+  "content",
+  "events",
+  "storytelling",
+] as const;
+
+const work = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
+---
+
+<BaseLayout lang={lang} title={t("creative.hero.title")} description={t("creative.hero.lead")}>
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("creative.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("creative.hero.title")}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{t("creative.hero.lead")}</p>
+    </div>
+  </section>
+
+  <div class="mx-auto aspect-[21/9] max-w-(--container-content) overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
+    <RemoteImage
+      src="/photos/pole-creative-direction-hero.jpg"
+      alt=""
+      width={1619}
+      height={2400}
+      loading="eager"
+      fetchpriority="high"
+      class="h-full w-full"
+    />
+  </div>
+
+  <section class="bg-(--color-ink) py-20 md:py-28">
+    <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+      <div class="grid grid-cols-1 border-t border-(--color-line) sm:grid-cols-2 lg:grid-cols-4">
+        {
+          capabilities.map((capability, i) => (
+            <div
+              class="border-b border-(--color-line) px-1 py-10 sm:border-r sm:px-6 sm:last:border-r-0 sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0"
+              data-reveal
+              data-reveal-delay={String((i % 4) * 0.06)}
+            >
+              <span class="label-tracked text-(--color-paper)/40">0{i + 1}</span>
+              <h3 class="font-display mt-4 text-xl text-(--color-paper)">
+                {t(`creative.capability.${capability}.name` as UiKey)}
+              </h3>
+              <p class="mt-2 text-sm text-(--color-paper)/60">
+                {t(`creative.capability.${capability}.desc` as UiKey)}
+              </p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {
+    work.length > 0 && (
+      <section class="bg-(--color-paper) py-24 md:py-32">
+        <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+          <div class="max-w-2xl" data-reveal>
+            <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.work.eyebrow")}</p>
+            <h2 class="font-display mt-4 text-4xl text-(--color-ink) sm:text-5xl">{t("home.work.title")}</h2>
+          </div>
+          <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {work.map((item, i) => (
+              <CardWork lang={lang} work={item} index={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

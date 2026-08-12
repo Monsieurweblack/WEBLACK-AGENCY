@@ -1,0 +1,40 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import HeroHome from "../components/sections/HeroHome.astro";
+import ManifestoQuote from "../components/sections/ManifestoQuote.astro";
+import DivisionsGrid from "../components/sections/DivisionsGrid.astro";
+import SelectedWorkPreview from "../components/sections/SelectedWorkPreview.astro";
+import Perspective from "../components/sections/Perspective.astro";
+import TalentNetworkPreview from "../components/sections/TalentNetworkPreview.astro";
+import JournalPreview from "../components/sections/JournalPreview.astro";
+import CtaContact from "../components/sections/CtaContact.astro";
+import { getEntriesByLang, getFeatured, sortByDateDesc } from "../lib/content";
+
+const lang = "fr" as const;
+const heroImage = {
+  url: "/photos/hero-home.jpg",
+  alt: "Défilé de mode dans une salle comble, mannequin sous un projecteur.",
+  width: 1440,
+  height: 959,
+};
+
+const featuredWork = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
+const featuredTalent = (await getFeatured("talent", lang)).slice(0, 4);
+const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).slice(0, 3);
+---
+
+<BaseLayout lang={lang} image={heroImage.url}>
+  <HeroHome lang={lang} heroImage={heroImage} />
+  <ManifestoQuote lang={lang} />
+  <DivisionsGrid lang={lang} />
+  <SelectedWorkPreview lang={lang} work={featuredWork} />
+  <Perspective lang={lang} />
+  <TalentNetworkPreview lang={lang} talent={featuredTalent} />
+  <JournalPreview lang={lang} articles={latestJournal} />
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

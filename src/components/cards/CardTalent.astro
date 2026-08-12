@@ -1,0 +1,30 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import { localizedPath, type Lang } from "../../i18n/utils";
+import type { TalentEntry } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  talent: TalentEntry;
+  index?: number;
+}
+
+const { lang, talent, index = 0 } = Astro.props;
+const href = localizedPath(lang, `/talent/${talent.data.slug}`);
+---
+
+<a href={href} class="group block" data-reveal data-reveal-delay={String((index % 4) * 0.06)}>
+  <div class="aspect-[3/4] overflow-hidden bg-(--color-ink-soft)">
+    <RemoteImage
+      src={talent.data.portraitImage.url}
+      alt={talent.data.portraitImage.alt}
+      width={600}
+      height={800}
+      credit={talent.data.portraitImage.credit}
+      class="h-full w-full grayscale transition-all duration-700 ease-(--ease-signature) group-hover:scale-105 group-hover:grayscale-0"
+      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+    />
+  </div>
+  <h3 class="font-display mt-4 text-lg text-(--color-paper)">{talent.data.name}</h3>
+  <p class="label-tracked mt-1 text-(--color-gold)/80">{talent.data.role}</p>
+</a>

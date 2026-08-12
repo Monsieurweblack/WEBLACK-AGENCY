@@ -1,0 +1,40 @@
+---
+import CardWork from "../cards/CardWork.astro";
+import type { WorkEntry } from "../../lib/content";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  work: WorkEntry[];
+}
+
+const { lang, work } = Astro.props;
+const t = useTranslations(lang);
+---
+
+{
+  work.length > 0 && (
+    <section class="bg-(--color-ink) py-24 md:py-32">
+      <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+        <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+          <div class="max-w-2xl">
+            <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.work.eyebrow")}</p>
+            <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{t("home.work.title")}</h2>
+          </div>
+          <a
+            href={localizedPath(lang, "/selected-work")}
+            class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+          >
+            {t("home.work.cta")} &rarr;
+          </a>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {work.map((item, i) => (
+            <CardWork lang={lang} work={item} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

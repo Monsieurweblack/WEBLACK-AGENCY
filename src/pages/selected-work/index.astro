@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CardWork from "../../components/cards/CardWork.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import { useTranslations } from "../../i18n/utils";
+import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+const work = sortByDateDesc(await getEntriesByLang("work", lang));
+---
+
+<BaseLayout lang={lang} title={t("selectedwork.hero.title")} description={t("selectedwork.hero.title")}>
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("selectedwork.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("selectedwork.hero.title")}
+      </h1>
+    </div>
+  </section>
+
+  <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+    <div class="mx-auto max-w-(--container-content)">
+      {
+        work.length > 0 ? (
+          <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {work.map((item, i) => (
+              <CardWork lang={lang} work={item} index={i} />
+            ))}
+          </div>
+        ) : (
+          <p class="text-(--color-paper)/60">{t("selectedwork.empty")}</p>
+        )
+      }
+    </div>
+  </section>
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

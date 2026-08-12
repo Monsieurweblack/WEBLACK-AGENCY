@@ -1,0 +1,108 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import CtaContact from "../sections/CtaContact.astro";
+import type { TalentEntry } from "../../lib/content";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  talent: TalentEntry;
+}
+
+const { lang, talent } = Astro.props;
+const t = useTranslations(lang);
+const categoryLabel = t(`talent.category.${talent.data.category}` as UiKey);
+---
+
+<article class="bg-(--color-ink)">
+  <div class="mx-auto max-w-(--container-content) px-6 pb-20 pt-40 md:px-10">
+    <a
+      href={localizedPath(lang, "/talent")}
+      class="label-tracked text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+    >
+      &larr; {t("talent.back")}
+    </a>
+
+    <div class="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+      <div class="aspect-[3/4] overflow-hidden bg-(--color-ink-soft)">
+        <RemoteImage
+          src={talent.data.portraitImage.url}
+          alt={talent.data.portraitImage.alt}
+          width={900}
+          height={1200}
+          credit={talent.data.portraitImage.credit}
+          loading="eager"
+          fetchpriority="high"
+          class="h-full w-full"
+        />
+      </div>
+
+      <div>
+        <p class="label-tracked text-(--color-gold)">{categoryLabel} · {talent.data.country}</p>
+        <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+          {talent.data.name}
+        </h1>
+        <p class="label-tracked mt-3 text-(--color-paper)/60">{talent.data.role}</p>
+
+        <div class="prose-weblack mt-8 max-w-none" set:html={talent.data.bioHtml} />
+
+        {
+          talent.data.specialties && talent.data.specialties.length > 0 && (
+            <p class="mt-6 text-sm text-(--color-paper)/60">{talent.data.specialties.join(" · ")}</p>
+          )
+        }
+
+        {
+          talent.data.highlights && talent.data.highlights.length > 0 && (
+            <div class="mt-10 border-t border-(--color-line) pt-6">
+              <p class="label-tracked text-(--color-gold)">{t("talent.highlights")}</p>
+              <ul class="mt-4 space-y-3">
+                {talent.data.highlights.map((highlight) => (
+                  <li class="flex items-start gap-3 text-(--color-paper)/80">
+                    <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-(--color-gold)" />
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+
+        <div class="mt-8 flex flex-wrap items-center gap-6">
+          {
+            talent.data.instagram && (
+              <a
+                href={talent.data.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="label-tracked inline-flex items-center gap-2 text-(--color-paper) transition-colors hover:text-(--color-gold)"
+              >
+                Instagram &rarr;
+              </a>
+            )
+          }
+          {
+            talent.data.portfolioUrl && (
+              <a
+                href={talent.data.portfolioUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="label-tracked inline-flex items-center gap-2 text-(--color-paper) transition-colors hover:text-(--color-gold)"
+              >
+                Portfolio &rarr;
+              </a>
+            )
+          }
+          <a
+            href={localizedPath(lang, "/contact")}
+            class="label-tracked inline-flex items-center gap-2 text-(--color-gold) transition-colors hover:text-(--color-gold-bright)"
+          >
+            {t("talent.cta.book")} &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <CtaContact lang={lang} />
+</article>

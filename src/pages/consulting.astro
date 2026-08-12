@@ -1,0 +1,75 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import RemoteImage from "../components/media/RemoteImage.astro";
+import CtaContact from "../components/sections/CtaContact.astro";
+import { useTranslations, type UiKey } from "../i18n/utils";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+
+const offers = [
+  "strategy",
+  "positioning",
+  "development",
+  "creativestrategy",
+  "cultural",
+  "communication",
+  "partnerships",
+  "market",
+] as const;
+---
+
+<BaseLayout lang={lang} title={t("consulting.hero.title")} description={t("consulting.hero.lead")}>
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("consulting.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("consulting.hero.title")}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{t("consulting.hero.lead")}</p>
+    </div>
+  </section>
+
+  <div class="mx-auto aspect-[21/9] max-w-(--container-content) overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
+    <RemoteImage
+      src="/photos/pole-studio-hero.jpg"
+      alt=""
+      width={1732}
+      height={2400}
+      loading="eager"
+      fetchpriority="high"
+      class="h-full w-full"
+    />
+  </div>
+
+  <section class="bg-(--color-ink) py-20 md:py-28">
+    <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+      <div class="grid grid-cols-1 border-t border-(--color-line) sm:grid-cols-2 lg:grid-cols-4">
+        {
+          offers.map((offer, i) => (
+            <div
+              class="border-b border-(--color-line) px-1 py-10 sm:border-r sm:px-6 sm:last:border-r-0 sm:[&:nth-child(2)]:border-r-0 lg:[&:nth-child(2)]:border-r lg:last:border-r-0"
+              data-reveal
+              data-reveal-delay={String((i % 4) * 0.06)}
+            >
+              <span class="label-tracked text-(--color-paper)/40">0{i + 1}</span>
+              <h3 class="font-display mt-4 text-xl text-(--color-paper)">
+                {t(`consulting.offer.${offer}.name` as UiKey)}
+              </h3>
+              <p class="mt-2 text-sm text-(--color-paper)/60">
+                {t(`consulting.offer.${offer}.desc` as UiKey)}
+              </p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <CtaContact lang={lang} title={t("consulting.hero.title")} buttonLabel={t("consulting.cta")} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

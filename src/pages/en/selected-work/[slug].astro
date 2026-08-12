@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import WorkDetail from "../../../components/pages/WorkDetail.astro";
+import { useTranslations } from "../../../i18n/utils";
+import { getEntriesByLang } from "../../../lib/content";
+
+export async function getStaticPaths() {
+  const entries = await getEntriesByLang("work", "en");
+  return entries.map((work) => ({ params: { slug: work.data.slug }, props: { work } }));
+}
+
+const { work } = Astro.props;
+const lang = "en" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout
+  lang={lang}
+  title={`${work.data.title} — ${t("nav.selectedwork")}`}
+  description={work.data.context}
+  image={work.data.coverImage.url}
+>
+  <WorkDetail lang={lang} work={work} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

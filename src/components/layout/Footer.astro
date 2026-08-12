@@ -1,0 +1,120 @@
+---
+import { Image } from "astro:assets";
+import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
+import SocialLinks from "./SocialLinks.astro";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const year = new Date().getFullYear();
+
+const exploreLinks = [
+  { label: t("nav.talent"), href: "/talent" },
+  { label: t("nav.creative"), href: "/creative" },
+  { label: t("nav.consulting"), href: "/consulting" },
+  { label: t("nav.selectedwork"), href: "/selected-work" },
+];
+
+const studioLinks = [
+  { label: t("nav.about"), href: "/about" },
+  { label: t("nav.journal"), href: "/journal" },
+  { label: t("nav.responsibility"), href: "/responsibility" },
+  { label: t("nav.partners"), href: "/partners" },
+];
+
+const legalLinks = [
+  { label: t("footer.mentions"), href: "/mentions-legales" },
+  { label: t("footer.privacy"), href: "/politique-de-confidentialite" },
+];
+---
+
+<footer class="border-t border-(--color-line) bg-(--color-ink) text-(--color-paper)">
+  <div class="mx-auto max-w-(--container-content) px-6 py-16 md:px-10 md:py-20">
+    <div class="grid grid-cols-1 gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div>
+        <div class="flex items-center gap-3">
+          <Image src={weblackIcon} alt="WEBLACK" width={36} height={36} />
+          <p class="font-display text-2xl tracking-[0.05em]">WEBLACK</p>
+        </div>
+        <p class="label-tracked mt-4 text-(--color-paper)/60">{t("footer.tagline")}</p>
+        <p class="mt-6 max-w-xs text-sm text-(--color-paper)/50">{t("footer.since")}</p>
+      </div>
+
+      <nav aria-label={t("footer.explore")}>
+        <p class="label-tracked text-(--color-gold)">{t("footer.explore")}</p>
+        <ul class="mt-4 space-y-3">
+          {
+            exploreLinks.map((link) => (
+              <li>
+                <a
+                  href={localizedPath(lang, link.href)}
+                  class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <nav aria-label={t("footer.studio")}>
+        <p class="label-tracked text-(--color-gold)">{t("footer.studio")}</p>
+        <ul class="mt-4 space-y-3">
+          {
+            studioLinks.map((link) => (
+              <li>
+                <a
+                  href={localizedPath(lang, link.href)}
+                  class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <nav aria-label={t("footer.legal")}>
+        <p class="label-tracked text-(--color-gold)">{t("footer.legal")}</p>
+        <ul class="mt-4 space-y-3">
+          {
+            legalLinks.map((link) => (
+              <li>
+                <a
+                  href={localizedPath(lang, link.href)}
+                  class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+          <li>
+            <a
+              href={localizedPath(lang, "/contact")}
+              class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+            >
+              {t("nav.contact")}
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
+    <div
+      class="mt-16 flex flex-col gap-6 border-t border-(--color-line) pt-8 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="flex flex-col gap-2 text-xs text-(--color-paper)/40">
+        <p>&copy; {year} WEBLACK. {t("footer.rights")}</p>
+        <p>{t("contact.info.address.label")}</p>
+      </div>
+      <SocialLinks />
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,76 @@
+---
+/**
+ * Wrapper for two image sources: hotlinked Unsplash URLs (astro:assets can't
+ * optimize remote URLs without remotePatterns, so we build a srcset from
+ * Unsplash's own resize query params instead) and local WEBLACK photos
+ * pre-sized into public/photos/ (served as-is — they don't support on-the-fly
+ * resize params, so no srcset is generated for those).
+ */
+interface Credit {
+  photographer: string;
+  photographerUrl?: string;
+}
+
+interface Props {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  credit?: Credit;
+  creditLabel?: string;
+  loading?: "lazy" | "eager";
+  fetchpriority?: "high" | "low" | "auto";
+  class?: string;
+  sizes?: string;
+}
+
+const {
+  src,
+  alt,
+  width,
+  height,
+  credit,
+  creditLabel = "Photo",
+  loading = "lazy",
+  fetchpriority = "auto",
+  class: className,
+  sizes = "100vw",
+} = Astro.props;
+
+const isRemote = src.startsWith("http://") || src.startsWith("https://");
+
+function withWidth(url: string, w: number) {
+  const u = new URL(url);
+  u.searchParams.set("w", String(w));
+  u.searchParams.set("q", "80");
+  u.searchParams.set("auto", "format");
+  u.searchParams.set("fit", "crop");
+  return u.toString();
+}
+
+const widths = [Math.round(width * 0.75), width, Math.min(width * 1.5, 3200)];
+const srcset = isRemote ? widths.map((w) => `${withWidth(src, w)} ${w}w`).join(", ") : undefined;
+const finalSrc = isRemote ? withWidth(src, width) : src;
+---
+
+<figure class:list={["relative m-0", className]}>
+  <img
+    src={finalSrc}
+    srcset={srcset}
+    sizes={sizes}
+    alt={alt}
+    width={width}
+    height={height}
+    loading={loading}
+    decoding="async"
+    fetchpriority={fetchpriority}
+    class="block h-full w-full object-cover"
+  />
+  {
+    credit && (
+      <figcaption class="sr-only">
+        {creditLabel}: {credit.photographer}
+      </figcaption>
+    )
+  }
+</figure>

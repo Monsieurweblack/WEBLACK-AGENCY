@@ -1,0 +1,64 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { useTranslations } from "../../i18n/utils";
+import { CONTACT_EMAIL } from "../../lib/contact";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t("footer.privacy")} noindex>
+  <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
+      <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
+
+      <p class="mt-4 text-sm text-(--color-ink)/50">
+        <strong>Page pending legal review.</strong> This text describes data handling as technically
+        implemented on this site (contact form) and should be reviewed by counsel before going live,
+        particularly the publisher details.
+      </p>
+
+      <h2>Data controller</h2>
+      <p>
+        WEBLACK, [legal form and address to be completed], is the data controller for
+        information collected through this site. Contact: {CONTACT_EMAIL}.
+      </p>
+
+      <h2>Data collected</h2>
+      <p>
+        The site's contact form opens your own mail app directly, pre-filled with your name, email
+        address, organisation (optional), the profile you selected and your message — you then send
+        that message yourself, from your own mailbox, to {CONTACT_EMAIL}. The site itself does not
+        collect, store, or transmit any data to a third party. No other personal data is collected by
+        the site.
+      </p>
+
+      <h2>Purpose and retention</h2>
+      <p>
+        Messages sent this way are used solely to respond to your enquiry. They are kept in WEBLACK's
+        mailbox for as long as necessary to process the request, then deleted or archived in
+        accordance with applicable legal obligations.
+      </p>
+
+      <h2>Technical sub-processor</h2>
+      <p>
+        The contact form does not route through any server or third-party service: it builds a
+        <code>mailto:</code> link opened by your own mail client. No financial or sensitive data is
+        collected on this site.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        Under the General Data Protection Regulation (GDPR), you have the right to access, rectify,
+        erase and port your data, as well as the right to object to its processing. To exercise these
+        rights, write to {CONTACT_EMAIL}.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        This site does not currently use advertising tracking cookies or third-party analytics tools.
+        This section will be updated if an audience measurement tool is added.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

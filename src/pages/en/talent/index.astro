@@ -1,0 +1,72 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import CardTalent from "../../../components/cards/CardTalent.astro";
+import CtaContact from "../../../components/sections/CtaContact.astro";
+import { useTranslations, localizedPath, type UiKey } from "../../../i18n/utils";
+import { getEntriesByLang } from "../../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+const talent = await getEntriesByLang("talent", lang);
+const categories = [...new Set(talent.map((person) => person.data.category))];
+---
+
+<BaseLayout lang={lang} title={t("talent.hero.title")} description={t("talent.hero.lead")}>
+  <section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("talent.hero.title")}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{t("talent.hero.lead")}</p>
+      <a
+        href={localizedPath(lang, "/talent/apply")}
+        class="mt-8 inline-flex items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-ink) transition-colors duration-300 hover:bg-(--color-gold-bright)"
+      >
+        {t("talent.cta.apply")}
+      </a>
+    </div>
+  </section>
+
+  <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+    <div class="mx-auto max-w-(--container-content)">
+      {
+        categories.length > 0 && (
+          <div id="talent-filter" class="flex flex-wrap gap-x-6 gap-y-2 border-y border-(--color-line) py-6">
+            <button type="button" data-filter="all" class="label-tracked text-(--color-gold)">
+              {t("talent.filter.all")}
+            </button>
+            {categories.map((category) => (
+              <button type="button" data-filter={category} class="label-tracked text-(--color-paper)/50">
+                {t(`talent.category.${category}` as UiKey)}
+              </button>
+            ))}
+          </div>
+        )
+      }
+
+      {
+        talent.length > 0 ? (
+          <div id="talent-grid" class="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+            {talent.map((person, i) => (
+              <div data-category={person.data.category}>
+                <CardTalent lang={lang} talent={person} index={i} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p class="mt-14 text-(--color-paper)/60">{t("talent.empty")}</p>
+        )
+      }
+    </div>
+  </section>
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../../scripts/gsap/scroll-choreography";
+  import { initTalentFilter } from "../../../scripts/filters/talent-filter";
+  initScrollChoreography();
+  initTalentFilter();
+</script>

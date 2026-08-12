@@ -1,0 +1,53 @@
+---
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const divisions = [
+  { key: "talent", href: "/talent" },
+  { key: "creative", href: "/creative" },
+  { key: "consulting", href: "/consulting" },
+] as const;
+---
+
+<section class="bg-(--color-ink) py-24 md:py-32">
+  <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+    <div class="max-w-2xl" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.divisions.eyebrow")}</p>
+      <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+        {t("home.divisions.title")}
+      </h2>
+    </div>
+
+    <div class="mt-16 grid grid-cols-1 border-t border-(--color-line) md:grid-cols-3">
+      {
+        divisions.map((division, i) => (
+          <a
+            href={localizedPath(lang, division.href)}
+            class="group flex flex-col justify-between border-b border-(--color-line) px-1 py-10 transition-colors duration-300 md:border-b-0 md:border-r md:px-8 md:last:border-r-0"
+            data-reveal
+            data-reveal-delay={String(i * 0.1)}
+          >
+            <div>
+              <span class="label-tracked text-(--color-paper)/40">0{i + 1}</span>
+              <h3 class="font-display mt-6 text-3xl text-(--color-paper) transition-colors duration-300 group-hover:text-(--color-gold)">
+                {t(`division.${division.key}.name` as UiKey)}
+              </h3>
+              <p class="mt-4 max-w-xs text-(--color-paper)/60">
+                {t(`division.${division.key}.tagline` as UiKey)}
+              </p>
+            </div>
+            <span class="label-tracked mt-10 inline-flex items-center gap-2 text-(--color-paper)/50 transition-colors duration-300 group-hover:text-(--color-gold)">
+              {t("common.readMore")} &rarr;
+            </span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</section>

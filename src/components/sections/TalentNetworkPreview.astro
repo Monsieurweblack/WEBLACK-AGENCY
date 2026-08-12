@@ -1,0 +1,42 @@
+---
+import CardTalent from "../cards/CardTalent.astro";
+import type { TalentEntry } from "../../lib/content";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  talent: TalentEntry[];
+}
+
+const { lang, talent } = Astro.props;
+const t = useTranslations(lang);
+---
+
+{
+  talent.length > 0 && (
+    <section class="bg-(--color-ink) py-24 md:py-32">
+      <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+        <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+          <div class="max-w-2xl">
+            <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.talentnetwork.eyebrow")}</p>
+            <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+              {t("home.talentnetwork.title")}
+            </h2>
+          </div>
+          <a
+            href={localizedPath(lang, "/talent")}
+            class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+          >
+            {t("home.talentnetwork.cta")} &rarr;
+          </a>
+        </div>
+
+        <div class="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+          {talent.map((person, i) => (
+            <CardTalent lang={lang} talent={person} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

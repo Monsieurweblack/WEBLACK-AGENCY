@@ -1,0 +1,139 @@
+---
+import { Image } from "astro:assets";
+import LanguageSwitcher from "./LanguageSwitcher.astro";
+import SocialLinks from "./SocialLinks.astro";
+import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const navItems = [
+  { label: t("nav.about"), href: "/about" },
+  { label: t("nav.talent"), href: "/talent" },
+  { label: t("nav.creative"), href: "/creative" },
+  { label: t("nav.consulting"), href: "/consulting" },
+  { label: t("nav.selectedwork"), href: "/selected-work" },
+  { label: t("nav.journal"), href: "/journal" },
+  { label: t("nav.responsibility"), href: "/responsibility" },
+].map((item) => ({ ...item, href: localizedPath(lang, item.href) }));
+
+const homeHref = localizedPath(lang, "/");
+const contactHref = localizedPath(lang, "/contact");
+---
+
+<header
+  id="site-header"
+  class="fixed inset-x-0 top-0 z-50 transition-colors duration-500"
+  data-header
+>
+  <div
+    class="mx-auto flex max-w-(--container-content) items-center justify-between px-6 py-5 md:px-10"
+  >
+    <a
+      href={homeHref}
+      class="flex items-center gap-3 transition-opacity hover:opacity-80"
+    >
+      <Image src={weblackIcon} alt="WEBLACK" width={34} height={34} loading="eager" />
+      <span class="font-display text-lg tracking-[0.05em] text-(--color-paper)">WEBLACK</span>
+    </a>
+
+    <div class="flex items-center gap-3">
+      <a
+        href={contactHref}
+        class="label-tracked hidden text-(--color-paper) transition-colors hover:text-(--color-gold) sm:inline-flex"
+      >
+        {t("nav.contact")}
+      </a>
+      <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" />
+      <button
+        type="button"
+        id="menu-trigger"
+        class="label-tracked inline-flex items-center gap-3 border border-(--color-line) px-4 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="site-menu"
+        data-close-label={t("nav.close")}
+      >
+        <span data-menu-label>{t("nav.menu")}</span>
+        <span class="relative block h-3 w-5" aria-hidden="true">
+          <span
+            class="absolute left-0 top-0 block h-px w-5 bg-current transition-transform duration-300"
+            data-menu-bar-top></span>
+          <span
+            class="absolute bottom-0 left-0 block h-px w-5 bg-current transition-transform duration-300"
+            data-menu-bar-bottom></span>
+        </span>
+      </button>
+    </div>
+  </div>
+  <noscript>
+    <nav
+      class="border-t border-(--color-line) bg-(--color-ink) px-6 py-4 md:px-10"
+      aria-label="Navigation principale"
+    >
+      <ul class="flex flex-wrap gap-x-6 gap-y-2">
+        {
+          navItems.map((item) => (
+            <li>
+              <a href={item.href} class="label-tracked text-(--color-paper)">
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a href={contactHref} class="label-tracked text-(--color-gold)">
+            {t("nav.contact")}
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </noscript>
+</header>
+
+<div
+  id="site-menu"
+  class="fixed inset-0 z-40 flex flex-col justify-center bg-(--color-ink) opacity-0 pointer-events-none"
+  data-menu-panel
+  aria-hidden="true"
+  inert
+>
+  <nav
+    class="mx-auto flex w-full max-w-(--container-content) flex-col gap-4 px-6 md:px-10"
+    aria-label="Navigation principale"
+  >
+    {
+      navItems.map((item, i) => (
+        <a
+          href={item.href}
+          class="menu-link translate-y-4 font-display text-4xl text-(--color-paper) opacity-0 transition-colors duration-300 hover:text-(--color-gold) sm:text-6xl lg:text-7xl"
+          style={`transition-delay:${i * 40}ms`}
+        >
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+  <div
+    class="mx-auto mt-12 flex w-full max-w-(--container-content) items-center justify-between gap-6 border-t border-(--color-line) px-6 pt-8 md:px-10"
+  >
+    <a
+      href={contactHref}
+      class="label-tracked text-(--color-paper) transition-colors hover:text-(--color-gold)"
+    >
+      {t("nav.contact")}
+    </a>
+    <SocialLinks class="hidden sm:flex" />
+    <LanguageSwitcher lang={lang} />
+  </div>
+</div>
+
+<script>
+  import { initNav } from "../../scripts/gsap/nav";
+  initNav();
+</script>

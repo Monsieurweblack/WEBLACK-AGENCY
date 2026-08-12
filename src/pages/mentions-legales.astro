@@ -1,0 +1,108 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { useTranslations, localizedPath } from "../i18n/utils";
+import { CONTACT_EMAIL } from "../lib/contact";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t("footer.mentions")}>
+  <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
+      <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.mentions")}</h1>
+
+      <h2>Éditeur du site</h2>
+      <p>
+        WEBLACK AFRICA<br />
+        Société au capital social de 100 000 €<br />
+        Siège social : Paris, France
+      </p>
+      <p>
+        Téléphone : <a href="tel:+330743700063">+33 07 43 70 00 63</a><br />
+        E-mail : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+      </p>
+      <p>
+        Directeur de la publication :<br />
+        Deo-Gratias Kpodo, Founder &amp; Creative Director
+      </p>
+
+      <h2>Hébergement</h2>
+      <p>Le présent site est hébergé par :</p>
+      <p>
+        HOSTINGER INTERNATIONAL LIMITED<br />
+        61 Lordou Vironos Street<br />
+        6023 Larnaca<br />
+        Chypre
+      </p>
+      <p>
+        Hostinger International Limited est une société de droit chypriote. Les conditions actuelles
+        de Hostinger identifient cette entité comme l'entité contractante pour les pays de l'Union
+        européenne non compris dans leurs groupes spécifiques.
+      </p>
+
+      <h2>Propriété intellectuelle</h2>
+      <p>
+        L'ensemble des contenus présents sur ce site, notamment les textes, photographies, éléments
+        graphiques, logos, vidéos, créations, marques et autres éléments visuels, est protégé par les
+        dispositions applicables en matière de propriété intellectuelle.
+      </p>
+      <p>
+        Sauf autorisation préalable et écrite de WEBLACK AFRICA, toute reproduction, représentation,
+        modification, adaptation, distribution ou exploitation, totale ou partielle, de ces contenus
+        est interdite.
+      </p>
+      <p>
+        La marque WEBLACK AFRICA, son identité visuelle, ses logos et éléments graphiques sont
+        protégés et ne peuvent être utilisés sans autorisation.
+      </p>
+
+      <h2>Responsabilité</h2>
+      <p>
+        WEBLACK AFRICA s'efforce d'assurer l'exactitude et la mise à jour des informations publiées
+        sur le site. Toutefois, l'agence ne saurait garantir l'exhaustivité, l'exactitude ou l'absence
+        d'erreurs dans l'ensemble des contenus proposés.
+      </p>
+      <p>
+        WEBLACK AFRICA ne pourra être tenue responsable des dommages résultant de l'utilisation du
+        site ou de l'impossibilité temporaire d'y accéder.
+      </p>
+
+      <h2>Données personnelles</h2>
+      <p>
+        Les éventuelles données personnelles collectées par l'intermédiaire du site sont traitées
+        conformément à notre{" "}
+        <a href={localizedPath(lang, "/politique-de-confidentialite")}>Politique de confidentialité</a>.
+      </p>
+      <p>
+        Pour toute question relative au traitement de vos données personnelles ou à l'exercice de vos
+        droits, vous pouvez nous contacter à l'adresse : <a href="mailto:weblackmedias@gmail.com">weblackmedias@gmail.com</a>
+      </p>
+
+      <h2>Propriété intellectuelle et contrefaçons</h2>
+      <p>
+        WEBLACK AFRICA est propriétaire des droits de propriété intellectuelle et détient les droits
+        d'usage sur tous les éléments accessibles sur le site internet, notamment les textes, images,
+        graphismes, logos, vidéos, icônes et sons. Toute reproduction, représentation, modification,
+        publication, adaptation de tout ou partie des éléments du site, quel que soit le moyen ou le
+        procédé utilisé, est interdite, sauf autorisation écrite préalable de{" "}
+        <a href="https://www.weblack.fr" target="_blank" rel="noopener noreferrer">www.weblack.fr</a>.
+        Toute exploitation non autorisée du site ou de l'un quelconque des éléments qu'il contient sera
+        considérée comme constitutive d'une contrefaçon et poursuivie conformément aux dispositions des
+        articles L.335-2 et suivants du Code de Propriété Intellectuelle.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        Le site peut utiliser des cookies ou technologies similaires nécessaires à son fonctionnement
+        et, le cas échéant, destinés à améliorer l'expérience utilisateur ou à mesurer son audience.
+      </p>
+      <p>
+        Les modalités d'utilisation de ces technologies sont précisées dans notre Politique de
+        cookies.
+      </p>
+
+      <p class="text-sm text-(--color-ink)/50">Dernière mise à jour : août 2026</p>
+    </div>
+  </section>
+</BaseLayout>

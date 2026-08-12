@@ -1,0 +1,64 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import RemoteImage from "../components/media/RemoteImage.astro";
+import CtaContact from "../components/sections/CtaContact.astro";
+import { useTranslations, localizedPath } from "../i18n/utils";
+import { getEntriesByLang } from "../lib/content";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+const partners = await getEntriesByLang("partners", lang);
+---
+
+<BaseLayout lang={lang} title={t("partners.hero.title")} description={t("partners.hero.lead")}>
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("partners.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("partners.hero.title")}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{t("partners.hero.lead")}</p>
+    </div>
+  </section>
+
+  <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+    <div class="mx-auto max-w-(--container-content) divide-y divide-(--color-line) border-t border-(--color-line)">
+      {
+        partners.map((partner, i) => (
+          <div class="grid grid-cols-1 gap-8 py-14 lg:grid-cols-[1fr_1.4fr] lg:items-center" data-reveal data-reveal-delay={String(i * 0.08)}>
+            <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
+              <RemoteImage
+                src={partner.data.coverImage.url}
+                alt={partner.data.coverImage.alt}
+                width={900}
+                height={675}
+                credit={partner.data.coverImage.credit}
+                class="h-full w-full"
+              />
+            </div>
+            <div>
+              <p class="label-tracked text-(--color-gold)">{partner.data.location.city}, {partner.data.location.country}</p>
+              <h2 class="font-display mt-3 text-2xl text-(--color-paper)">{partner.data.name}</h2>
+              <p class="mt-4 text-(--color-paper)/70">{partner.data.description}</p>
+              {partner.data.relatedWorkSlug && (
+                <a
+                  href={localizedPath(lang, `/selected-work/${partner.data.relatedWorkSlug}`)}
+                  class="label-tracked mt-6 inline-flex items-center gap-2 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+                >
+                  {t("partners.cta")} &rarr;
+                </a>
+              )}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

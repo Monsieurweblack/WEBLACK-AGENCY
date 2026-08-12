@@ -1,0 +1,33 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  lead?: string;
+  buttonLabel?: string;
+}
+
+const { lang, title, lead, buttonLabel } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<section class="bg-(--color-ink) py-24 md:py-32">
+  <div
+    class="mx-auto flex max-w-(--container-content) flex-col items-start gap-8 border-t border-(--color-line) px-6 pt-16 md:flex-row md:items-end md:justify-between md:px-10"
+    data-reveal
+  >
+    <div>
+      <h2 class="font-display max-w-2xl text-4xl text-(--color-paper) sm:text-5xl">
+        {title ?? t("home.contact.title")}
+      </h2>
+      <p class="mt-5 max-w-lg text-(--color-paper)/70">{lead ?? t("home.contact.lead")}</p>
+    </div>
+    <a
+      href={localizedPath(lang, "/contact")}
+      class="inline-flex shrink-0 items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-ink) transition-colors duration-300 hover:bg-(--color-gold-bright)"
+    >
+      {buttonLabel ?? t("home.contact.cta")}
+    </a>
+  </div>
+</section>

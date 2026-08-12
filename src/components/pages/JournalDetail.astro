@@ -1,0 +1,52 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import CtaContact from "../sections/CtaContact.astro";
+import type { JournalEntry } from "../../lib/content";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  article: JournalEntry;
+}
+
+const { lang, article } = Astro.props;
+const t = useTranslations(lang);
+const date = article.data.publishDate.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+const categoryLabel = t(`journal.category.${article.data.category}` as UiKey);
+---
+
+<article class="bg-(--color-ink)">
+  <div class="mx-auto max-w-3xl px-6 pb-16 pt-40 md:px-10">
+    <a
+      href={localizedPath(lang, "/journal")}
+      class="label-tracked text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+    >
+      &larr; {t("journal.back")}
+    </a>
+    <p class="label-tracked mt-8 text-(--color-gold)">{categoryLabel} · {date}</p>
+    <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+      {article.data.title}
+    </h1>
+    <p class="mt-6 text-lg text-(--color-paper)/70">{article.data.excerpt}</p>
+  </div>
+
+  <div class="mx-auto aspect-[16/9] max-w-5xl overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
+    <RemoteImage
+      src={article.data.coverImage.url}
+      alt={article.data.coverImage.alt}
+      width={1600}
+      height={900}
+      credit={article.data.coverImage.credit}
+      loading="eager"
+      class="h-full w-full"
+    />
+  </div>
+
+  <div class="prose-weblack mx-auto max-w-3xl px-6 py-16 md:px-10" set:html={article.data.bodyHtml} />
+
+  <CtaContact lang={lang} />
+</article>

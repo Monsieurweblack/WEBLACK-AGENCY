@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { useTranslations } from "../i18n/utils";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title="404" noindex>
+  <section class="flex min-h-[70vh] flex-col items-center justify-center bg-(--color-ink) px-6 text-center">
+    <p class="label-tracked text-(--color-gold)">404</p>
+    <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+      {t("notFound.title")}
+    </h1>
+    <a
+      href="/"
+      class="label-tracked mt-8 inline-flex items-center border border-(--color-line) px-6 py-3 text-(--color-paper) transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+    >
+      {t("notFound.cta")}
+    </a>
+  </section>
+</BaseLayout>

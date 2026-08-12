@@ -1,0 +1,64 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { useTranslations } from "../i18n/utils";
+import { CONTACT_EMAIL } from "../lib/contact";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t("footer.privacy")} noindex>
+  <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
+      <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
+
+      <p class="mt-4 text-sm text-(--color-ink)/50">
+        <strong>Page en attente de validation juridique.</strong> Ce texte décrit le traitement des
+        données tel qu'implémenté techniquement sur ce site (formulaire de contact) et doit être
+        revu par un conseil avant mise en ligne, notamment sur les mentions relatives à l'éditeur.
+      </p>
+
+      <h2>Responsable de traitement</h2>
+      <p>
+        WEBLACK, [forme juridique et adresse à compléter], est responsable du traitement des
+        données collectées via ce site. Contact : {CONTACT_EMAIL}.
+      </p>
+
+      <h2>Données collectées</h2>
+      <p>
+        Le formulaire de contact du site ouvre directement votre messagerie personnelle, pré-remplie
+        avec votre nom, votre adresse e-mail, votre organisation (facultatif), le profil sélectionné
+        et votre message : c'est vous qui envoyez ensuite ce message, depuis votre propre
+        boîte mail, vers {CONTACT_EMAIL}. Aucune donnée n'est collectée, stockée ou transmise à un
+        tiers par le site lui-même. Aucune autre donnée personnelle n'est collectée par le site.
+      </p>
+
+      <h2>Finalité et durée de conservation</h2>
+      <p>
+        Les messages ainsi envoyés sont utilisés exclusivement pour répondre à votre demande. Ils sont
+        conservés dans la messagerie de WEBLACK le temps nécessaire au traitement de la demande,
+        puis supprimés ou archivés conformément aux obligations légales applicables.
+      </p>
+
+      <h2>Sous-traitant technique</h2>
+      <p>
+        Le formulaire de contact ne transite par aucun serveur ni prestataire tiers : il construit un
+        lien <code>mailto:</code> ouvert par votre propre client de messagerie. Aucune donnée bancaire
+        ou sensible n'est collectée sur ce site.
+      </p>
+
+      <h2>Vos droits</h2>
+      <p>
+        Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez d'un
+        droit d'accès, de rectification, d'effacement et de portabilité de vos données, ainsi que du
+        droit de vous opposer à leur traitement. Pour exercer ces droits, écrivez à {CONTACT_EMAIL}.
+      </p>
+
+      <h2>Cookies</h2>
+      <p>
+        Ce site n'utilise pas de cookies de suivi publicitaire ni d'outils d'analyse tiers à ce jour.
+        Cette section sera mise à jour si un outil de mesure d'audience est ajouté.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import JournalDetail from "../../components/pages/JournalDetail.astro";
+import { useTranslations } from "../../i18n/utils";
+import { getEntriesByLang } from "../../lib/content";
+
+export async function getStaticPaths() {
+  const entries = await getEntriesByLang("journal", "fr");
+  return entries.map((article) => ({ params: { slug: article.data.slug }, props: { article } }));
+}
+
+const { article } = Astro.props;
+const lang = "fr" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout
+  lang={lang}
+  title={`${article.data.title} — ${t("nav.journal")}`}
+  description={article.data.excerpt}
+  image={article.data.coverImage.url}
+>
+  <JournalDetail lang={lang} article={article} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>
