@@ -17,7 +17,12 @@ export function initContactForm() {
   const labelName = form.dataset.labelName || "Nom";
   const labelEmail = form.dataset.labelEmail || "E-mail";
   const labelOrganisation = form.dataset.labelOrganisation || "Organisation";
+  const labelRole = form.dataset.labelRole || "Fonction";
+  const labelCountry = form.dataset.labelCountry || "Pays";
   const labelProfile = form.dataset.labelProfile || "Profil";
+  const labelInterest = form.dataset.labelInterest || "Intérêt";
+  const labelTimeline = form.dataset.labelTimeline || "Calendrier";
+  const labelBudget = form.dataset.labelBudget || "Budget";
 
   function setStatus(kind: "idle" | "submitting" | "success" | "error") {
     if (!status) return;
@@ -35,7 +40,12 @@ export function initContactForm() {
     const name = String(data.get("name") || "");
     const email = String(data.get("email") || "");
     const organisation = String(data.get("organisation") || "");
+    const role = String(data.get("role") || "");
+    const country = String(data.get("country") || "");
     const profileLabel = String(data.get("profileLabel") || "");
+    const interest = String(data.get("interest") || "");
+    const timeline = String(data.get("timeline") || "");
+    const budget = String(data.get("budget") || "");
     const message = String(data.get("message") || "");
 
     const subject = `[WEBLACK] ${profileLabel} — ${name}`;
@@ -43,7 +53,12 @@ export function initContactForm() {
       `${labelName}: ${name}`,
       `${labelEmail}: ${email}`,
       organisation ? `${labelOrganisation}: ${organisation}` : null,
+      role ? `${labelRole}: ${role}` : null,
+      country ? `${labelCountry}: ${country}` : null,
       profileLabel ? `${labelProfile}: ${profileLabel}` : null,
+      interest ? `${labelInterest}: ${interest}` : null,
+      timeline ? `${labelTimeline}: ${timeline}` : null,
+      budget ? `${labelBudget}: ${budget}` : null,
       "",
       message,
     ].filter((line): line is string => line !== null);
@@ -54,6 +69,12 @@ export function initContactForm() {
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+
+    // Honeypot: a filled hidden field means a bot filled every input blindly.
+    // Real visitors never see or touch it — silently drop the submission.
+    const honeypot = form.querySelector<HTMLInputElement>('input[name="website"]');
+    if (honeypot?.value) return;
+
     if (!form.checkValidity() || !contactEmail) {
       form.reportValidity();
       setStatus("error");

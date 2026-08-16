@@ -3,11 +3,17 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import CardTalent from "../../../components/cards/CardTalent.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
 import { useTranslations, localizedPath, type UiKey } from "../../../i18n/utils";
-import { getEntriesByLang } from "../../../lib/content";
+import type { TalentEntry } from "../../../lib/content";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
-const talent = await getEntriesByLang("talent", lang);
+/**
+ * The Talent collection in Sanity currently only contains seed/demo entries
+ * (stock portraits, no verified WEBLACK talent) — publishing them here would
+ * violate the no-fabrication rule, so the public grid is suppressed until
+ * real, verified profiles are published in the CMS.
+ */
+const talent: TalentEntry[] = [];
 const categories = [...new Set(talent.map((person) => person.data.category))];
 ---
 
@@ -49,7 +55,7 @@ const categories = [...new Set(talent.map((person) => person.data.category))];
         talent.length > 0 ? (
           <div id="talent-grid" class="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {talent.map((person, i) => (
-              <div data-category={person.data.category}>
+              <div data-category={person.data.category} class="min-w-0">
                 <CardTalent lang={lang} talent={person} index={i} />
               </div>
             ))}

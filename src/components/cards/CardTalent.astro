@@ -13,7 +13,7 @@ const { lang, talent, index = 0 } = Astro.props;
 const href = localizedPath(lang, `/talent/${talent.data.slug}`);
 ---
 
-<a href={href} class="group block" data-reveal data-reveal-delay={String((index % 4) * 0.06)}>
+<a href={href} class="group block min-w-0" data-reveal data-reveal-delay={String((index % 4) * 0.06)}>
   <div class="aspect-[3/4] overflow-hidden bg-(--color-ink-soft)">
     <RemoteImage
       src={talent.data.portraitImage.url}

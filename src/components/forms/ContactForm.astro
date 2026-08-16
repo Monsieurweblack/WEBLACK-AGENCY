@@ -24,12 +24,23 @@ const t = useTranslations(lang);
   data-label-name={t("contact.form.mailto.name")}
   data-label-email={t("contact.form.mailto.email")}
   data-label-organisation={t("contact.form.mailto.organisation")}
+  data-label-role={t("contact.form.mailto.role")}
+  data-label-country={t("contact.form.mailto.country")}
   data-label-profile={t("contact.form.mailto.profile")}
+  data-label-interest={t("contact.form.mailto.interest")}
+  data-label-timeline={t("contact.form.mailto.timeline")}
+  data-label-budget={t("contact.form.mailto.budget")}
   data-label-message={t("contact.form.mailto.message")}
   class="space-y-6"
   novalidate
 >
   <input type="hidden" id="contact-profile" name="profile" value="" />
+
+  <!-- Honeypot: hidden from real visitors, left empty by them; a filled value marks the submission as spam. -->
+  <div class="absolute left-[-9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+    <label for="website">Website</label>
+    <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+  </div>
 
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div>
@@ -56,17 +67,58 @@ const t = useTranslations(lang);
     </div>
   </div>
 
-  <div>
-    <label for="organisation" class="label-tracked text-(--color-paper)/70">
-      {t("contact.form.organisation")}
-    </label>
-    <input
-      type="text"
-      id="organisation"
-      name="organisation"
-      autocomplete="organization"
-      class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
-    />
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div>
+      <label for="organisation" class="label-tracked text-(--color-paper)/70">
+        {t("contact.form.organisation")}
+      </label>
+      <input
+        type="text"
+        id="organisation"
+        name="organisation"
+        autocomplete="organization"
+        class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+      />
+    </div>
+    <div>
+      <label for="role" class="label-tracked text-(--color-paper)/70">{t("contact.form.role")}</label>
+      <input
+        type="text"
+        id="role"
+        name="role"
+        autocomplete="organization-title"
+        class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+      />
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div>
+      <label for="country" class="label-tracked text-(--color-paper)/70">{t("contact.form.country")}</label>
+      <input
+        type="text"
+        id="country"
+        name="country"
+        required
+        autocomplete="country-name"
+        class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+      />
+    </div>
+    <div>
+      <label for="interest" class="label-tracked text-(--color-paper)/70">{t("contact.form.interest")}</label>
+      <select
+        id="interest"
+        name="interest"
+        required
+        class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+      >
+        <option value="" disabled selected>{t("contact.form.interest.placeholder")}</option>
+        <option value={t("contact.form.interest.talent")}>{t("contact.form.interest.talent")}</option>
+        <option value={t("contact.form.interest.creative")}>{t("contact.form.interest.creative")}</option>
+        <option value={t("contact.form.interest.consulting")}>{t("contact.form.interest.consulting")}</option>
+        <option value={t("contact.form.interest.other")}>{t("contact.form.interest.other")}</option>
+      </select>
+    </div>
   </div>
 
   <div>
@@ -78,6 +130,32 @@ const t = useTranslations(lang);
       required
       class="mt-2 w-full resize-none border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
     ></textarea>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div>
+      <label for="timeline" class="label-tracked text-(--color-paper)/70">{t("contact.form.timeline")}</label>
+      <select
+        id="timeline"
+        name="timeline"
+        class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+      >
+        <option value="" selected>{t("contact.form.timeline.placeholder")}</option>
+        <option value={t("contact.form.timeline.asap")}>{t("contact.form.timeline.asap")}</option>
+        <option value={t("contact.form.timeline.3months")}>{t("contact.form.timeline.3months")}</option>
+        <option value={t("contact.form.timeline.later")}>{t("contact.form.timeline.later")}</option>
+        <option value={t("contact.form.timeline.tbd")}>{t("contact.form.timeline.tbd")}</option>
+      </select>
+    </div>
+    <div>
+      <label for="budget" class="label-tracked text-(--color-paper)/70">{t("contact.form.budget")}</label>
+      <input
+        type="text"
+        id="budget"
+        name="budget"
+        class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+      />
+    </div>
   </div>
 
   <div class="flex flex-wrap items-center gap-6 pt-2">

@@ -2,11 +2,13 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import TalentDetail from "../../components/pages/TalentDetail.astro";
 import { useTranslations } from "../../i18n/utils";
-import { getEntriesByLang } from "../../lib/content";
 
+/**
+ * No pages are generated until real, verified talent profiles exist in
+ * Sanity — see src/pages/talent/index.astro for why.
+ */
 export async function getStaticPaths() {
-  const entries = await getEntriesByLang("talent", "fr");
-  return entries.map((talent) => ({ params: { slug: talent.data.slug }, props: { talent } }));
+  return [];
 }
 
 const { talent } = Astro.props;

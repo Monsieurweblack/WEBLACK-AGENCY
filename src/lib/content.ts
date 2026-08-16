@@ -245,14 +245,6 @@ export async function getEntryBySlugAndLang<C extends CollectionKey>(
   return doc ? mapEntry(collection, doc) : undefined;
 }
 
-export async function getTranslation<C extends CollectionKey>(
-  collection: C,
-  slug: string,
-  targetLang: Lang,
-): Promise<CollectionMap[C] | undefined> {
-  return getEntryBySlugAndLang(collection, slug, targetLang);
-}
-
 export async function getFeatured<C extends CollectionKey>(
   collection: C,
   lang: Lang,

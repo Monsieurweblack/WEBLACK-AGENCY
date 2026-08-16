@@ -1,10 +1,16 @@
 ---
+import weblackMark from "../../assets/logo/weblack-mark-gold-64.png";
+
 /**
  * Wrapper for two image sources: hotlinked Unsplash URLs (astro:assets can't
  * optimize remote URLs without remotePatterns, so we build a srcset from
  * Unsplash's own resize query params instead) and local WEBLACK photos
  * pre-sized into public/photos/ (served as-is — they don't support on-the-fly
  * resize params, so no srcset is generated for those).
+ *
+ * Falls back to a plain on-brand placeholder (never a stock/generic image)
+ * when the source 404s — real WEBLACK photography is still pending for most
+ * placements, and a broken-image icon isn't an acceptable substitute.
  */
 interface Credit {
   photographer: string;
@@ -65,7 +71,11 @@ const finalSrc = isRemote ? withWidth(src, width) : src;
     decoding="async"
     fetchpriority={fetchpriority}
     class="block h-full w-full object-cover"
+    onerror="this.style.display='none';this.nextElementSibling?.removeAttribute('hidden')"
   />
+  <div hidden class="absolute inset-0 flex items-center justify-center bg-(--color-ink-soft)">
+    <img src={weblackMark.src} alt="" width="28" height="28" class="opacity-30" />
+  </div>
   {
     credit && (
       <figcaption class="sr-only">

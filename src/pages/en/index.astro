@@ -5,7 +5,7 @@ import ManifestoQuote from "../../components/sections/ManifestoQuote.astro";
 import DivisionsGrid from "../../components/sections/DivisionsGrid.astro";
 import SelectedWorkPreview from "../../components/sections/SelectedWorkPreview.astro";
 import Perspective from "../../components/sections/Perspective.astro";
-import TalentNetworkPreview from "../../components/sections/TalentNetworkPreview.astro";
+import TeamPreview from "../../components/sections/TeamPreview.astro";
 import JournalPreview from "../../components/sections/JournalPreview.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
 import { getEntriesByLang, getFeatured, sortByDateDesc } from "../../lib/content";
@@ -19,7 +19,6 @@ const heroImage = {
 };
 
 const featuredWork = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
-const featuredTalent = (await getFeatured("talent", lang)).slice(0, 4);
 const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).slice(0, 3);
 ---
 
@@ -29,7 +28,7 @@ const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).sl
   <DivisionsGrid lang={lang} />
   <SelectedWorkPreview lang={lang} work={featuredWork} />
   <Perspective lang={lang} />
-  <TalentNetworkPreview lang={lang} talent={featuredTalent} />
+  <TeamPreview lang={lang} />
   <JournalPreview lang={lang} articles={latestJournal} />
   <CtaContact lang={lang} />
 </BaseLayout>

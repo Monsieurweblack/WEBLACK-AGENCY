@@ -69,14 +69,28 @@ const steps = [1, 2, 3, 4, 5] as const;
     </div>
   </section>
 
-  <section class="bg-(--color-ink) px-6 py-20 md:px-10 md:py-28">
-    <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-16 border-t border-(--color-line) pt-16 lg:grid-cols-[1fr_1.4fr]">
-      <div data-reveal>
-        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.founder.eyebrow")}</p>
-        <h2 class="font-display mt-4 text-3xl text-(--color-paper)">{t("about.founder.name")}</h2>
-        <p class="label-tracked mt-2 text-(--color-paper)/50">{t("about.founder.role")}</p>
+  <section id="equipe" class="scroll-mt-24 bg-(--color-ink) px-6 py-20 md:px-10 md:py-28">
+    <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) pt-16">
+      <div class="max-w-2xl" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.team.eyebrow")}</p>
+        <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{t("about.team.title")}</h2>
       </div>
-      <div data-reveal data-reveal-delay="0.1">
+
+      <div class="mt-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div data-reveal data-reveal-delay="0.05">
+          <div class="flex aspect-[3/4] items-center justify-center border border-(--color-line) bg-(--color-ink-soft)">
+            <span class="label-tracked px-6 text-center text-(--color-paper)/30">{t("about.team.portraitPending")}</span>
+          </div>
+          <h3 class="font-display mt-5 text-xl text-(--color-paper)">{t("about.founder.name")}</h3>
+          <p class="label-tracked mt-1 text-(--color-gold)/80">{t("about.founder.role")}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-(--color-ink) px-6 pb-20 md:px-10 md:pb-28">
+    <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) pt-16">
+      <div data-reveal>
         <h3 class="font-display text-2xl text-(--color-paper)">{t("about.network.title")}</h3>
         <p class="mt-4 max-w-xl text-(--color-paper)/70">{t("about.network.body")}</p>
       </div>
