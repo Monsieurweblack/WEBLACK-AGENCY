@@ -1,5 +1,6 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
+import weblackSymbol from "../../assets/logo/weblack-symbol-clean.png";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 
 interface Props {
@@ -39,8 +40,17 @@ const t = useTranslations(lang);
     <div class="absolute inset-0 bg-(--color-ink)/20"></div>
   </div>
 
-  <div class="pointer-events-none absolute inset-0" data-hero-canvas-wrap aria-hidden="true">
-    <canvas id="hero-canvas" class="h-full w-full"></canvas>
+  <div
+    class="pointer-events-none absolute inset-x-0 top-[9%] z-[4] mx-auto w-[62vw] max-w-[360px] opacity-80 sm:top-[10%] sm:w-[44vw] sm:max-w-[420px] sm:opacity-90 lg:inset-x-auto lg:right-[-2%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] lg:-translate-y-1/2 lg:opacity-100"
+    aria-hidden="true"
+  >
+    <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
+    <div
+      data-hero-mark
+      style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${weblackSymbol.src}); mask-image: url(${weblackSymbol.src});`}
+      class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
+    >
+    </div>
   </div>
 
   <div
@@ -79,13 +89,35 @@ const t = useTranslations(lang);
   </div>
 </section>
 
-<script>
-  import { initHeroScene } from "../../scripts/three/hero-scene";
-
-  const canvas = document.getElementById("hero-canvas") as HTMLCanvasElement | null;
-  if (canvas) {
-    initHeroScene(canvas).catch(() => {
-      canvas.style.display = "none";
-    });
+<style>
+  .hero-symbol {
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    background: radial-gradient(
+      circle at 35% 28%,
+      var(--color-gold-bright),
+      var(--color-gold) 55%,
+      var(--color-gold-dim) 100%
+    );
   }
-</script>
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-hero-mark] {
+      animation: hero-mark-drift 28s ease-in-out infinite;
+    }
+  }
+
+  @keyframes hero-mark-drift {
+    0%,
+    100% {
+      transform: rotate(-1deg) scale(1);
+    }
+    50% {
+      transform: rotate(1deg) scale(1.015);
+    }
+  }
+</style>
