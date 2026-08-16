@@ -105,10 +105,8 @@ const t = useTranslations(lang);
     );
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    [data-hero-mark] {
-      animation: hero-mark-drift 28s ease-in-out infinite;
-    }
+  [data-hero-mark] {
+    animation: hero-mark-drift 28s ease-in-out infinite;
   }
 
   @keyframes hero-mark-drift {
@@ -118,6 +116,12 @@ const t = useTranslations(lang);
     }
     50% {
       transform: rotate(1deg) scale(1.015);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-hero-mark] {
+      animation: none;
     }
   }
 </style>
