@@ -107,13 +107,13 @@ const contactHref = localizedPath(lang, "/contact");
 
 <div
   id="site-menu"
-  class="fixed inset-0 z-40 flex flex-col justify-center bg-(--color-ink) opacity-0 pointer-events-none"
+  class="fixed inset-0 z-40 flex flex-col justify-start pt-32 bg-(--color-ink) opacity-0 pointer-events-none sm:justify-center sm:pt-0"
   data-menu-panel
   aria-hidden="true"
   inert
 >
   <nav
-    class="mx-auto flex w-full max-w-(--container-content) flex-col gap-4 px-6 md:px-10"
+    class="mx-auto flex w-full max-w-(--container-content) flex-col gap-3 px-6 sm:gap-4 md:px-10"
     aria-label={t("nav.ariaLabel")}
   >
     {
@@ -130,7 +130,7 @@ const contactHref = localizedPath(lang, "/contact");
     }
   </nav>
   <div
-    class="mx-auto mt-12 flex w-full max-w-(--container-content) items-center justify-between gap-6 border-t border-(--color-line) px-6 pt-8 md:px-10"
+    class="mx-auto mt-8 flex w-full max-w-(--container-content) items-center justify-between gap-6 border-t border-(--color-line) px-6 pt-8 md:mt-12 md:px-10"
   >
     <a
       href={contactHref}
