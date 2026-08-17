@@ -1,22 +1,26 @@
 ---
 import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
-import type { LiveEventEntry } from "../../lib/content";
+import type { LiveEventConfig } from "../../data/live";
 
 interface Props {
   lang: Lang;
-  event: LiveEventEntry;
+  event: LiveEventConfig;
 }
 
 const { lang, event } = Astro.props;
 const t = useTranslations(lang);
-const { title, description, youtubeVideoId, status, scheduledStart, showChat } = event.data;
+const { status, youtubeVideoId, showChat, scheduledStart } = event;
+const title = event.title[lang];
+const description = event.description[lang];
 
 const embedDomain = Astro.site ? new URL(Astro.site).hostname : Astro.url.hostname;
 const playerUrl = `https://www.youtube-nocookie.com/embed/${youtubeVideoId}`;
 const chatUrl = `https://www.youtube.com/live_chat?v=${youtubeVideoId}&embed_domain=${embedDomain}`;
 
 const statusLabel = t(`live.status.${status}` as UiKey);
+const showPlayer = status === "live" || status === "replay";
 const showChatPanel = status === "live" && showChat;
+const scheduledDate = scheduledStart ? new Date(scheduledStart) : null;
 const dateFormatter = new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-US", {
   dateStyle: "long",
   timeStyle: "short",
@@ -32,15 +36,15 @@ const dateFormatter = new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-US",
           {statusLabel}
         </span>
         {
-          status === "upcoming" && scheduledStart && (
+          status === "upcoming" && scheduledDate && (
             <span class="text-sm text-(--color-paper)/60">
-              {dateFormatter.format(scheduledStart)}
+              {dateFormatter.format(scheduledDate)}
               {" · "}
               <span class="text-(--color-gold)">{t("live.countdown.label")}</span>
               {" "}
               <span
                 data-countdown
-                data-countdown-target={scheduledStart.toISOString()}
+                data-countdown-target={scheduledDate.toISOString()}
                 data-label-day={t("live.countdown.day")}
                 data-label-hour={t("live.countdown.hour")}
                 data-label-minute={t("live.countdown.minute")}
@@ -53,39 +57,41 @@ const dateFormatter = new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-US",
       {description && <p class="mt-4 max-w-2xl text-(--color-paper)/70">{description}</p>}
     </div>
 
-    <div
-      class:list={[
-        "mt-12 grid grid-cols-1 gap-6",
-        showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
-      ]}
-      data-reveal
-      data-reveal-delay="0.1"
-    >
-      <div class="aspect-video w-full overflow-hidden bg-(--color-ink-soft)">
-        <iframe
-          src={playerUrl}
-          title={title}
-          class="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-          loading="lazy"
-        ></iframe>
-      </div>
-      {
-        showChatPanel ? (
-          <div class="hidden max-h-[640px] overflow-hidden border border-(--color-line) bg-(--color-ink-soft) lg:block">
+    {
+      showPlayer && (
+        <div
+          class:list={[
+            "mt-12 grid grid-cols-1 gap-6",
+            showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
+          ]}
+          data-reveal
+          data-reveal-delay="0.1"
+        >
+          <div class="aspect-video w-full overflow-hidden bg-(--color-ink-soft)">
             <iframe
-              src={chatUrl}
-              title={t("live.chat.title")}
-              class="h-full min-h-[480px] w-full"
+              src={playerUrl}
+              title={title}
+              class="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
               loading="lazy"
             />
           </div>
-        ) : status === "live" && !showChat ? (
-          <p class="text-sm text-(--color-paper)/50">{t("live.chat.unavailable")}</p>
-        ) : null
-      }
-    </div>
+          {showChatPanel ? (
+            <div class="hidden max-h-[640px] overflow-hidden border border-(--color-line) bg-(--color-ink-soft) lg:block">
+              <iframe
+                src={chatUrl}
+                title={t("live.chat.title")}
+                class="h-full min-h-[480px] w-full"
+                loading="lazy"
+              />
+            </div>
+          ) : status === "live" && !showChat ? (
+            <p class="text-sm text-(--color-paper)/50">{t("live.chat.unavailable")}</p>
+          ) : null}
+        </div>
+      )
+    }
   </div>
 </section>
 

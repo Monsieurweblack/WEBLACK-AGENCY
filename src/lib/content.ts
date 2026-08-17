@@ -115,31 +115,6 @@ export interface PartnerData {
   seo?: Seo;
 }
 
-export type LiveStatus = "upcoming" | "live" | "replay";
-
-export interface LiveEventData {
-  slug: string;
-  lang: Lang;
-  title: string;
-  description?: string;
-  youtubeVideoId: string;
-  status: LiveStatus;
-  scheduledStart?: Date;
-  showChat: boolean;
-  seo?: Seo;
-}
-
-export interface VideoData {
-  slug: string;
-  lang: Lang;
-  title: string;
-  youtubeVideoId: string;
-  category?: string;
-  publishDate: Date;
-  featured: boolean;
-  seo?: Seo;
-}
-
 export interface TalentEntry {
   data: TalentData;
 }
@@ -152,20 +127,12 @@ export interface JournalEntry {
 export interface PartnerEntry {
   data: PartnerData;
 }
-export interface LiveEventEntry {
-  data: LiveEventData;
-}
-export interface VideoEntry {
-  data: VideoData;
-}
 
 interface CollectionMap {
   talent: TalentEntry;
   work: WorkEntry;
   journal: JournalEntry;
   partners: PartnerEntry;
-  liveEvent: LiveEventEntry;
-  video: VideoEntry;
 }
 
 export type CollectionKey = keyof CollectionMap;
@@ -247,33 +214,6 @@ function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionM
           location: doc.location,
           coverImage: doc.coverImage,
           relatedWorkSlug: doc.relatedWorkSlug,
-          seo: doc.seo,
-        },
-      } as CollectionMap[C];
-    case "liveEvent":
-      return {
-        data: {
-          slug,
-          lang: doc.lang,
-          title: doc.title,
-          description: doc.description,
-          youtubeVideoId: doc.youtubeVideoId,
-          status: doc.status,
-          scheduledStart: doc.scheduledStart ? new Date(doc.scheduledStart) : undefined,
-          showChat: doc.showChat ?? true,
-          seo: doc.seo,
-        },
-      } as CollectionMap[C];
-    case "video":
-      return {
-        data: {
-          slug,
-          lang: doc.lang,
-          title: doc.title,
-          youtubeVideoId: doc.youtubeVideoId,
-          category: doc.category,
-          publishDate: new Date(doc.publishDate),
-          featured: doc.featured ?? false,
           seo: doc.seo,
         },
       } as CollectionMap[C];

@@ -4,6 +4,7 @@ import LanguageSwitcher from "./LanguageSwitcher.astro";
 import SocialLinks from "./SocialLinks.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { liveEvent } from "../../data/live";
 
 interface Props {
   lang: Lang;
@@ -11,6 +12,7 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
+const isOnAir = liveEvent.status === "live";
 
 const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
@@ -51,8 +53,12 @@ const liveHref = localizedPath(lang, "/live");
     <div class="flex items-center gap-3">
       <a
         href={liveHref}
-        class="label-tracked inline-flex items-center text-(--color-paper) transition-colors hover:text-(--color-gold)"
+        class:list={[
+          "label-tracked inline-flex items-center transition-colors",
+          isOnAir ? "gap-2 live-on-air" : "text-(--color-paper) hover:text-(--color-gold)",
+        ]}
       >
+        {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
         {t("nav.live")}
       </a>
       <a
@@ -103,7 +109,14 @@ const liveHref = localizedPath(lang, "/live");
           ))
         }
         <li>
-          <a href={liveHref} class="label-tracked text-(--color-paper)">
+          <a
+            href={liveHref}
+            class:list={[
+              "label-tracked inline-flex items-center",
+              isOnAir ? "gap-2 live-on-air" : "text-(--color-paper)",
+            ]}
+          >
+            {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
             {t("nav.live")}
           </a>
         </li>
@@ -154,6 +167,39 @@ const liveHref = localizedPath(lang, "/live");
     <LanguageSwitcher lang={lang} class="inline-flex" />
   </div>
 </div>
+
+<style>
+  .live-on-air {
+    color: #e11d2e;
+  }
+
+  .live-on-air-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #e11d2e;
+    animation: live-on-air-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes live-on-air-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 0 0 rgba(225, 29, 46, 0.45);
+    }
+    50% {
+      opacity: 0.55;
+      box-shadow: 0 0 0 4px rgba(225, 29, 46, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-on-air-dot {
+      animation: none;
+    }
+  }
+</style>
 
 <script>
   import { initNav } from "../../scripts/gsap/nav";
