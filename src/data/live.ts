@@ -20,11 +20,11 @@ export interface LiveEventConfig {
  * publish, schedule, or retire a broadcast — no CMS involved.
  */
 export const liveEvent: LiveEventConfig = {
-  status: "offline",
-  youtubeVideoId: "",
+  status: "replay",
+  youtubeVideoId: "Kcs4n93lS60",
   title: {
-    fr: "",
-    en: "",
+    fr: "ZE DEFILE ed.2026 - Diffusion en direct I Salle La Palmeraie PARIS",
+    en: "ZE DEFILE ed.2026 - Diffusion en direct I Salle La Palmeraie PARIS",
   },
   description: {
     fr: "",
