@@ -287,7 +287,7 @@ export const ui = {
     "contact.form.error": "Merci de renseigner tous les champs obligatoires avant d'envoyer.",
     "contact.form.mailto": "Ou écrivez-nous directement à",
     "contact.form.back": "Changer de profil",
-    "contact.info.address.label": "Agence internationale — équipes entre la France et l'Afrique de l'Ouest",
+    "contact.info.address.label": "WEBLACK - Plus de 15 ans d'une passion pour la créativité et l'innovation cultivée par nos collaborateurs à travers le monde.",
     "contact.info.email.label": "E-mail",
 
     "footer.tagline": "Talent. Créativité. Culture.",
@@ -588,7 +588,7 @@ export const ui = {
     "contact.form.error": "Please fill in all required fields before sending.",
     "contact.form.mailto": "Or write to us directly at",
     "contact.form.back": "Change profile",
-    "contact.info.address.label": "International agency — teams between France and West Africa",
+    "contact.info.address.label": "WEBLACK - Over 15 years of a passion for creativity and innovation, cultivated by our people around the world.",
     "contact.info.email.label": "Email",
 
     "footer.tagline": "Talent. Creativity. Culture.",
