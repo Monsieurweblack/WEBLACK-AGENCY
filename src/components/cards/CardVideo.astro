@@ -1,0 +1,53 @@
+---
+import { useTranslations, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  title: string;
+  youtubeVideoId: string;
+  meta?: string;
+  index?: number;
+}
+
+const { lang, title, youtubeVideoId, meta, index = 0 } = Astro.props;
+const t = useTranslations(lang);
+const thumbnail = `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+---
+
+<div class="group" data-reveal data-reveal-delay={String((index % 3) * 0.08)}>
+  <div
+    class="relative aspect-video w-full overflow-hidden bg-(--color-ink-soft)"
+    data-youtube-wrap
+    data-youtube-id={youtubeVideoId}
+    data-youtube-title={title}
+  >
+    <button
+      type="button"
+      data-youtube-trigger
+      class="absolute inset-0 block h-full w-full"
+      aria-label={`${t("live.watch")} — ${title}`}
+    >
+      <img
+        src={thumbnail}
+        alt=""
+        loading="lazy"
+        width="480"
+        height="360"
+        class="h-full w-full object-cover opacity-90 transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
+      />
+      <span
+        class="absolute inset-0 flex items-center justify-center bg-(--color-ink)/20 transition-colors group-hover:bg-(--color-ink)/10"
+      >
+        <span
+          class="flex h-14 w-14 items-center justify-center border border-(--color-paper)/60 bg-(--color-ink)/50 text-(--color-paper) transition-colors group-hover:border-(--color-gold) group-hover:text-(--color-gold)"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <path d="M8 5v14l11-7z"></path>
+          </svg>
+        </span>
+      </span>
+    </button>
+  </div>
+  {meta && <p class="label-tracked mt-4 text-(--color-gold)">{meta}</p>}
+  <h3 class="font-display mt-2 text-xl text-(--color-paper)">{title}</h3>
+</div>

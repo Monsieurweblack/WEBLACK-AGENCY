@@ -1,0 +1,95 @@
+---
+import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import type { LiveEventEntry } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  event: LiveEventEntry;
+}
+
+const { lang, event } = Astro.props;
+const t = useTranslations(lang);
+const { title, description, youtubeVideoId, status, scheduledStart, showChat } = event.data;
+
+const embedDomain = Astro.site ? new URL(Astro.site).hostname : Astro.url.hostname;
+const playerUrl = `https://www.youtube-nocookie.com/embed/${youtubeVideoId}`;
+const chatUrl = `https://www.youtube.com/live_chat?v=${youtubeVideoId}&embed_domain=${embedDomain}`;
+
+const statusLabel = t(`live.status.${status}` as UiKey);
+const showChatPanel = status === "live" && showChat;
+const dateFormatter = new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-US", {
+  dateStyle: "long",
+  timeStyle: "short",
+});
+---
+
+<section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    <div data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("live.hero.eyebrow")}</p>
+      <div class="mt-4 flex flex-wrap items-center gap-4">
+        <span class="label-tracked border border-(--color-line) px-3 py-1.5 text-(--color-paper)">
+          {statusLabel}
+        </span>
+        {
+          status === "upcoming" && scheduledStart && (
+            <span class="text-sm text-(--color-paper)/60">
+              {dateFormatter.format(scheduledStart)}
+              {" · "}
+              <span class="text-(--color-gold)">{t("live.countdown.label")}</span>
+              {" "}
+              <span
+                data-countdown
+                data-countdown-target={scheduledStart.toISOString()}
+                data-label-day={t("live.countdown.day")}
+                data-label-hour={t("live.countdown.hour")}
+                data-label-minute={t("live.countdown.minute")}
+              />
+            </span>
+          )
+        }
+      </div>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">{title}</h1>
+      {description && <p class="mt-4 max-w-2xl text-(--color-paper)/70">{description}</p>}
+    </div>
+
+    <div
+      class:list={[
+        "mt-12 grid grid-cols-1 gap-6",
+        showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
+      ]}
+      data-reveal
+      data-reveal-delay="0.1"
+    >
+      <div class="aspect-video w-full overflow-hidden bg-(--color-ink-soft)">
+        <iframe
+          src={playerUrl}
+          title={title}
+          class="h-full w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+      </div>
+      {
+        showChatPanel ? (
+          <div class="hidden max-h-[640px] overflow-hidden border border-(--color-line) bg-(--color-ink-soft) lg:block">
+            <iframe
+              src={chatUrl}
+              title={t("live.chat.title")}
+              class="h-full min-h-[480px] w-full"
+              loading="lazy"
+            />
+          </div>
+        ) : status === "live" && !showChat ? (
+          <p class="text-sm text-(--color-paper)/50">{t("live.chat.unavailable")}</p>
+        ) : null
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initCountdown } from "../../scripts/video/countdown";
+  initCountdown();
+</script>

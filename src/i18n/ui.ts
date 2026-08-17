@@ -10,6 +10,7 @@ export const defaultLang: Lang = "fr";
 export const ui = {
   fr: {
     "nav.about": "À propos",
+    "nav.live": "Live",
     "nav.talent": "Talent",
     "nav.creative": "Créatif",
     "nav.consulting": "Consulting",
@@ -219,6 +220,23 @@ export const ui = {
     "journal.back": "Tout le Journal",
     "journal.empty": "Aucun article publié pour le moment.",
 
+    "live.hero.eyebrow": "Live",
+    "live.hero.title": "WEBLACK Live",
+    "live.hero.lead": "Suivez les directs WEBLACK et retrouvez nos films et vidéos.",
+    "live.status.upcoming": "À venir",
+    "live.status.live": "En direct",
+    "live.status.replay": "Replay",
+    "live.countdown.label": "Début dans",
+    "live.countdown.day": "j",
+    "live.countdown.hour": "h",
+    "live.countdown.minute": "min",
+    "live.chat.title": "Chat en direct",
+    "live.chat.unavailable": "Le chat n'est pas disponible pour ce direct.",
+    "live.replays.title": "Replays",
+    "live.videos.title": "Films & vidéos",
+    "live.empty": "Aucun direct ni vidéo publiée pour le moment.",
+    "live.watch": "Regarder",
+
     "responsibility.hero.eyebrow": "Responsabilité",
     "responsibility.hero.title": "Une pratique documentée, pas une promesse.",
     "responsibility.hero.lead":
@@ -302,6 +320,7 @@ export const ui = {
   },
   en: {
     "nav.about": "About",
+    "nav.live": "Live",
     "nav.talent": "Talent",
     "nav.creative": "Creative",
     "nav.consulting": "Consulting",
@@ -508,6 +527,23 @@ export const ui = {
     "journal.readMore": "Read the article",
     "journal.back": "All Journal",
     "journal.empty": "No articles published yet.",
+
+    "live.hero.eyebrow": "Live",
+    "live.hero.title": "WEBLACK Live",
+    "live.hero.lead": "Follow WEBLACK's live broadcasts and explore our films and videos.",
+    "live.status.upcoming": "Upcoming",
+    "live.status.live": "Live now",
+    "live.status.replay": "Replay",
+    "live.countdown.label": "Starts in",
+    "live.countdown.day": "d",
+    "live.countdown.hour": "h",
+    "live.countdown.minute": "min",
+    "live.chat.title": "Live chat",
+    "live.chat.unavailable": "Chat isn't available for this broadcast.",
+    "live.replays.title": "Replays",
+    "live.videos.title": "Films & Videos",
+    "live.empty": "No live stream or video published yet.",
+    "live.watch": "Watch",
 
     "responsibility.hero.eyebrow": "Responsibility",
     "responsibility.hero.title": "A documented practice, not a promise.",

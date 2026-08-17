@@ -1,0 +1,71 @@
+---
+import CardVideo from "../cards/CardVideo.astro";
+import { useTranslations, type Lang } from "../../i18n/utils";
+import type { LiveEventEntry, VideoEntry } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  replays: LiveEventEntry[];
+  videos: VideoEntry[];
+}
+
+const { lang, replays, videos } = Astro.props;
+const t = useTranslations(lang);
+const isEmpty = replays.length === 0 && videos.length === 0;
+---
+
+<section class="bg-(--color-ink) px-6 pb-24 pt-12 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    {
+      isEmpty ? (
+        <p class="text-(--color-paper)/60" data-reveal>
+          {t("live.empty")}
+        </p>
+      ) : (
+        <>
+          {replays.length > 0 && (
+            <div class="mb-16">
+              <h2 class="label-tracked text-(--color-gold)" data-reveal>
+                {t("live.replays.title")}
+              </h2>
+              <div class="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {replays.map((event, i) => (
+                  <CardVideo
+                    lang={lang}
+                    title={event.data.title}
+                    youtubeVideoId={event.data.youtubeVideoId}
+                    meta={t("live.status.replay")}
+                    index={i}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {videos.length > 0 && (
+            <div>
+              <h2 class="label-tracked text-(--color-gold)" data-reveal>
+                {t("live.videos.title")}
+              </h2>
+              <div class="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {videos.map((video, i) => (
+                  <CardVideo
+                    lang={lang}
+                    title={video.data.title}
+                    youtubeVideoId={video.data.youtubeVideoId}
+                    meta={video.data.category}
+                    index={i}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )
+    }
+  </div>
+</section>
+
+<script>
+  import { initLazyVideoEmbeds } from "../../scripts/video/lazy-embed";
+  initLazyVideoEmbeds();
+</script>

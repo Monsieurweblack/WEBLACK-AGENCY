@@ -29,6 +29,7 @@ const navItems = [
 
 const homeHref = localizedPath(lang, "/");
 const contactHref = localizedPath(lang, "/contact");
+const liveHref = localizedPath(lang, "/live");
 ---
 
 <header
@@ -48,6 +49,12 @@ const contactHref = localizedPath(lang, "/contact");
     </a>
 
     <div class="flex items-center gap-3">
+      <a
+        href={liveHref}
+        class="label-tracked inline-flex items-center text-(--color-paper) transition-colors hover:text-(--color-gold)"
+      >
+        {t("nav.live")}
+      </a>
       <a
         href={contactHref}
         class="label-tracked hidden text-(--color-paper) transition-colors hover:text-(--color-gold) sm:inline-flex"
@@ -95,6 +102,11 @@ const contactHref = localizedPath(lang, "/contact");
             </li>
           ))
         }
+        <li>
+          <a href={liveHref} class="label-tracked text-(--color-paper)">
+            {t("nav.live")}
+          </a>
+        </li>
         <li>
           <a href={contactHref} class="label-tracked text-(--color-gold)">
             {t("nav.contact")}

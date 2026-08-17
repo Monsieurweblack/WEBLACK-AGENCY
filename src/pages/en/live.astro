@@ -1,0 +1,63 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LivePlayer from "../../components/sections/LivePlayer.astro";
+import VideoLibrary from "../../components/sections/VideoLibrary.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import { useTranslations } from "../../i18n/utils";
+import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
+import type { LiveEventEntry } from "../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+
+const events = await getEntriesByLang("liveEvent", lang);
+const videos = sortByDateDesc(await getEntriesByLang("video", lang));
+
+const liveNow = events.find((event) => event.data.status === "live");
+const upcoming = events
+  .filter((event) => event.data.status === "upcoming")
+  .sort(
+    (a, b) =>
+      (a.data.scheduledStart?.getTime() ?? Infinity) - (b.data.scheduledStart?.getTime() ?? Infinity),
+  )[0];
+const activeEvent: LiveEventEntry | undefined = liveNow ?? upcoming;
+
+const replays = events
+  .filter((event) => event.data.status === "replay")
+  .sort(
+    (a, b) => (b.data.scheduledStart?.getTime() ?? 0) - (a.data.scheduledStart?.getTime() ?? 0),
+  );
+---
+
+<BaseLayout lang={lang} title={t("live.hero.title")} description={t("live.hero.lead")}>
+  {
+    !activeEvent && (
+      <section class="bg-(--color-ink) px-6 pb-8 pt-40 md:px-10">
+        <div class="mx-auto max-w-(--container-content)" data-reveal>
+          <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("live.hero.eyebrow")}</p>
+          <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+            {t("live.hero.title")}
+          </h1>
+          <p class="font-display mt-4 max-w-xl text-balance text-xl text-(--color-paper)/70">
+            {t("live.hero.lead")}
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    activeEvent ? (
+      <LivePlayer lang={lang} event={activeEvent} />
+    ) : (
+      <VideoLibrary lang={lang} replays={replays} videos={videos} />
+    )
+  }
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>
