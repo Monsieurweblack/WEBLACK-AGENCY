@@ -1,6 +1,7 @@
 ---
 import { getAbsoluteLocaleUrl } from "astro:i18n";
 import { useTranslations, languages, type Lang } from "../../i18n/utils";
+import { SOCIAL_LINKS } from "../../lib/social";
 
 interface Props {
   lang: Lang;
@@ -15,11 +16,38 @@ const t = useTranslations(lang);
 
 const pageTitle = title ? `${title} — WEBLACK` : t("seo.default.title");
 const pageDescription = description ?? t("seo.default.description");
-const DEFAULT_OG_IMAGE = "/photos/banner-model-logo-bw-2400.jpg";
+const DEFAULT_OG_IMAGE = lang === "fr" ? "/photos/og-weblack-fr.jpg" : "/photos/og-weblack-en.jpg";
 const ogImage = new URL(image ?? DEFAULT_OG_IMAGE, Astro.site);
+const isDefaultOgImage = !image;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const logoUrl = new URL("/apple-touch-icon.png", Astro.site);
 
 const pathWithoutLang = Astro.url.pathname.replace(/^\/(fr|en)(?=\/|$)/, "") || "/";
+const homeUrl = getAbsoluteLocaleUrl(lang, "/");
+
+const ogLocale = lang === "fr" ? "fr_FR" : "en_GB";
+const ogLocaleAlternate = lang === "fr" ? "en_GB" : "fr_FR";
+const schemaLang = lang === "fr" ? "fr-FR" : "en-GB";
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "WEBLACK",
+    url: homeUrl,
+    logo: logoUrl,
+    description: t("seo.default.description"),
+    sameAs: [SOCIAL_LINKS.facebook, SOCIAL_LINKS.instagram],
+    inLanguage: schemaLang,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "WEBLACK",
+    url: homeUrl,
+    inLanguage: schemaLang,
+  },
+];
 ---
 
 <title>{pageTitle}</title>
@@ -46,11 +74,18 @@ const pathWithoutLang = Astro.url.pathname.replace(/^\/(fr|en)(?=\/|$)/, "") || 
 <meta property="og:title" content={pageTitle} />
 <meta property="og:description" content={pageDescription} />
 <meta property="og:image" content={ogImage} />
+{isDefaultOgImage && <meta property="og:image:width" content="1200" />}
+{isDefaultOgImage && <meta property="og:image:height" content="630" />}
+<meta property="og:image:alt" content={t("seo.ogImage.alt")} />
 <meta property="og:url" content={canonicalUrl} />
-<meta property="og:locale" content={lang === "fr" ? "fr_FR" : "en_US"} />
+<meta property="og:locale" content={ogLocale} />
+<meta property="og:locale:alternate" content={ogLocaleAlternate} />
 <meta property="og:site_name" content="WEBLACK" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={pageTitle} />
 <meta name="twitter:description" content={pageDescription} />
 <meta name="twitter:image" content={ogImage} />
+<meta name="twitter:image:alt" content={t("seo.ogImage.alt")} />
+
+{!noindex && <script type="application/ld+json" is:inline set:html={JSON.stringify(structuredData)} />}

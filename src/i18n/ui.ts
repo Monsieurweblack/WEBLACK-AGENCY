@@ -197,6 +197,8 @@ export const ui = {
 
     "selectedwork.hero.eyebrow": "Réalisations",
     "selectedwork.hero.title": "Des projets choisis pour leur exigence.",
+    "selectedwork.seo.description":
+      "Une sélection de projets menés par WEBLACK en direction créative, stratégie de marque et production d'expériences.",
     "selectedwork.detail.context": "Contexte",
     "selectedwork.detail.challenge": "Enjeu",
     "selectedwork.detail.role": "Rôle de WEBLACK",
@@ -209,6 +211,8 @@ export const ui = {
 
     "journal.hero.eyebrow": "Journal",
     "journal.hero.title": "Projets, entretiens et regards sur la création.",
+    "journal.seo.description":
+      "Récits de projets, entretiens et regards sur la création, la mode et la culture par l'équipe WEBLACK.",
     "journal.filter.all": "Tous",
     "journal.category.projects": "Projets",
     "journal.category.interviews": "Entretiens",
@@ -256,6 +260,8 @@ export const ui = {
     "contact.hero.eyebrow": "Contact",
     "contact.hero.title": "Un projet, un talent ou une collaboration en tête ?",
     "contact.hero.lead": "Faisons-le ensemble.",
+    "contact.seo.description":
+      "Contactez WEBLACK pour un projet, une collaboration ou une candidature talent — agence, marque, créatif, partenaire ou média.",
     "contact.segment.talent": "Je suis un talent",
     "contact.segment.brand": "Je suis une marque",
     "contact.segment.creative": "Je suis un créatif",
@@ -302,6 +308,7 @@ export const ui = {
     "seo.default.title": "WEBLACK — Agence créative indépendante",
     "seo.default.description":
       "WEBLACK est une agence créative indépendante qui relie talents, créativité, culture et opportunités au-delà des frontières. Talent management, direction créative et conseil de marque.",
+    "seo.ogImage.alt": "WEBLACK — Agence créative indépendante. Talent · Créativité · Culture.",
 
     "common.langSwitch": "English",
     "common.readMore": "En savoir plus",
@@ -502,6 +509,8 @@ export const ui = {
 
     "selectedwork.hero.eyebrow": "Selected Work",
     "selectedwork.hero.title": "Projects chosen for their rigour.",
+    "selectedwork.seo.description":
+      "A selection of projects led by WEBLACK in creative direction, brand strategy and experience production.",
     "selectedwork.detail.context": "Context",
     "selectedwork.detail.challenge": "Challenge",
     "selectedwork.detail.role": "WEBLACK's role",
@@ -514,6 +523,8 @@ export const ui = {
 
     "journal.hero.eyebrow": "Journal",
     "journal.hero.title": "Projects, interviews and perspectives on creativity.",
+    "journal.seo.description":
+      "Project stories, interviews and perspectives on creation, fashion and culture from the WEBLACK team.",
     "journal.filter.all": "All",
     "journal.category.projects": "Projects",
     "journal.category.interviews": "Interviews",
@@ -557,6 +568,8 @@ export const ui = {
     "contact.hero.eyebrow": "Contact",
     "contact.hero.title": "Have a project, a talent or a collaboration in mind?",
     "contact.hero.lead": "Let's make it happen.",
+    "contact.seo.description":
+      "Contact WEBLACK about a project, collaboration or talent application — agency, brand, creative, partner or media.",
     "contact.segment.talent": "I'm a Talent",
     "contact.segment.brand": "I'm a Brand",
     "contact.segment.creative": "I'm a Creative",
@@ -603,6 +616,7 @@ export const ui = {
     "seo.default.title": "WEBLACK — Independent Creative Agency",
     "seo.default.description":
       "WEBLACK is an independent creative agency connecting talent, creativity, culture and opportunity across borders. Talent management, creative direction and brand consulting.",
+    "seo.ogImage.alt": "WEBLACK — Independent Creative Agency. Talent · Creativity · Culture.",
 
     "common.langSwitch": "Français",
     "common.readMore": "Learn more",

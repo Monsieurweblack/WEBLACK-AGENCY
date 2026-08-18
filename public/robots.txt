@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.weblack.fr/sitemap-index.xml
+Sitemap: https://weblack.fr/sitemap-index.xml

@@ -5,9 +5,15 @@ import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
+const NOINDEX_PATHS = ['/404/', '/en/404/', '/politique-de-confidentialite/', '/en/politique-de-confidentialite/'];
+
 export default defineConfig({
-  site: 'https://www.weblack.fr',
-  integrations: [sitemap()],
+  site: 'https://weblack.fr',
+  integrations: [
+    sitemap({
+      filter: (page) => !NOINDEX_PATHS.some((path) => page.endsWith(path)),
+    }),
+  ],
   i18n: {
     locales: ['fr', 'en'],
     defaultLocale: 'fr',

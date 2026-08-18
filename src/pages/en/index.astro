@@ -22,7 +22,7 @@ const featuredWork = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3)
 const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).slice(0, 3);
 ---
 
-<BaseLayout lang={lang} image={heroImage.url}>
+<BaseLayout lang={lang}>
   <HeroHome lang={lang} heroImage={heroImage} />
   <ManifestoQuote lang={lang} />
   <DivisionsGrid lang={lang} />
