@@ -88,4 +88,12 @@ const structuredData = [
 <meta name="twitter:image" content={ogImage} />
 <meta name="twitter:image:alt" content={t("seo.ogImage.alt")} />
 
-{!noindex && <script type="application/ld+json" is:inline set:html={JSON.stringify(structuredData)} />}
+{
+  !noindex && (
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify(structuredData).replace(/</g, "\\u003c")}
+    />
+  )
+}
