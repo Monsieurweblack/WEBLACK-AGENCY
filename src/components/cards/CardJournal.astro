@@ -7,9 +7,10 @@ interface Props {
   lang: Lang;
   article: JournalEntry;
   index?: number;
+  wide?: boolean;
 }
 
-const { lang, article, index = 0 } = Astro.props;
+const { lang, article, index = 0, wide = false } = Astro.props;
 const t = useTranslations(lang);
 const href = localizedPath(lang, `/journal/${article.data.slug}`);
 const date = article.data.publishDate.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
@@ -17,24 +18,36 @@ const date = article.data.publishDate.toLocaleDateString(lang === "fr" ? "fr-FR"
   month: "long",
   year: "numeric",
 });
-const categoryLabel = t(`journal.category.${article.data.category}` as UiKey);
+const categoryLabel = t(`journal.category.${article.data.category}` as UiKey) ?? article.data.category;
 ---
 
-<a href={href} class="group block" data-reveal data-reveal-delay={String((index % 3) * 0.08)}>
-  <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
+<a
+  href={href}
+  class:list={["group block", wide && "sm:grid sm:grid-cols-2 sm:items-center sm:gap-8"]}
+  data-reveal
+  data-reveal-delay={String((index % 3) * 0.08)}
+>
+  <div class:list={["min-w-0 overflow-hidden bg-(--color-ink-soft)", wide ? "aspect-[4/3] sm:aspect-[16/11]" : "aspect-[4/3]"]}>
     <RemoteImage
       src={article.data.coverImage.url}
       alt={article.data.coverImage.alt}
-      width={800}
-      height={600}
+      width={wide ? 1000 : 800}
+      height={wide ? 750 : 600}
       credit={article.data.coverImage.credit}
       class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
-      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+      sizes={wide ? "(min-width: 640px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
     />
   </div>
-  <p class="label-tracked mt-4 text-(--color-gold)">{categoryLabel} · {date}</p>
-  <h3 class="font-display mt-2 text-xl text-(--color-paper) transition-colors group-hover:text-(--color-gold)">
-    {article.data.title}
-  </h3>
-  <p class="mt-2 text-sm text-(--color-paper)/60">{article.data.excerpt}</p>
+  <div class:list={["min-w-0", wide && "mt-4 sm:mt-0"]}>
+    <p class="label-tracked mt-4 text-(--color-gold)">{categoryLabel} · {date}</p>
+    <h3
+      class:list={[
+        "font-display mt-2 text-(--color-paper) transition-colors group-hover:text-(--color-gold)",
+        wide ? "text-2xl sm:text-3xl" : "text-xl",
+      ]}
+    >
+      {article.data.title}
+    </h3>
+    <p class="mt-2 text-sm text-(--color-paper)/60">{article.data.excerpt}</p>
+  </div>
 </a>

@@ -140,6 +140,24 @@
     background: color-mix(in srgb, currentColor 12%, transparent);
     padding: 0.15em 0.4em;
   }
+  .prose-weblack figure {
+    margin: 2.2em 0;
+  }
+  .prose-weblack figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .prose-weblack figcaption {
+    margin-top: 0.75em;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--color-paper) 45%, transparent);
+  }
+  .prose-weblack--ink figcaption {
+    color: color-mix(in srgb, var(--color-ink) 45%, transparent);
+  }
 
   .prose-weblack--ink {
     color: color-mix(in srgb, var(--color-ink) 78%, transparent);

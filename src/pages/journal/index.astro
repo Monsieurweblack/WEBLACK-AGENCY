@@ -3,16 +3,30 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import RemoteImage from "../../components/media/RemoteImage.astro";
 import CardJournal from "../../components/cards/CardJournal.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
-import { useTranslations } from "../../i18n/utils";
-import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
+import { useTranslations, localizedPath, type UiKey } from "../../i18n/utils";
+import { getEntriesByLang, sortByDateDesc, JOURNAL_CATEGORY_ORDER } from "../../lib/content";
 
 const lang = "fr" as const;
 const t = useTranslations(lang);
 const articles = sortByDateDesc(await getEntriesByLang("journal", lang));
+
+const featuredFirst = articles.find((a) => a.data.featured) ?? articles[0];
+const rest = articles.filter((a) => a !== featuredFirst);
+
+const categories = JOURNAL_CATEGORY_ORDER.filter((category) =>
+  rest.some((article) => article.data.category === category),
+);
+
+const leadDate = featuredFirst
+  ? featuredFirst.data.publishDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+  : "";
+const leadCategoryLabel = featuredFirst
+  ? (t(`journal.category.${featuredFirst.data.category}` as UiKey) ?? featuredFirst.data.category)
+  : "";
 ---
 
 <BaseLayout lang={lang} title={t("journal.hero.title")} description={t("journal.seo.description")}>
-  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+  <section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("journal.hero.eyebrow")}</p>
       <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
@@ -21,30 +35,95 @@ const articles = sortByDateDesc(await getEntriesByLang("journal", lang));
     </div>
   </section>
 
-  <div class="mx-auto aspect-[21/9] max-w-(--container-content) overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
-    <RemoteImage
-      src="/photos/banner-model-logo-bw-alt-2000.jpg"
-      alt=""
-      width={1942}
-      height={809}
-      loading="eager"
-      fetchpriority="high"
-      class="h-full w-full"
-    />
-  </div>
+  {
+    featuredFirst && (
+      <section class="bg-(--color-ink) px-6 pb-20 md:px-10">
+        <div class="mx-auto max-w-(--container-content)" data-reveal>
+          <a
+            href={localizedPath(lang, `/journal/${featuredFirst.data.slug}`)}
+            class="group grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center lg:gap-12"
+          >
+            <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft) lg:aspect-[16/11]">
+              <RemoteImage
+                src={featuredFirst.data.coverImage.url}
+                alt={featuredFirst.data.coverImage.alt}
+                width={1100}
+                height={825}
+                credit={featuredFirst.data.coverImage.credit}
+                loading="eager"
+                fetchpriority="high"
+                class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+              />
+            </div>
+            <div>
+              <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("journal.featured.eyebrow")}</p>
+              <p class="label-tracked mt-4 text-(--color-paper)/50">
+                {leadCategoryLabel} · {leadDate}
+              </p>
+              <h2 class="font-display mt-4 text-3xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-4xl lg:text-5xl">
+                {featuredFirst.data.title}
+              </h2>
+              <p class="mt-5 max-w-xl text-lg text-(--color-paper)/70">{featuredFirst.data.excerpt}</p>
+              <span class="label-tracked mt-6 inline-flex items-center gap-2 text-(--color-paper)/60 transition-colors group-hover:text-(--color-gold)">
+                {t("journal.readMore")} &rarr;
+              </span>
+            </div>
+          </a>
+        </div>
+      </section>
+    )
+  }
 
-  <section class="bg-(--color-ink) px-6 py-24 md:px-10 md:py-32">
+  <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
     <div class="mx-auto max-w-(--container-content)">
+      {rest.length > 0 && (
+        <h2 class="label-tracked border-t border-(--color-line) pt-8 text-(--color-paper)/60" data-reveal>
+          {t("journal.latest.title")}
+        </h2>
+      )}
+
       {
-        articles.length > 0 ? (
-          <div class="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-            {articles.map((article, i) => (
-              <CardJournal lang={lang} article={article} index={i} />
+        categories.length > 0 && (
+          <div
+            id="journal-filter"
+            class="mt-8 flex gap-x-8 gap-y-2 overflow-x-auto border-b border-(--color-line)"
+            style="scrollbar-width:none"
+          >
+            <button
+              type="button"
+              data-filter="all"
+              aria-current="true"
+              class="label-tracked shrink-0 border-b-2 border-(--color-gold) pb-4 text-(--color-gold)"
+            >
+              {t("journal.filter.all")}
+            </button>
+            {categories.map((category) => (
+              <button
+                type="button"
+                data-filter={category}
+                aria-current="false"
+                class="label-tracked shrink-0 border-b-2 border-transparent pb-4 text-(--color-paper)/50"
+              >
+                {t(`journal.category.${category}` as UiKey) ?? category}
+              </button>
             ))}
           </div>
-        ) : (
-          <p class="text-(--color-paper)/60">{t("journal.empty")}</p>
         )
+      }
+
+      {
+        rest.length > 0 ? (
+          <div id="journal-grid" class="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+            {rest.map((article, i) => (
+              <div data-category={article.data.category} class:list={["min-w-0", i === 0 && "sm:col-span-2"]}>
+                <CardJournal lang={lang} article={article} index={i} wide={i === 0} />
+              </div>
+            ))}
+          </div>
+        ) : !featuredFirst ? (
+          <p class="text-(--color-paper)/60">{t("journal.empty")}</p>
+        ) : null
       }
     </div>
   </section>
@@ -54,5 +133,7 @@ const articles = sortByDateDesc(await getEntriesByLang("journal", lang));
 
 <script>
   import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  import { initJournalFilter } from "../../scripts/filters/journal-filter";
   initScrollChoreography();
+  initJournalFilter();
 </script>

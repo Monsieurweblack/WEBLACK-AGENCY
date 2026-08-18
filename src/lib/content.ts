@@ -48,7 +48,31 @@ export type JournalCategory =
   | "insights"
   | "culture"
   | "talent-stories"
-  | "industry-perspectives";
+  | "industry-perspectives"
+  | "news"
+  | "fashion"
+  | "designers"
+  | "fashion-weeks"
+  | "reports";
+
+/**
+ * Canonical editorial ordering for category tabs. Pages derive the actual
+ * tab set from published articles (never show a tab with nothing behind
+ * it) but sort it against this order for a stable, intentional sequence.
+ */
+export const JOURNAL_CATEGORY_ORDER: JournalCategory[] = [
+  "news",
+  "fashion",
+  "designers",
+  "fashion-weeks",
+  "industry-perspectives",
+  "culture",
+  "interviews",
+  "insights",
+  "talent-stories",
+  "reports",
+  "projects",
+];
 
 export interface TalentData {
   slug: string;
@@ -96,10 +120,12 @@ export interface JournalData {
   excerpt: string;
   category: JournalCategory;
   publishDate: Date;
+  updatedAt: Date;
   author?: string;
   coverImage: EntryImage;
   relatedWorkSlug?: string;
   bodyHtml: string;
+  readTimeMinutes: number;
   featured: boolean;
   seo?: Seo;
 }
@@ -137,8 +163,54 @@ interface CollectionMap {
 
 export type CollectionKey = keyof CollectionMap;
 
-function toHtmlSafe(blocks: PortableTextBlock[] | undefined): string {
-  return blocks && blocks.length > 0 ? toHTML(blocks) : "";
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+/**
+ * Resolves a Sanity image asset reference (`image-{id}-{w}x{h}-{format}`)
+ * to a real CDN URL. No @sanity/image-url dependency needed — the
+ * reference format is stable and documented by Sanity.
+ */
+function sanityImageUrl(ref: string | undefined): string | null {
+  if (!ref) return null;
+  const match = ref.match(/^image-([a-f0-9]+)-(\d+x\d+)-(\w+)$/);
+  if (!match) return null;
+  const [, id, dimensions, format] = match;
+  const projectId = import.meta.env.SANITY_PROJECT_ID;
+  const dataset = import.meta.env.SANITY_DATASET;
+  return `https://cdn.sanity.io/images/${projectId}/${dataset}/${id}-${dimensions}.${format}?w=1600&auto=format`;
+}
+
+/**
+ * Renders portable text to HTML, including inline image blocks (used by
+ * both talent bios and journal article bodies) — a plain block-content
+ * field embeds images the same way whether the editor is writing a bio
+ * or an article body, so one renderer serves both.
+ */
+function toHtmlSafe(blocks: (PortableTextBlock | { _type: "image"; asset?: { _ref?: string }; alt?: string; caption?: string })[] | undefined): string {
+  if (!blocks || blocks.length === 0) return "";
+  return toHTML(blocks, {
+    components: {
+      types: {
+        image: ({ value }) => {
+          const url = sanityImageUrl(value?.asset?._ref);
+          if (!url) return "";
+          const alt = escapeAttr(value.alt ?? "");
+          const caption = value.caption ? `<figcaption>${escapeAttr(value.caption)}</figcaption>` : "";
+          return `<figure><img src="${url}" alt="${alt}" loading="lazy" />${caption}</figure>`;
+        },
+      },
+    },
+  });
+}
+
+const WORDS_PER_MINUTE = 200;
+
+function estimateReadTime(html: string): number {
+  const text = html.replace(/<[^>]+>/g, " ");
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
 }
 
 function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionMap[C] {
@@ -187,7 +259,8 @@ function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionM
           seo: doc.seo,
         },
       } as CollectionMap[C];
-    case "journal":
+    case "journal": {
+      const bodyHtml = toHtmlSafe(doc.body);
       return {
         data: {
           slug,
@@ -196,14 +269,17 @@ function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionM
           excerpt: doc.excerpt,
           category: doc.category,
           publishDate: new Date(doc.publishDate),
+          updatedAt: new Date(doc._updatedAt ?? doc.publishDate),
           author: doc.author,
           coverImage: doc.coverImage,
           relatedWorkSlug: doc.relatedWorkSlug,
-          bodyHtml: toHtmlSafe(doc.body),
+          bodyHtml,
+          readTimeMinutes: estimateReadTime(bodyHtml),
           featured: doc.featured ?? false,
           seo: doc.seo,
         },
       } as CollectionMap[C];
+    }
     case "partners":
       return {
         data: {

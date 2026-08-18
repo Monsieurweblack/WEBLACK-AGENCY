@@ -1,7 +1,9 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
+import CardJournal from "../cards/CardJournal.astro";
 import CtaContact from "../sections/CtaContact.astro";
 import type { JournalEntry } from "../../lib/content";
+import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 
 interface Props {
@@ -11,27 +13,65 @@ interface Props {
 
 const { lang, article } = Astro.props;
 const t = useTranslations(lang);
-const date = article.data.publishDate.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
+const locale = lang === "fr" ? "fr-FR" : "en-US";
+const date = article.data.publishDate.toLocaleDateString(locale, {
   day: "numeric",
   month: "long",
   year: "numeric",
 });
-const categoryLabel = t(`journal.category.${article.data.category}` as UiKey);
+const categoryLabel = t(`journal.category.${article.data.category}` as UiKey) ?? article.data.category;
+
+const allArticles = sortByDateDesc(await getEntriesByLang("journal", lang));
+const related = allArticles
+  .filter((a) => a.data.slug !== article.data.slug && a.data.category === article.data.category)
+  .slice(0, 3);
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const imageUrl = new URL(article.data.coverImage.url, Astro.site).toString();
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: article.data.title,
+  description: article.data.excerpt,
+  image: imageUrl,
+  datePublished: article.data.publishDate.toISOString(),
+  dateModified: article.data.updatedAt.toISOString(),
+  inLanguage: lang === "fr" ? "fr-FR" : "en-GB",
+  mainEntityOfPage: canonicalUrl,
+  author: article.data.author
+    ? { "@type": "Person", name: article.data.author }
+    : { "@type": "Organization", name: "WEBLACK" },
+  publisher: { "@type": "Organization", name: "WEBLACK", logo: new URL("/apple-touch-icon.png", Astro.site).toString() },
+};
 ---
 
+<script type="application/ld+json" is:inline set:html={JSON.stringify(structuredData).replace(/</g, "\\u003c")} />
+
 <article class="bg-(--color-ink)">
-  <div class="mx-auto max-w-3xl px-6 pb-16 pt-40 md:px-10">
+  <div class="mx-auto max-w-3xl px-6 pb-10 pt-40 md:px-10">
     <a
       href={localizedPath(lang, "/journal")}
       class="label-tracked text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
     >
       &larr; {t("journal.back")}
     </a>
-    <p class="label-tracked mt-8 text-(--color-gold)">{categoryLabel} · {date}</p>
+    <p class="label-tracked mt-8 text-(--color-gold)">{categoryLabel}</p>
     <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
       {article.data.title}
     </h1>
     <p class="mt-6 text-lg text-(--color-paper)/70">{article.data.excerpt}</p>
+
+    <div class="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-(--color-line) pt-6 text-sm text-(--color-paper)/50">
+      {article.data.author && (
+        <>
+          <span>{t("journal.byline.by")} <span class="text-(--color-paper)/80">{article.data.author}</span></span>
+          <span aria-hidden="true">·</span>
+        </>
+      )}
+      <time datetime={article.data.publishDate.toISOString()}>{date}</time>
+      <span aria-hidden="true">·</span>
+      <span>{article.data.readTimeMinutes} {t("journal.readingTime.suffix")}</span>
+    </div>
   </div>
 
   <div class="mx-auto aspect-[16/9] max-w-5xl overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
@@ -47,6 +87,17 @@ const categoryLabel = t(`journal.category.${article.data.category}` as UiKey);
   </div>
 
   <div class="prose-weblack mx-auto max-w-3xl px-6 py-16 md:px-10" set:html={article.data.bodyHtml} />
+
+  {related.length > 0 && (
+    <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) px-6 py-16 md:px-10 md:py-20">
+      <h2 class="label-tracked text-(--color-paper)/60">{t("journal.related.title")}</h2>
+      <div class="mt-8 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        {related.map((relatedArticle, i) => (
+          <CardJournal lang={lang} article={relatedArticle} index={i} />
+        ))}
+      </div>
+    </div>
+  )}
 
   <CtaContact lang={lang} />
 </article>
