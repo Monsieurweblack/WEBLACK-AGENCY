@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import RemoteImage from "../../components/media/RemoteImage.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
+import FounderBioModal from "../../components/sections/FounderBioModal.astro";
 import { useTranslations, type UiKey } from "../../i18n/utils";
 
 const lang = "en" as const;
@@ -78,22 +79,32 @@ const steps = [1, 2, 3, 4, 5] as const;
 
       <div class="mt-16 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
         <div data-reveal data-reveal-delay="0.05">
-          <div class="aspect-[3/4] overflow-hidden bg-(--color-ink-soft)">
+          <button
+            type="button"
+            class="group relative block aspect-[3/4] w-full overflow-hidden bg-(--color-ink-soft)"
+            data-founder-bio-trigger
+            aria-label={`${t("about.founder.bio.cta")} — ${t("about.founder.name")}`}
+          >
             <RemoteImage
               src="/photos/founder-deo-gratias-kpodo.png"
               alt={t("about.founder.name")}
-              width={1088}
-              height={1446}
-              class="h-full w-full object-cover"
+              width={950}
+              height={1266}
+              class="h-full w-full object-cover transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             />
-          </div>
+            <div class="absolute inset-0 flex items-end bg-gradient-to-t from-(--color-ink)/70 via-(--color-ink)/0 to-transparent p-6 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+              <span class="label-tracked text-(--color-paper)">{t("about.founder.bio.cta")} &rarr;</span>
+            </div>
+          </button>
           <h3 class="font-display mt-5 text-xl text-(--color-paper)">{t("about.founder.name")}</h3>
           <p class="label-tracked mt-1 text-(--color-gold)/80">{t("about.founder.role")}</p>
         </div>
       </div>
     </div>
   </section>
+
+  <FounderBioModal lang={lang} />
 
   <section class="bg-(--color-ink) px-6 pb-20 md:px-10 md:pb-28">
     <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) pt-16">

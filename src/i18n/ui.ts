@@ -108,6 +108,7 @@ export const ui = {
     "about.founder.eyebrow": "Fondateur",
     "about.founder.name": "Deo-Gratias Kpodo",
     "about.founder.role": "Fondateur & Directeur créatif",
+    "about.founder.bio.cta": "Lire la biographie",
     "about.network.title": "Réseau & collaborations",
     "about.network.body":
       "WEBLACK a construit des collaborations réelles avec des événements et organisations de la scène créative, notamment le Ze Défilé by WaxFashion et la Nuit du Textile Africain (NTA).",
@@ -414,6 +415,7 @@ export const ui = {
     "about.founder.eyebrow": "Founder",
     "about.founder.name": "Deo-Gratias Kpodo",
     "about.founder.role": "Founder & Creative Director",
+    "about.founder.bio.cta": "Read the biography",
     "about.network.title": "Network & collaborations",
     "about.network.body":
       "WEBLACK has built real collaborations with events and organisations across the creative scene, including the Ze Défilé by WaxFashion and the Nuit du Textile Africain (NTA).",

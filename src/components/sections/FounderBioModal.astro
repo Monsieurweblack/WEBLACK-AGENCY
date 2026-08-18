@@ -1,0 +1,58 @@
+---
+import { useTranslations, type Lang } from "../../i18n/utils";
+import { founderBio } from "../../data/founder-bio";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const bio = founderBio[lang];
+---
+
+<div
+  id="founder-bio-panel"
+  class="fixed inset-0 z-[60] overflow-y-auto bg-(--color-ink)/97 opacity-0 pointer-events-none backdrop-blur-sm"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="founder-bio-heading"
+  aria-hidden="true"
+  inert
+  data-founder-bio-panel
+>
+  <div class="relative mx-auto min-h-full w-full max-w-(--container-content) px-6 pb-24 pt-28 md:px-10 md:pt-32">
+    <button
+      type="button"
+      class="label-tracked absolute right-6 top-8 inline-flex items-center gap-3 border border-(--color-line) px-4 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold) md:right-10"
+      data-founder-bio-close
+    >
+      {t("nav.close")}
+      <span aria-hidden="true">&times;</span>
+    </button>
+
+    <div class="max-w-3xl">
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.founder.eyebrow")}</p>
+      <h2 id="founder-bio-heading" class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+        {bio.name}
+      </h2>
+      <p class="label-tracked mt-3 text-(--color-paper)/50">{t("about.founder.role")}</p>
+
+      <div class="mt-10 space-y-6 text-(--color-paper)/80">
+        {bio.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+      </div>
+
+      <blockquote class="mt-12 border-l-2 border-(--color-gold) pl-6 md:pl-8">
+        <p class="font-display text-2xl italic leading-snug text-(--color-paper) sm:text-3xl">
+          “{bio.quote}”
+        </p>
+        <cite class="label-tracked mt-4 block not-italic text-(--color-gold)">{bio.quoteAttribution}</cite>
+      </blockquote>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { initFounderBio } from "../../scripts/founder-bio";
+  initFounderBio();
+</script>
