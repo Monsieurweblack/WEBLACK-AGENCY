@@ -24,7 +24,7 @@ export const liveEvent: LiveEventConfig = {
   youtubeVideoId: "Kcs4n93lS60",
   title: {
     fr: "ZE DEFILE ed.2026 - Diffusion en direct I Salle La Palmeraie PARIS",
-    en: "ZE DEFILE ed.2026 - Diffusion en direct I Salle La Palmeraie PARIS",
+    en: "ZE DEFILE ed.2026 - Live Broadcast I Salle La Palmeraie PARIS",
   },
   description: {
     fr: "",

@@ -97,10 +97,10 @@ export const ui = {
     "about.body2":
       "Son approche repose sur une conviction simple : le potentiel ne prend de la valeur que lorsqu'il est accompagné d'une vision, d'une exigence et d'un véritable savoir-faire.",
     "about.body3":
-      "WEBLACK développe ainsi des collaborations et des projets à dimension internationale, en créant des connexions entre les talents, les industries créatives et les marchés.",
+      "Basée entre la France et l'Afrique de l'Ouest, WEBLACK développe des collaborations et des projets à dimension internationale, en connectant talents, industries créatives et marchés au-delà des frontières.",
     "about.vision.title": "Notre ambition",
     "about.vision.body":
-      "Construire une référence indépendante dans le management des talents et les industries créatives, en faisant émerger des personnalités, des marques et des projets qui comptent. À travers chacune de ses réalisations, WEBLACK cherche à susciter le désir, créer de l'émotion et générer une valeur culturelle durable au service du luxe, de la mode et de la culture.",
+      "Construire une référence indépendante dans le management des talents et les industries créatives, en faisant émerger des personnalités, des marques et des projets qui comptent. Chaque collaboration est pensée comme un projet à part entière : une vision claire, une exécution exigeante, et une valeur culturelle qui dépasse le temps d'une campagne.",
     "about.method.eyebrow": "Notre méthode",
     "about.method.title": "WEBLACK Perspective",
     "about.team.eyebrow": "L'équipe",
@@ -108,10 +108,12 @@ export const ui = {
     "about.founder.eyebrow": "Fondateur",
     "about.founder.name": "Deo-Gratias Kpodo",
     "about.founder.role": "Fondateur & Directeur créatif",
+    "about.founder.bio.short":
+      "Entrepreneur et stratège, Deo-Gratias Kpodo fonde WEBLACK en 2010. Depuis, il accompagne maisons de mode, institutions et talents dans leur stratégie de marque et leur rayonnement international.",
     "about.founder.bio.cta": "Lire la biographie",
     "about.network.title": "Réseau & collaborations",
     "about.network.body":
-      "WEBLACK a construit des collaborations réelles avec des événements et organisations de la scène créative, notamment le Ze Défilé by WaxFashion et la Nuit du Textile Africain (NTA).",
+      "WEBLACK a construit des collaborations réelles avec des événements et organisations de la scène créative, notamment ZÉ DÉFILÉ by WAXFASHION et la Nuit du Textile Africain (NTA).",
 
     "talent.hero.eyebrow": "Talent",
     "talent.hero.title": "Management, représentation et développement de talents.",
@@ -303,7 +305,7 @@ export const ui = {
     "contact.form.error": "Merci de renseigner tous les champs obligatoires avant d'envoyer.",
     "contact.form.mailto": "Ou écrivez-nous directement à",
     "contact.form.back": "Changer de profil",
-    "contact.info.address.label": "WEBLACK - Plus de 15 ans d'une passion pour la créativité et l'innovation cultivée par nos collaborateurs à travers le monde.",
+    "contact.info.address.label": "WEBLACK — Agence créative indépendante entre la France et l'Afrique de l'Ouest, au rayonnement international.",
     "contact.info.email.label": "E-mail",
 
     "footer.tagline": "Talent. Créativité. Culture.",
@@ -373,7 +375,7 @@ export const ui = {
     "home.divisions.eyebrow": "What we do",
     "home.divisions.title": "Three disciplines, one vision.",
     "division.talent.name": "Talent",
-    "division.talent.tagline": "Management, representation and development.",
+    "division.talent.tagline": "Management, representation and talent development.",
     "division.creative.name": "Creative",
     "division.creative.tagline": "Direction, campaigns, content, production and experiences.",
     "division.consulting.name": "Consulting",
@@ -421,10 +423,10 @@ export const ui = {
     "about.body2":
       "Its approach rests on a simple conviction: potential only gains value when paired with vision, rigour and genuine expertise.",
     "about.body3":
-      "WEBLACK develops collaborations and projects with international reach, creating connections between talent, creative industries and markets.",
+      "Based between France and West Africa, WEBLACK develops collaborations and projects with international reach, connecting talent, creative industries and markets across borders.",
     "about.vision.title": "Our ambition",
     "about.vision.body":
-      "To build an independent reference in talent management and the creative industries, bringing forward personalities, brands and projects that matter. Through each of its work, WEBLACK seeks to spark desire, create emotion and generate lasting cultural value in service of luxury, fashion and culture.",
+      "To build an independent reference in talent management and the creative industries, bringing forward personalities, brands and projects that matter. Every collaboration is treated as a project in its own right: a clear vision, rigorous execution, and cultural value that outlasts any single campaign.",
     "about.method.eyebrow": "Our method",
     "about.method.title": "WEBLACK Perspective",
     "about.team.eyebrow": "The Team",
@@ -432,10 +434,12 @@ export const ui = {
     "about.founder.eyebrow": "Founder",
     "about.founder.name": "Deo-Gratias Kpodo",
     "about.founder.role": "Founder & Creative Director",
+    "about.founder.bio.short":
+      "Entrepreneur and strategist, Deo-Gratias Kpodo founded WEBLACK in 2010. Since then, he has guided fashion houses, institutions and talents through brand strategy and international growth.",
     "about.founder.bio.cta": "Read the biography",
     "about.network.title": "Network & collaborations",
     "about.network.body":
-      "WEBLACK has built real collaborations with events and organisations across the creative scene, including the Ze Défilé by WaxFashion and the Nuit du Textile Africain (NTA).",
+      "WEBLACK has built real collaborations with events and organisations across the creative scene, including ZÉ DÉFILÉ by WAXFASHION and the Nuit du Textile Africain (NTA).",
 
     "talent.hero.eyebrow": "Talent",
     "talent.hero.title": "Management, representation and development.",
@@ -594,7 +598,7 @@ export const ui = {
     "contact.segment.brand": "I'm a Brand",
     "contact.segment.creative": "I'm a Creative",
     "contact.segment.partner": "I'm a Partner",
-    "contact.segment.media": "I'm Media",
+    "contact.segment.media": "I'm Media or a Content Creator",
     "contact.segment.other": "Other",
     "contact.form.name": "Full name",
     "contact.form.email": "Email address",
@@ -621,7 +625,7 @@ export const ui = {
     "contact.form.error": "Please fill in all required fields before sending.",
     "contact.form.mailto": "Or write to us directly at",
     "contact.form.back": "Change profile",
-    "contact.info.address.label": "WEBLACK - Over 15 years of a passion for creativity and innovation, cultivated by our people around the world.",
+    "contact.info.address.label": "WEBLACK — Independent creative agency based between France and West Africa, with international reach.",
     "contact.info.email.label": "Email",
 
     "footer.tagline": "Talent. Creativity. Culture.",
