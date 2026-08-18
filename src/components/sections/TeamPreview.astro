@@ -1,4 +1,5 @@
 ---
+import RemoteImage from "../media/RemoteImage.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 
 interface Props {
@@ -29,8 +30,15 @@ const teamAnchor = lang === "fr" ? "equipe" : "team";
 
     <div class="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-3" data-reveal data-reveal-delay="0.1">
       <div>
-        <div class="flex aspect-[3/4] items-center justify-center border border-(--color-line) bg-(--color-ink-soft)">
-          <span class="label-tracked px-6 text-center text-(--color-paper)/30">{t("about.team.portraitPending")}</span>
+        <div class="aspect-[3/4] overflow-hidden bg-(--color-ink-soft)">
+          <RemoteImage
+            src="/photos/founder-deo-gratias-kpodo.png"
+            alt={t("about.founder.name")}
+            width={1088}
+            height={1446}
+            class="h-full w-full object-cover"
+            sizes="(min-width: 640px) 33vw, 100vw"
+          />
         </div>
         <h3 class="font-display mt-5 text-xl text-(--color-paper)">{t("about.founder.name")}</h3>
         <p class="label-tracked mt-1 text-(--color-gold)/80">{t("about.founder.role")}</p>
