@@ -4,7 +4,10 @@
 @import "@fontsource-variable/manrope";
 
 @theme {
-  /* Palette — noir / blanc / or subtil */
+  /* Palette — noir / blanc / or subtil. Dark mode is the default/signature
+     expression of WEBLACK; these are the dark-mode values. Light mode
+     redefines the same variable names below — components never reference
+     a light/dark variant directly, only these semantic tokens. */
   --color-ink: #0a0a0a;
   --color-ink-soft: #141412;
   --color-paper: #f8f6f1;
@@ -14,6 +17,21 @@
   --color-gold-dim: #7a6544;
   --color-line: rgb(248 246 241 / 14%);
   --color-line-on-paper: rgb(10 10 10 / 12%);
+
+  /* Text sitting on a solid gold surface (CTA buttons). Verified against
+     both themes' actual gold value: ink-on-gold is 7.07:1 in dark mode and
+     5.32:1 in light mode (gold itself is darkened for light mode below, for
+     its own contrast reasons) — --color-ink already tracks the right tone
+     in both cases, so this is a semantic alias, not an independent color. */
+  --color-on-gold: var(--color-ink);
+
+  /* Gold tuned for the *other* theme's tone — for the handful of accent
+     panels (Perspective, About method, Journal/Work preview) that render
+     bg-(--color-paper) intentionally inverted from the page: in dark mode
+     that panel is light-surfaced, in light mode it inverts to dark-surfaced.
+     Their eyebrow label needs whichever gold is safe for that surface, i.e.
+     always the opposite of the page-level --color-gold. */
+  --color-gold-inverse: #7d5f34;
 
   /* Type */
   --font-display: "Fraunces Variable", "Fraunces", ui-serif, Georgia, serif;
@@ -27,10 +45,75 @@
   --breakpoint-3xl: 1920px;
 }
 
+/*
+ * Light mode overrides. Dark mode (the @theme block above) is the bare
+ * :root default. A light theme applies when either:
+ *  - the OS reports prefers-color-scheme: light and the user hasn't
+ *    explicitly forced dark ([data-theme="dark"] wins over the OS), or
+ *  - the user explicitly chose light via the header toggle ([data-theme="light"]).
+ *
+ * --color-ink/--color-paper keep their names but swap which physical tone
+ * they hold per theme (ink = dominant background, paper = dominant text) so
+ * that every existing bg-(--color-ink)/text-(--color-paper) usage across the
+ * site becomes theme-aware for free, with zero component changes.
+ *
+ * Sections that intentionally use the paper/ink pair inverted (bg-(--color-paper)
+ * with text-(--color-ink) — the Perspective/Manifesto/Journal-preview "light
+ * panel on the dark page" accent) invert coherently along with everything
+ * else: in light mode they become a dark panel on the light page. Same
+ * rhythm, same identity, mirrored — not a bug.
+ */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --color-ink: #f5f3ee;
+    --color-ink-soft: #ece8e0;
+    --color-paper: #111111;
+    --color-paper-dim: #2b2b2b;
+    --color-gold: #7d5f34;
+    --color-gold-bright: #96773f;
+    --color-gold-dim: #5c4526;
+    --color-line: rgb(17 17 17 / 12%);
+    --color-line-on-paper: rgb(248 246 241 / 14%);
+    --color-gold-inverse: #b8955f;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme="light"] {
+  --color-ink: #f5f3ee;
+  --color-ink-soft: #ece8e0;
+  --color-paper: #111111;
+  --color-paper-dim: #2b2b2b;
+  --color-gold: #7d5f34;
+  --color-gold-bright: #96773f;
+  --color-gold-dim: #5c4526;
+  --color-line: rgb(17 17 17 / 12%);
+  --color-line-on-paper: rgb(248 246 241 / 14%);
+  --color-gold-inverse: #b8955f;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    body,
+    header,
+    footer,
+    section,
+    nav {
+      transition:
+        background-color 250ms ease,
+        color 250ms ease,
+        border-color 250ms ease;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -168,5 +251,30 @@
   }
   .prose-weblack--ink em {
     color: color-mix(in srgb, var(--color-ink) 55%, transparent);
+  }
+  .prose-weblack--ink a {
+    color: var(--color-gold-inverse);
+  }
+
+  /*
+   * Marks the content wrapper *inside* a section that intentionally renders
+   * bg-(--color-paper) as an accent panel against the page's dominant tone
+   * (Perspective, About method, Journal/Work preview). --color-gold is
+   * tuned for the page's own surface, not this panel's — which is the
+   * *other* one, since the panel is deliberately inverted from the page.
+   * Same for --color-paper: shared card components (CardJournal, CardWork)
+   * set their title with text-(--color-paper), correct on the page's own
+   * ink surface but invisible on this panel's paper surface — here it
+   * needs to resolve to --color-ink instead.
+   *
+   * This must live on a wrapper *inside* the panel section, never on the
+   * section element itself (the one with bg-(--color-paper)) — overriding
+   * --color-paper there would also repaint the panel's own background,
+   * since background-color: var(--color-paper) on that same element would
+   * pick up the override too.
+   */
+  .on-light-panel {
+    --color-gold: var(--color-gold-inverse);
+    --color-paper: var(--color-ink);
   }
 }

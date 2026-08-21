@@ -74,10 +74,14 @@ const work = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
     work.length > 0 && (
       <section class="bg-(--color-paper) py-24 md:py-32">
         <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
-          <div class="max-w-2xl" data-reveal>
+          <div class="on-light-panel max-w-2xl" data-reveal>
             <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.work.eyebrow")}</p>
             <h2 class="font-display mt-4 text-4xl text-(--color-ink) sm:text-5xl">{t("home.work.title")}</h2>
           </div>
+          <!-- CardWork below is intentionally outside on-light-panel: its title/label
+               sit over a photo with a --color-ink gradient scrim, not on this panel's
+               own background — it must keep the page's plain (unoverridden) gold/paper
+               tones so the scrim and text stay in sync, same as everywhere else it's used. -->
           <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {work.map((item, i) => (
               <CardWork lang={lang} work={item} index={i} />

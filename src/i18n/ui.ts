@@ -26,6 +26,9 @@ export const ui = {
     "common.switchToFr": "Passer en français",
     "common.switchToEn": "Passer en anglais",
 
+    "theme.toggle.toLight": "Activer le mode clair",
+    "theme.toggle.toDark": "Activer le mode sombre",
+
     "contact.form.mailto.name": "Nom",
     "contact.form.mailto.email": "E-mail",
     "contact.form.mailto.organisation": "Organisation",
@@ -351,6 +354,9 @@ export const ui = {
 
     "common.switchToFr": "Switch to French",
     "common.switchToEn": "Switch to English",
+
+    "theme.toggle.toLight": "Switch to light mode",
+    "theme.toggle.toDark": "Switch to dark mode",
 
     "contact.form.mailto.name": "Name",
     "contact.form.mailto.email": "Email",

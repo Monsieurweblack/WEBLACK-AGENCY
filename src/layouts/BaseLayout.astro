@@ -22,8 +22,23 @@ const t = useTranslations(lang);
 <html lang={lang}>
   <head>
     <meta charset="UTF-8" />
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem("weblack-theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {}
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/png" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <Seo lang={lang} title={title} description={description} image={image} noindex={noindex} />
@@ -31,7 +46,7 @@ const t = useTranslations(lang);
   <body class:list={["bg-(--color-ink)", bodyClass]}>
     <a
       href="#main-content"
-      class="label-tracked fixed left-4 top-4 z-[100] -translate-y-24 bg-(--color-gold) px-4 py-2 text-(--color-ink) transition-transform focus-visible:translate-y-0"
+      class="label-tracked fixed left-4 top-4 z-[100] -translate-y-24 bg-(--color-gold) px-4 py-2 text-(--color-on-gold) transition-transform focus-visible:translate-y-0"
     >
       {t("common.skipToContent")}
     </a>

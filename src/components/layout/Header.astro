@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
+import ThemeToggle from "./ThemeToggle.astro";
 import SocialLinks from "./SocialLinks.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
@@ -67,6 +68,7 @@ const liveHref = localizedPath(lang, "/live");
       >
         {t("nav.contact")}
       </a>
+      <ThemeToggle lang={lang} class="hidden sm:inline-flex" />
       <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" />
       <button
         type="button"
@@ -164,6 +166,7 @@ const liveHref = localizedPath(lang, "/live");
       {t("nav.contact")}
     </a>
     <SocialLinks class="hidden sm:flex" />
+    <ThemeToggle lang={lang} class="inline-flex" />
     <LanguageSwitcher lang={lang} class="inline-flex" />
   </div>
 </div>
@@ -203,5 +206,7 @@ const liveHref = localizedPath(lang, "/live");
 
 <script>
   import { initNav } from "../../scripts/gsap/nav";
+  import { initTheme } from "../../scripts/theme";
   initNav();
+  initTheme();
 </script>
