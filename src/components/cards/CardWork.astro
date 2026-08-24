@@ -1,6 +1,6 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
-import { localizedPath, type Lang } from "../../i18n/utils";
+import { localizedPath, useTranslations, type Lang } from "../../i18n/utils";
 import type { WorkEntry } from "../../lib/content";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 }
 
 const { lang, work, index = 0 } = Astro.props;
+const t = useTranslations(lang);
 const href = localizedPath(lang, `/selected-work/${work.data.slug}`);
 ---
 
@@ -31,6 +32,11 @@ const href = localizedPath(lang, `/selected-work/${work.data.slug}`);
         {work.data.title}
       </h3>
       <p class="mt-2 text-sm text-(--color-paper)/60">{work.data.disciplines.join(" · ")}</p>
+      <p
+        class="label-tracked mt-3 translate-y-1 text-(--color-gold) opacity-0 transition-[opacity,transform] duration-500 ease-(--ease-signature) group-hover:translate-y-0 group-hover:opacity-100"
+      >
+        {t("common.readMore")} &rarr;
+      </p>
     </div>
   </div>
 </a>

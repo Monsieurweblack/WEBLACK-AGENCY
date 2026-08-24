@@ -46,11 +46,11 @@
 }
 
 /*
- * Light mode overrides. Dark mode (the @theme block above) is the bare
- * :root default. A light theme applies when either:
- *  - the OS reports prefers-color-scheme: light and the user hasn't
- *    explicitly forced dark ([data-theme="dark"] wins over the OS), or
- *  - the user explicitly chose light via the header toggle ([data-theme="light"]).
+ * Light mode overrides. Dark mode (the @theme block above) is the
+ * unconditional default — the bare :root values apply unless the user has
+ * explicitly chosen light via the header toggle ([data-theme="light"]).
+ * The OS prefers-color-scheme is deliberately NOT consulted here: WEBLACK
+ * defaults to dark regardless of system preference, on every first visit.
  *
  * --color-ink/--color-paper keep their names but swap which physical tone
  * they hold per theme (ink = dominant background, paper = dominant text) so
@@ -63,22 +63,6 @@
  * else: in light mode they become a dark panel on the light page. Same
  * rhythm, same identity, mirrored — not a bug.
  */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --color-ink: #f5f3ee;
-    --color-ink-soft: #ece8e0;
-    --color-paper: #111111;
-    --color-paper-dim: #2b2b2b;
-    --color-gold: #7d5f34;
-    --color-gold-bright: #96773f;
-    --color-gold-dim: #5c4526;
-    --color-line: rgb(17 17 17 / 12%);
-    --color-line-on-paper: rgb(248 246 241 / 14%);
-    --color-gold-inverse: #b8955f;
-    color-scheme: light;
-  }
-}
-
 :root[data-theme="light"] {
   --color-ink: #f5f3ee;
   --color-ink-soft: #ece8e0;

@@ -26,12 +26,7 @@ const t = useTranslations(lang);
       (function () {
         try {
           var stored = localStorage.getItem("weblack-theme");
-          var theme =
-            stored === "light" || stored === "dark"
-              ? stored
-              : window.matchMedia("(prefers-color-scheme: light)").matches
-                ? "light"
-                : "dark";
+          var theme = stored === "light" ? "light" : "dark";
           document.documentElement.setAttribute("data-theme", theme);
         } catch (e) {}
       })();

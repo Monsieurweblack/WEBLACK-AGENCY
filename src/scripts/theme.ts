@@ -3,23 +3,11 @@ type Theme = "light" | "dark";
 
 let initialized = false;
 
-function getStored(): Theme | null {
-  try {
-    const value = localStorage.getItem(STORAGE_KEY);
-    return value === "light" || value === "dark" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function getSystemTheme(): Theme {
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
+// Dark is the unconditional default: any state other than an explicit
+// "light" attribute (set by the blocking anti-FOUC script or a prior user
+// choice) resolves to dark, regardless of OS prefers-color-scheme.
 function getCurrentTheme(): Theme {
-  const attr = document.documentElement.getAttribute("data-theme");
-  if (attr === "light" || attr === "dark") return attr;
-  return getSystemTheme();
+  return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
 }
 
 function updateMetaThemeColor(theme: Theme) {
@@ -69,11 +57,5 @@ export function initTheme() {
       const next: Theme = getCurrentTheme() === "dark" ? "light" : "dark";
       applyTheme(next, { persist: true });
     });
-  });
-
-  // Follow the OS theme live only while the user hasn't made an explicit choice.
-  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", (event) => {
-    if (getStored()) return;
-    applyTheme(event.matches ? "light" : "dark", { persist: false });
   });
 }

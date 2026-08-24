@@ -47,7 +47,10 @@ const liveHref = localizedPath(lang, "/live");
       href={homeHref}
       class="flex items-center gap-3 transition-opacity hover:opacity-80"
     >
-      <Image src={weblackIcon} alt="WEBLACK" width={34} height={34} loading="eager" />
+      <span class="relative inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center">
+        <span class="logo-ring pointer-events-none absolute -inset-1 rounded-full" aria-hidden="true"></span>
+        <Image src={weblackIcon} alt="WEBLACK" width={34} height={34} loading="eager" class="relative" />
+      </span>
       <span class="font-display text-lg tracking-[0.05em] text-(--color-paper)">WEBLACK</span>
     </a>
 
@@ -55,7 +58,7 @@ const liveHref = localizedPath(lang, "/live");
       <a
         href={liveHref}
         class:list={[
-          "label-tracked inline-flex items-center transition-colors",
+          "label-tracked inline-flex items-center transition-[color,transform] duration-300 hover:-translate-y-px",
           isOnAir ? "gap-2 live-on-air" : "text-(--color-paper) hover:text-(--color-gold)",
         ]}
       >
@@ -64,7 +67,7 @@ const liveHref = localizedPath(lang, "/live");
       </a>
       <a
         href={contactHref}
-        class="label-tracked hidden text-(--color-paper) transition-colors hover:text-(--color-gold) sm:inline-flex"
+        class="label-tracked hidden text-(--color-paper) transition-[color,transform] duration-300 hover:-translate-y-px hover:text-(--color-gold) sm:inline-flex"
       >
         {t("nav.contact")}
       </a>
@@ -200,6 +203,36 @@ const liveHref = localizedPath(lang, "/live");
   @media (prefers-reduced-motion: reduce) {
     .live-on-air-dot {
       animation: none;
+    }
+  }
+
+  /*
+   * Logo mark is a single flattened image (circle + W baked into one file,
+   * no separable layers) — isolating just the circle for rotation would
+   * require reconstructing the artwork, which risks visible degradation.
+   * Instead: a thin gold arc sits behind the untouched logo and rotates
+   * slowly, giving the header a sense of life without touching a single
+   * pixel of the actual mark. transform-only, so it's cheap, and covered
+   * by the site's existing global prefers-reduced-motion rule (global.css
+   * forces animation-duration to ~0 for every element under that setting).
+   */
+  .logo-ring {
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 250deg,
+      var(--color-gold) 305deg,
+      var(--color-gold-bright) 320deg,
+      var(--color-gold) 335deg,
+      transparent 360deg
+    );
+    opacity: 0.8;
+    animation: logo-ring-spin 10s linear infinite;
+  }
+
+  @keyframes logo-ring-spin {
+    to {
+      transform: rotate(360deg);
     }
   }
 </style>
