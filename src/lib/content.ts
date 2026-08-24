@@ -139,6 +139,19 @@ export interface WorkData {
   seo?: Seo;
 }
 
+/**
+ * Moderated comments, added directly in Sanity by an editor after review —
+ * there is no public submission pipeline into this field (see the comment
+ * form's mailto: flow below). No document has this field in the Studio
+ * schema yet; like `format`, it's additive and simply reads as empty until
+ * populated.
+ */
+export interface JournalComment {
+  name: string;
+  text: string;
+  date: string;
+}
+
 export interface JournalData {
   slug: string;
   lang: Lang;
@@ -152,7 +165,7 @@ export interface JournalData {
   coverImage: EntryImage;
   relatedWorkSlug?: string;
   bodyHtml: string;
-  readTimeMinutes: number;
+  comments?: JournalComment[];
   featured: boolean;
   seo?: Seo;
 }
@@ -232,14 +245,6 @@ function toHtmlSafe(blocks: (PortableTextBlock | { _type: "image"; asset?: { _re
   });
 }
 
-const WORDS_PER_MINUTE = 200;
-
-function estimateReadTime(html: string): number {
-  const text = html.replace(/<[^>]+>/g, " ");
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
-}
-
 function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionMap[C] {
   const slug = doc.slug.current as string;
   switch (collection) {
@@ -302,7 +307,7 @@ function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionM
           coverImage: doc.coverImage,
           relatedWorkSlug: doc.relatedWorkSlug,
           bodyHtml,
-          readTimeMinutes: estimateReadTime(bodyHtml),
+          comments: doc.comments,
           featured: doc.featured ?? false,
           seo: doc.seo,
         },

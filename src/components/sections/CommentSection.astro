@@ -1,0 +1,106 @@
+---
+import { useTranslations, type Lang } from "../../i18n/utils";
+import { CONTACT_EMAIL } from "../../lib/contact";
+import type { JournalComment } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  articleTitle: string;
+  articleUrl: string;
+  comments?: JournalComment[];
+}
+
+const { lang, articleTitle, articleUrl, comments = [] } = Astro.props;
+const t = useTranslations(lang);
+const locale = lang === "fr" ? "fr-FR" : "en-US";
+---
+
+<section class="mx-auto max-w-3xl border-t border-(--color-line) px-6 py-16 md:px-10 md:py-20">
+  <h2 class="font-display text-3xl text-(--color-paper)">{t("comments.title")}</h2>
+
+  {
+    comments.length > 0 ? (
+      <ul class="mt-10 space-y-8">
+        {comments.map((comment) => (
+          <li class="border-t border-(--color-line) pt-6 first:border-t-0 first:pt-0">
+            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span class="text-sm font-semibold text-(--color-paper)">{comment.name}</span>
+              <time class="text-xs text-(--color-paper)/40">
+                {new Date(comment.date).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })}
+              </time>
+            </div>
+            <p class="mt-2 text-sm leading-relaxed text-(--color-paper)/70">{comment.text}</p>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="mt-6 text-sm text-(--color-paper)/50">{t("comments.empty")}</p>
+    )
+  }
+
+  <div class="mt-12 border-t border-(--color-line) pt-10">
+    <h3 class="label-tracked text-(--color-gold)">{t("comments.form.title")}</h3>
+    <p class="mt-3 text-sm text-(--color-paper)/50">{t("comments.form.notice")}</p>
+
+    <form
+      id="comment-form"
+      data-contact-email={CONTACT_EMAIL}
+      data-article-title={articleTitle}
+      data-article-url={articleUrl}
+      class="mt-6 space-y-6"
+      novalidate
+    >
+      <!-- Honeypot: hidden from real visitors, left empty by them; a filled value marks the submission as spam. -->
+      <div class="absolute left-[-9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+        <label for="comment-website">Website</label>
+        <input type="text" id="comment-website" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <div>
+        <label for="comment-name" class="label-tracked text-(--color-paper)/70">{t("comments.form.name")}</label>
+        <input
+          type="text"
+          id="comment-name"
+          name="name"
+          required
+          autocomplete="name"
+          class="mt-2 w-full border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+        />
+      </div>
+
+      <div>
+        <label for="comment-text" class="label-tracked text-(--color-paper)/70">{t("comments.form.text")}</label>
+        <textarea
+          id="comment-text"
+          name="text"
+          rows="4"
+          required
+          class="mt-2 w-full resize-none border-0 border-b border-(--color-line) bg-transparent py-3 text-(--color-paper) outline-none transition-colors focus:border-(--color-gold)"
+        ></textarea>
+      </div>
+
+      <button
+        type="submit"
+        class="inline-flex items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+      >
+        {t("comments.form.submit")}
+      </button>
+
+      <p
+        id="comment-form-status"
+        role="status"
+        aria-live="polite"
+        class="hidden text-sm"
+        data-success-text={t("comments.form.success")}
+        data-error-text={t("comments.form.error")}
+        data-submitting-text={t("comments.form.submitting")}
+      >
+      </p>
+    </form>
+  </div>
+</section>
+
+<script>
+  import { initCommentForm } from "../../scripts/forms/comment-form";
+  initCommentForm();
+</script>

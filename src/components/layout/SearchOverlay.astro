@@ -1,0 +1,87 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  class?: string;
+}
+
+const { lang, class: className = "inline-flex" } = Astro.props;
+const t = useTranslations(lang);
+const indexUrl = localizedPath(lang, "/search-index.json");
+---
+
+<button
+  type="button"
+  data-search-trigger
+  aria-label={t("search.trigger")}
+  aria-haspopup="dialog"
+  aria-controls="search-panel"
+  class:list={["h-9 w-9 items-center justify-center text-(--color-paper) transition-colors duration-300 hover:text-(--color-gold)", className]}
+>
+  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+    <circle cx="10.8" cy="10.8" r="6.3" />
+    <path d="m19.5 19.5-4.15-4.15" stroke-linecap="round" />
+  </svg>
+</button>
+
+<div
+  id="search-panel"
+  role="dialog"
+  aria-modal="true"
+  aria-label={t("search.trigger")}
+  data-index-url={indexUrl}
+  data-no-results={t("search.noResults")}
+  data-type-page={t("search.type.page")}
+  data-type-journal={t("search.type.journal")}
+  data-type-work={t("search.type.work")}
+  data-type-talent={t("search.type.talent")}
+  class="fixed inset-0 z-[60] flex flex-col items-center bg-(--color-ink)/97 pt-28 opacity-0 pointer-events-none px-6 backdrop-blur-sm transition-opacity duration-200 sm:pt-36 md:px-10"
+  aria-hidden="true"
+  inert
+>
+  <div class="w-full max-w-2xl">
+    <div class="flex items-center gap-4 border-b border-(--color-line) pb-4">
+      <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-(--color-paper)/40" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <circle cx="10.8" cy="10.8" r="6.3" />
+        <path d="m19.5 19.5-4.15-4.15" stroke-linecap="round" />
+      </svg>
+      <input
+        type="text"
+        id="search-input"
+        placeholder={t("search.placeholder")}
+        autocomplete="off"
+        class="font-display w-full border-0 bg-transparent text-xl text-(--color-paper) outline-none placeholder:text-(--color-paper)/40 sm:text-2xl"
+      />
+      <button
+        type="button"
+        id="search-close"
+        aria-label={t("search.close")}
+        class="shrink-0 text-(--color-paper)/50 transition-colors hover:text-(--color-gold)"
+      >
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+    <p id="search-hint" class="mt-4 text-sm text-(--color-paper)/40">{t("search.hint")}</p>
+    <ul id="search-results" class="mt-2 max-h-[60vh] space-y-1 overflow-y-auto"></ul>
+  </div>
+</div>
+
+<template id="search-result-template">
+  <li>
+    <a class="group flex items-baseline justify-between gap-4 border-b border-(--color-line) py-4 transition-colors hover:border-(--color-gold)">
+      <span>
+        <span class="block text-(--color-paper) group-hover:text-(--color-gold)" data-result-title></span>
+        <span class="mt-1 block text-sm text-(--color-paper)/50" data-result-description></span>
+      </span>
+      <span class="label-tracked shrink-0 text-(--color-paper)/30" data-result-type></span>
+    </a>
+  </li>
+</template>
+
+<script>
+  import { initSearch } from "../../scripts/search";
+  initSearch();
+</script>

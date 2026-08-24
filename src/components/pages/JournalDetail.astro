@@ -3,6 +3,7 @@ import RemoteImage from "../media/RemoteImage.astro";
 import CardJournal from "../cards/CardJournal.astro";
 import CtaContact from "../sections/CtaContact.astro";
 import ShareButtons from "../layout/ShareButtons.astro";
+import CommentSection from "../sections/CommentSection.astro";
 import type { JournalEntry } from "../../lib/content";
 import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
@@ -73,8 +74,6 @@ const structuredData = {
         </>
       )}
       <time datetime={article.data.publishDate.toISOString()}>{date}</time>
-      <span aria-hidden="true">·</span>
-      <span>{article.data.readTimeMinutes} {t("journal.readingTime.suffix")}</span>
     </div>
 
     <ShareButtons
@@ -110,6 +109,13 @@ const structuredData = {
       </a>
     </div>
   )}
+
+  <CommentSection
+    lang={lang}
+    articleTitle={article.data.title}
+    articleUrl={canonicalUrl}
+    comments={article.data.comments}
+  />
 
   {related.length > 0 && (
     <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) px-6 py-16 md:px-10 md:py-20">

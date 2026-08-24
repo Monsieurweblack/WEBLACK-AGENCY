@@ -3,6 +3,7 @@ import { Image } from "astro:assets";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
 import ThemeToggle from "./ThemeToggle.astro";
 import SocialLinks from "./SocialLinks.astro";
+import SearchOverlay from "./SearchOverlay.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { liveEvent } from "../../data/live";
@@ -73,6 +74,7 @@ const liveHref = localizedPath(lang, "/live");
       </a>
       <ThemeToggle lang={lang} class="hidden sm:inline-flex" />
       <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" />
+      <SearchOverlay lang={lang} class="hidden sm:inline-flex" />
       <button
         type="button"
         id="menu-trigger"
@@ -169,6 +171,19 @@ const liveHref = localizedPath(lang, "/live");
       {t("nav.contact")}
     </a>
     <SocialLinks class="hidden sm:flex" />
+    <button
+      type="button"
+      data-search-trigger
+      aria-label={t("search.trigger")}
+      aria-haspopup="dialog"
+      aria-controls="search-panel"
+      class="inline-flex h-9 w-9 items-center justify-center text-(--color-paper) transition-colors duration-300 hover:text-(--color-gold)"
+    >
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <circle cx="10.8" cy="10.8" r="6.3" />
+        <path d="m19.5 19.5-4.15-4.15" stroke-linecap="round" />
+      </svg>
+    </button>
     <ThemeToggle lang={lang} class="inline-flex" />
     <LanguageSwitcher lang={lang} class="inline-flex" />
   </div>
