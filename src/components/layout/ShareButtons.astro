@@ -1,0 +1,154 @@
+---
+import { useTranslations, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  url: string;
+  title: string;
+  label?: string;
+  class?: string;
+  iconClass?: string;
+}
+
+const { lang, url, title, label, class: className, iconClass = "h-5 w-5" } = Astro.props;
+const t = useTranslations(lang);
+
+const encodedUrl = encodeURIComponent(url);
+const encodedTitle = encodeURIComponent(title);
+
+const links = [
+  { name: "whatsapp", label: t("share.whatsapp"), href: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}` },
+  { name: "facebook", label: t("share.facebook"), href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
+  { name: "x", label: t("share.x"), href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}` },
+  { name: "linkedin", label: t("share.linkedin"), href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
+  { name: "email", label: t("share.email"), href: `mailto:?subject=${encodedTitle}&body=${encodedUrl}` },
+] as const;
+---
+
+<div class:list={["flex flex-col gap-3", className]}>
+  {label && <p class="label-tracked text-(--color-paper)/50">{label}</p>}
+  <ul class="flex flex-wrap items-center gap-4">
+    {
+      links.map((link) => (
+        <li>
+          <a
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={link.label}
+            class="inline-flex text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+          >
+            {link.name === "whatsapp" && (
+              <svg viewBox="0 0 24 24" class={iconClass} fill="currentColor" aria-hidden="true">
+                <path d="M12 2.5a9.35 9.35 0 0 0-8.02 14.13L2.9 21l4.5-1.06A9.35 9.35 0 1 0 12 2.5Zm5.35 13.32c-.22.63-1.29 1.22-1.82 1.3-.47.08-1.05.11-1.7-.1-.39-.13-.9-.3-1.55-.6-2.72-1.18-4.5-3.9-4.63-4.09-.14-.19-1.1-1.47-1.1-2.8s.68-1.98.93-2.25c.22-.24.5-.3.68-.3.17 0 .34 0 .49.01.16.01.37-.06.58.44.22.53.74 1.83.8 1.96.07.14.11.3.02.48-.09.19-.14.3-.27.46-.14.17-.29.37-.41.5-.14.14-.28.29-.12.57.16.28.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.28.14.44.12.61-.07.17-.19.72-.83.91-1.12.19-.28.38-.24.63-.14.26.09 1.63.77 1.91.91.28.15.47.22.53.34.07.13.07.72-.15 1.15Z" />
+              </svg>
+            )}
+            {link.name === "facebook" && (
+              <svg viewBox="0 0 24 24" class={iconClass} fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.25" />
+                <path
+                  d="M13.6 20.8v-6.8h2.28l.34-2.65h-2.62V9.63c0-.77.21-1.29 1.31-1.29h1.4V6c-.24-.03-1.07-.1-2.04-.1-2.02 0-3.4 1.23-3.4 3.5v1.95H8.6v2.65h2.27v6.8"
+                  fill="currentColor"
+                  stroke="none"
+                />
+              </svg>
+            )}
+            {link.name === "x" && (
+              <svg viewBox="0 0 24 24" class={iconClass} fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.25" />
+                <path d="M8.1 8.1l7.8 7.8M15.9 8.1l-7.8 7.8" stroke-linecap="round" />
+              </svg>
+            )}
+            {link.name === "linkedin" && (
+              <svg viewBox="0 0 24 24" class={iconClass} fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.25" />
+                <circle cx="8.6" cy="7.3" r="1.05" fill="currentColor" stroke="none" />
+                <path d="M8.6 10.4V16.5" stroke-width="1.6" stroke-linecap="round" />
+                <path
+                  d="M11.9 16.5v-3.6c0-1.3.7-2.1 1.85-2.1s1.85.8 1.85 2.1v3.6"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path d="M11.9 10.4V16.5" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            )}
+            {link.name === "email" && (
+              <svg viewBox="0 0 24 24" class={iconClass} fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                <circle cx="12" cy="12" r="9.25" />
+                <rect x="7" y="9.4" width="10" height="6.6" rx="1" />
+                <path d="m7.3 9.9 4.7 3.3 4.7-3.3" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            )}
+          </a>
+        </li>
+      ))
+    }
+    <li>
+      <button
+        type="button"
+        data-copy-link
+        data-url={url}
+        data-copied-label={t("share.copied")}
+        aria-label={t("share.copy")}
+        class="group relative inline-flex text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class:list={["copy-icon", iconClass]}
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9.25" />
+          <path
+            d="M10.3 13.7 13.7 10.3M11.9 9.1l.75-.75a2.4 2.4 0 0 1 3.4 3.4l-.9.9M12.1 14.9l-.75.75a2.4 2.4 0 0 1-3.4-3.4l.9-.9"
+            stroke-linecap="round"
+          />
+        </svg>
+        <svg
+          viewBox="0 0 24 24"
+          class:list={["check-icon hidden", iconClass]}
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.4"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9.25" />
+          <path d="M7.5 12.4l2.7 2.7 6.3-6.3" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    </li>
+  </ul>
+</div>
+
+<script>
+  function initShareCopyButtons() {
+    document.querySelectorAll<HTMLButtonElement>("[data-copy-link]").forEach((btn) => {
+      if (btn.dataset.bound === "true") return;
+      btn.dataset.bound = "true";
+      btn.addEventListener("click", async () => {
+        const url = btn.dataset.url;
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          return;
+        }
+        const copyIcon = btn.querySelector(".copy-icon");
+        const checkIcon = btn.querySelector(".check-icon");
+        const originalLabel = btn.getAttribute("aria-label");
+        copyIcon?.classList.add("hidden");
+        checkIcon?.classList.remove("hidden");
+        btn.setAttribute("aria-label", btn.dataset.copiedLabel ?? "Copied");
+        window.setTimeout(() => {
+          copyIcon?.classList.remove("hidden");
+          checkIcon?.classList.add("hidden");
+          if (originalLabel) btn.setAttribute("aria-label", originalLabel);
+        }, 2000);
+      });
+    });
+  }
+  initShareCopyButtons();
+</script>

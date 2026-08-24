@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import SocialLinks from "./SocialLinks.astro";
+import ShareButtons from "./ShareButtons.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 const { lang } = Astro.props;
 const t = useTranslations(lang);
 const year = new Date().getFullYear();
+const currentUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
 const exploreLinks = [
   { label: t("nav.talent"), href: "/talent" },
@@ -115,6 +117,10 @@ const legalLinks = [
         <p>{t("contact.info.address.label")}</p>
       </div>
       <SocialLinks />
+    </div>
+
+    <div class="mt-8 border-t border-(--color-line) pt-8">
+      <ShareButtons lang={lang} url={currentUrl} title={t("seo.default.title")} label={t("share.site")} />
     </div>
   </div>
 </footer>

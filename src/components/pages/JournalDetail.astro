@@ -2,6 +2,7 @@
 import RemoteImage from "../media/RemoteImage.astro";
 import CardJournal from "../cards/CardJournal.astro";
 import CtaContact from "../sections/CtaContact.astro";
+import ShareButtons from "../layout/ShareButtons.astro";
 import type { JournalEntry } from "../../lib/content";
 import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
@@ -75,6 +76,14 @@ const structuredData = {
       <span aria-hidden="true">·</span>
       <span>{article.data.readTimeMinutes} {t("journal.readingTime.suffix")}</span>
     </div>
+
+    <ShareButtons
+      lang={lang}
+      url={canonicalUrl}
+      title={article.data.title}
+      label={t("share.article")}
+      class="mt-8"
+    />
   </div>
 
   <div class="mx-auto aspect-[16/9] max-w-5xl overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">

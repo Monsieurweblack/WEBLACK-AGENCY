@@ -329,6 +329,16 @@ export const ui = {
     "footer.rights": "Tous droits réservés.",
     "footer.since": "Fondée en 2010",
 
+    "share.site": "Partager WEBLACK",
+    "share.article": "Partager cet article",
+    "share.whatsapp": "Partager sur WhatsApp",
+    "share.facebook": "Partager sur Facebook",
+    "share.x": "Partager sur X",
+    "share.linkedin": "Partager sur LinkedIn",
+    "share.email": "Partager par e-mail",
+    "share.copy": "Copier le lien",
+    "share.copied": "Lien copié",
+
     "seo.default.title": "WEBLACK — Agence créative indépendante",
     "seo.default.description":
       "WEBLACK est une agence créative indépendante qui relie talents, créativité, culture et opportunités au-delà des frontières. Talent management, direction créative et conseil de marque.",
@@ -661,6 +671,16 @@ export const ui = {
     "footer.privacy": "Privacy policy",
     "footer.rights": "All rights reserved.",
     "footer.since": "Founded in 2010",
+
+    "share.site": "Share WEBLACK",
+    "share.article": "Share this article",
+    "share.whatsapp": "Share on WhatsApp",
+    "share.facebook": "Share on Facebook",
+    "share.x": "Share on X",
+    "share.linkedin": "Share on LinkedIn",
+    "share.email": "Share by email",
+    "share.copy": "Copy link",
+    "share.copied": "Link copied",
 
     "seo.default.title": "WEBLACK — Independent Creative Agency",
     "seo.default.description":
