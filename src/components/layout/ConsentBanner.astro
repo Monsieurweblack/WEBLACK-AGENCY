@@ -1,0 +1,125 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<div
+  id="consent-banner"
+  data-consent-banner
+  class="fixed inset-x-0 bottom-0 z-[70] hidden border-t border-(--color-line) bg-(--color-ink) px-6 py-6 shadow-[0_-8px_30px_rgba(0,0,0,0.35)] md:px-10"
+  role="region"
+  aria-label={t("consent.preferences.title")}
+>
+  <div class="mx-auto flex max-w-(--container-content) flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+    <p class="max-w-2xl text-sm text-(--color-paper)/70">
+      {t("consent.banner.text")}
+      {" "}
+      <a
+        href={localizedPath(lang, "/politique-de-confidentialite")}
+        class="text-(--color-gold) underline underline-offset-2 hover:text-(--color-gold-bright)"
+      >
+        {t("consent.banner.learnMore")}
+      </a>
+    </p>
+    <div class="flex shrink-0 flex-wrap items-center gap-3">
+      <button
+        type="button"
+        data-consent-reject
+        class="label-tracked border border-(--color-line) px-5 py-3 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+      >
+        {t("consent.reject")}
+      </button>
+      <button
+        type="button"
+        data-consent-customize
+        class="label-tracked border border-(--color-line) px-5 py-3 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+      >
+        {t("consent.customize")}
+      </button>
+      <button
+        type="button"
+        data-consent-accept
+        class="label-tracked bg-(--color-gold) px-5 py-3 text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+      >
+        {t("consent.accept")}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div
+  id="consent-preferences"
+  data-consent-preferences
+  role="dialog"
+  aria-modal="true"
+  aria-label={t("consent.preferences.title")}
+  class="fixed inset-0 z-[80] flex items-end justify-center bg-(--color-ink)/80 opacity-0 pointer-events-none px-6 pb-6 backdrop-blur-sm transition-opacity duration-200 sm:items-center md:px-10"
+  aria-hidden="true"
+  inert
+>
+  <div class="w-full max-w-xl border border-(--color-line) bg-(--color-ink) p-8 md:p-10">
+    <h2 class="font-display text-2xl text-(--color-paper)">{t("consent.preferences.title")}</h2>
+    <p class="mt-3 text-sm text-(--color-paper)/60">{t("consent.preferences.lead")}</p>
+
+    <div class="mt-8 space-y-6 border-t border-(--color-line) pt-6">
+      <div class="flex items-start justify-between gap-6">
+        <div>
+          <p class="text-sm font-semibold text-(--color-paper)">{t("consent.category.necessary.title")}</p>
+          <p class="mt-1 text-sm text-(--color-paper)/50">{t("consent.category.necessary.desc")}</p>
+        </div>
+        <input type="checkbox" checked disabled aria-label={t("consent.category.necessary.title")} class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold) opacity-50" />
+      </div>
+
+      <div class="flex items-start justify-between gap-6 border-t border-(--color-line) pt-6">
+        <div>
+          <p class="text-sm font-semibold text-(--color-paper)">{t("consent.category.analytics.title")}</p>
+          <p class="mt-1 text-sm text-(--color-paper)/50">{t("consent.category.analytics.desc")}</p>
+        </div>
+        <input
+          type="checkbox"
+          id="consent-analytics-toggle"
+          data-consent-analytics-toggle
+          aria-label={t("consent.category.analytics.title")}
+          class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold)"
+        />
+      </div>
+    </div>
+
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-(--color-line) pt-6">
+      <button
+        type="button"
+        data-consent-close
+        class="label-tracked text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+      >
+        {t("consent.close")}
+      </button>
+      <div class="flex flex-wrap gap-3">
+        <button
+          type="button"
+          data-consent-save
+          class="label-tracked border border-(--color-line) px-5 py-3 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+        >
+          {t("consent.save")}
+        </button>
+        <button
+          type="button"
+          data-consent-accept-all
+          class="label-tracked bg-(--color-gold) px-5 py-3 text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+        >
+          {t("consent.acceptAll")}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { initConsent } from "../../scripts/consent";
+  initConsent();
+</script>

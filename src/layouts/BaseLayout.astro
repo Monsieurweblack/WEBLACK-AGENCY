@@ -3,6 +3,7 @@ import "../styles/global.css";
 import Header from "../components/layout/Header.astro";
 import Footer from "../components/layout/Footer.astro";
 import Seo from "../components/layout/Seo.astro";
+import ConsentBanner from "../components/layout/ConsentBanner.astro";
 import { useTranslations, type Lang } from "../i18n/utils";
 
 interface Props {
@@ -33,6 +34,52 @@ const t = useTranslations(lang);
         } catch (e) {}
       })();
     </script>
+    <!--
+      Basic Consent Mode: gtag.js itself is never requested — no script, no
+      cookie, no request to googletagmanager.com — until the visitor grants
+      analytics consent. weblackLoadGA4() is the single place that does the
+      loading; it's exposed on window so consent.ts (loaded later, when the
+      visitor interacts with the banner) can call the exact same path. A
+      prior "accepted" choice (read synchronously here, same
+      "weblack-consent" key consent.ts writes to) loads GA4 immediately on
+      return visits; no choice yet, or a prior refusal, leaves it unloaded.
+    -->
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      window.gtag = gtag;
+
+      var GA_MEASUREMENT_ID = "G-1Y2Q6BGRZ8";
+      var ga4Loaded = false;
+
+      function weblackLoadGA4() {
+        if (ga4Loaded) return;
+        ga4Loaded = true;
+        gtag("consent", "default", {
+          ad_storage: "denied",
+          ad_user_data: "denied",
+          ad_personalization: "denied",
+          analytics_storage: "granted",
+        });
+        var script = document.createElement("script");
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_MEASUREMENT_ID;
+        document.head.appendChild(script);
+        gtag("js", new Date());
+        gtag("config", GA_MEASUREMENT_ID);
+      }
+      window.__weblackLoadGA4 = weblackLoadGA4;
+
+      try {
+        var storedConsent = localStorage.getItem("weblack-consent");
+        if (storedConsent) {
+          var parsedConsent = JSON.parse(storedConsent);
+          if (parsedConsent && parsedConsent.analytics === true) weblackLoadGA4();
+        }
+      } catch (e) {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)" />
@@ -52,5 +99,6 @@ const t = useTranslations(lang);
       <slot />
     </main>
     <Footer lang={lang} />
+    <ConsentBanner lang={lang} />
   </body>
 </html>

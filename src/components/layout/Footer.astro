@@ -98,6 +98,15 @@ const legalLinks = [
             ))
           }
           <li>
+            <button
+              type="button"
+              data-open-consent-preferences
+              class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+            >
+              {t("footer.privacyPreferences")}
+            </button>
+          </li>
+          <li>
             <a
               href={localizedPath(lang, "/contact")}
               class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
