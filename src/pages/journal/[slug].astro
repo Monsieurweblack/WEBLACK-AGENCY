@@ -1,17 +1,32 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import JournalDetail from "../../components/pages/JournalDetail.astro";
-import { useTranslations } from "../../i18n/utils";
+import { useTranslations, localizedPath } from "../../i18n/utils";
 import { getEntriesByLang } from "../../lib/content";
 
+/**
+ * Not every article is published in both languages, and even paired
+ * articles don't always share the same slug (see the FR/EN NTA pair) — the
+ * language switcher can't assume a same-slug counterpart exists. When it
+ * doesn't, `altLangHref` sends it to the other language's Journal index
+ * instead of a 404.
+ */
 export async function getStaticPaths() {
-  const entries = await getEntriesByLang("journal", "fr");
-  return entries.map((article) => ({ params: { slug: article.data.slug }, props: { article } }));
+  const [entries, enEntries] = await Promise.all([
+    getEntriesByLang("journal", "fr"),
+    getEntriesByLang("journal", "en"),
+  ]);
+  const enSlugs = new Set(enEntries.map((entry) => entry.data.slug));
+  return entries.map((article) => ({
+    params: { slug: article.data.slug },
+    props: { article, hasAltLang: enSlugs.has(article.data.slug) },
+  }));
 }
 
-const { article } = Astro.props;
+const { article, hasAltLang } = Astro.props;
 const lang = "fr" as const;
 const t = useTranslations(lang);
+const altLangHref = hasAltLang ? undefined : localizedPath("en", "/journal");
 ---
 
 <BaseLayout
@@ -20,6 +35,7 @@ const t = useTranslations(lang);
   description={article.data.seo?.description ?? article.data.excerpt}
   image={article.data.coverImage.url}
   imageAlt={article.data.coverImage.alt}
+  altLangHref={altLangHref}
 >
   <JournalDetail lang={lang} article={article} />
 </BaseLayout>

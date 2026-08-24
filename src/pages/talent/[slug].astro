@@ -2,12 +2,15 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import TalentDetail from "../../components/pages/TalentDetail.astro";
 import { useTranslations } from "../../i18n/utils";
+import type { TalentEntry } from "../../lib/content";
 
 /**
  * No pages are generated until real, verified talent profiles exist in
- * Sanity — see src/pages/talent/index.astro for why.
+ * Sanity — see src/pages/talent/index.astro for why. The explicit return
+ * type (rather than letting `[]` infer as `never[]`) keeps `Astro.props`
+ * typed correctly below instead of collapsing to `never`.
  */
-export async function getStaticPaths() {
+export async function getStaticPaths(): Promise<{ params: { slug: string }; props: { talent: TalentEntry } }[]> {
   return [];
 }
 

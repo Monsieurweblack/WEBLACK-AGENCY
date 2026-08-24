@@ -13,9 +13,10 @@ interface Props {
   imageAlt?: string;
   noindex?: boolean;
   bodyClass?: string;
+  altLangHref?: string;
 }
 
-const { lang, title, description, image, imageAlt, noindex, bodyClass } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex, bodyClass, altLangHref } = Astro.props;
 const t = useTranslations(lang);
 ---
 
@@ -46,7 +47,7 @@ const t = useTranslations(lang);
     >
       {t("common.skipToContent")}
     </a>
-    <Header lang={lang} />
+    <Header lang={lang} altLangHref={altLangHref} />
     <main id="main-content">
       <slot />
     </main>

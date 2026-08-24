@@ -12,21 +12,37 @@ export function initSearch() {
   initialized = true;
 
   const triggers = document.querySelectorAll<HTMLButtonElement>("[data-search-trigger]");
-  const panel = document.getElementById("search-panel");
-  const closeButton = document.getElementById("search-close");
-  const input = document.getElementById("search-input") as HTMLInputElement | null;
-  const hint = document.getElementById("search-hint");
-  const resultsList = document.getElementById("search-results");
-  const template = document.getElementById("search-result-template") as HTMLTemplateElement | null;
-  if (triggers.length === 0 || !panel || !closeButton || !input || !hint || !resultsList || !template) return;
+  const panelEl = document.getElementById("search-panel");
+  const closeButtonEl = document.getElementById("search-close");
+  const inputEl = document.getElementById("search-input") as HTMLInputElement | null;
+  const hintEl = document.getElementById("search-hint");
+  const resultsListEl = document.getElementById("search-results");
+  const templateEl = document.getElementById("search-result-template") as HTMLTemplateElement | null;
+  if (triggers.length === 0 || !panelEl || !closeButtonEl || !inputEl || !hintEl || !resultsListEl || !templateEl) {
+    return;
+  }
 
-  const indexUrl = panel.dataset.indexUrl || "";
-  const noResultsText = panel.dataset.noResults || "";
+  // TypeScript doesn't narrow `| null` across closures defined below (they
+  // could in principle be invoked before this point), even though the guard
+  // above already proved every one of these is present. Bundling the
+  // verified elements here gives the rest of this function real non-null
+  // types without re-checking each one inside every nested handler.
+  const dom = {
+    panel: panelEl,
+    closeButton: closeButtonEl,
+    input: inputEl,
+    hint: hintEl,
+    resultsList: resultsListEl,
+    template: templateEl,
+  };
+
+  const indexUrl = dom.panel.dataset.indexUrl || "";
+  const noResultsText = dom.panel.dataset.noResults || "";
   const typeLabels: Record<SearchEntry["type"], string> = {
-    page: panel.dataset.typePage || "",
-    journal: panel.dataset.typeJournal || "",
-    work: panel.dataset.typeWork || "",
-    talent: panel.dataset.typeTalent || "",
+    page: dom.panel.dataset.typePage || "",
+    journal: dom.panel.dataset.typeJournal || "",
+    work: dom.panel.dataset.typeWork || "",
+    talent: dom.panel.dataset.typeTalent || "",
   };
 
   let entries: SearchEntry[] | null = null;
@@ -46,16 +62,16 @@ export function initSearch() {
   }
 
   function renderResults(matches: SearchEntry[]) {
-    resultsList.innerHTML = "";
+    dom.resultsList.innerHTML = "";
     if (matches.length === 0) {
-      hint.textContent = noResultsText;
-      hint.classList.remove("hidden");
+      dom.hint.textContent = noResultsText;
+      dom.hint.classList.remove("hidden");
       return;
     }
-    hint.classList.add("hidden");
+    dom.hint.classList.add("hidden");
     const fragment = document.createDocumentFragment();
     matches.slice(0, 20).forEach((entry) => {
-      const node = template.content.cloneNode(true) as DocumentFragment;
+      const node = dom.template.content.cloneNode(true) as DocumentFragment;
       const link = node.querySelector("a");
       const title = node.querySelector<HTMLElement>("[data-result-title]");
       const description = node.querySelector<HTMLElement>("[data-result-description]");
@@ -66,14 +82,14 @@ export function initSearch() {
       if (type) type.textContent = typeLabels[entry.type] || "";
       fragment.appendChild(node);
     });
-    resultsList.appendChild(fragment);
+    dom.resultsList.appendChild(fragment);
   }
 
   function runSearch(query: string) {
     const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
-      resultsList.innerHTML = "";
-      hint.classList.remove("hidden");
+      dom.resultsList.innerHTML = "";
+      dom.hint.classList.remove("hidden");
       return;
     }
     loadIndex().then((data) => {
@@ -85,36 +101,36 @@ export function initSearch() {
   }
 
   function openSearch() {
-    panel.classList.remove("pointer-events-none");
-    panel.classList.add("opacity-100");
-    panel.removeAttribute("inert");
-    panel.setAttribute("aria-hidden", "false");
+    dom.panel.classList.remove("pointer-events-none");
+    dom.panel.classList.add("opacity-100");
+    dom.panel.removeAttribute("inert");
+    dom.panel.setAttribute("aria-hidden", "false");
     triggers.forEach((trigger) => trigger.setAttribute("aria-expanded", "true"));
     document.body.style.overflow = "hidden";
     loadIndex();
-    window.setTimeout(() => input.focus(), 50);
+    window.setTimeout(() => dom.input.focus(), 50);
   }
 
   function closeSearch() {
-    panel.classList.add("pointer-events-none");
-    panel.classList.remove("opacity-100");
-    panel.setAttribute("inert", "");
-    panel.setAttribute("aria-hidden", "true");
+    dom.panel.classList.add("pointer-events-none");
+    dom.panel.classList.remove("opacity-100");
+    dom.panel.setAttribute("inert", "");
+    dom.panel.setAttribute("aria-hidden", "true");
     triggers.forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
     document.body.style.overflow = "";
-    input.value = "";
-    resultsList.innerHTML = "";
-    hint.classList.remove("hidden");
+    dom.input.value = "";
+    dom.resultsList.innerHTML = "";
+    dom.hint.classList.remove("hidden");
   }
 
   triggers.forEach((trigger) => trigger.addEventListener("click", openSearch));
-  closeButton.addEventListener("click", closeSearch);
-  panel.addEventListener("click", (event) => {
-    if (event.target === panel) closeSearch();
+  dom.closeButton.addEventListener("click", closeSearch);
+  dom.panel.addEventListener("click", (event) => {
+    if (event.target === dom.panel) closeSearch();
   });
-  input.addEventListener("input", () => runSearch(input.value));
+  dom.input.addEventListener("input", () => runSearch(dom.input.value));
   document.addEventListener("keydown", (event) => {
-    const isOpen = panel.getAttribute("aria-hidden") === "false";
+    const isOpen = dom.panel.getAttribute("aria-hidden") === "false";
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       isOpen ? closeSearch() : openSearch();

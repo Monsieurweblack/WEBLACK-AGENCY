@@ -10,9 +10,10 @@ import { liveEvent } from "../../data/live";
 
 interface Props {
   lang: Lang;
+  altLangHref?: string;
 }
 
-const { lang } = Astro.props;
+const { lang, altLangHref } = Astro.props;
 const t = useTranslations(lang);
 const isOnAir = liveEvent.status === "live";
 
@@ -73,7 +74,7 @@ const liveHref = localizedPath(lang, "/live");
         {t("nav.contact")}
       </a>
       <ThemeToggle lang={lang} class="hidden sm:inline-flex" />
-      <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" />
+      <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" hrefOverride={altLangHref} />
       <SearchOverlay lang={lang} class="hidden sm:inline-flex" />
       <button
         type="button"
@@ -185,7 +186,7 @@ const liveHref = localizedPath(lang, "/live");
       </svg>
     </button>
     <ThemeToggle lang={lang} class="inline-flex" />
-    <LanguageSwitcher lang={lang} class="inline-flex" />
+    <LanguageSwitcher lang={lang} class="inline-flex" hrefOverride={altLangHref} />
   </div>
 </div>
 

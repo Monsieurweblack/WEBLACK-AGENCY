@@ -4,12 +4,19 @@ import { otherLang, switchLocalePath, useTranslations, type Lang } from "../../i
 interface Props {
   lang: Lang;
   class?: string;
+  /**
+   * Overrides the naive same-slug path swap below — needed wherever the
+   * current page has no guaranteed counterpart at the same slug in the
+   * other language (e.g. a Journal article only published in one
+   * language). Without this, the switcher can link straight to a 404.
+   */
+  hrefOverride?: string;
 }
 
-const { lang, class: className } = Astro.props;
+const { lang, class: className, hrefOverride } = Astro.props;
 const t = useTranslations(lang);
 const target = otherLang(lang);
-const href = switchLocalePath(Astro.url.pathname, target);
+const href = hrefOverride ?? switchLocalePath(Astro.url.pathname, target);
 const label = target === "fr" ? "FR" : "EN";
 const switchLabel = target === "fr" ? t("common.switchToFr") : t("common.switchToEn");
 ---

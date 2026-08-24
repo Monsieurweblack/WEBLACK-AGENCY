@@ -25,8 +25,8 @@ function updateToggles(theme: Theme) {
     if (label) button.setAttribute("aria-label", label);
     const sun = button.querySelector<SVGElement>("[data-icon-sun]");
     const moon = button.querySelector<SVGElement>("[data-icon-moon]");
-    sun?.toggleAttribute("hidden", !isDark);
-    moon?.toggleAttribute("hidden", isDark);
+    if (sun) sun.style.display = isDark ? "" : "none";
+    if (moon) moon.style.display = isDark ? "none" : "";
   });
 }
 
