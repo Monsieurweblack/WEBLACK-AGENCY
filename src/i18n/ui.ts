@@ -59,7 +59,9 @@ export const ui = {
     "division.consulting.tagline": "Stratégie de marque, positionnement et intelligence culturelle.",
 
     "home.work.eyebrow": "Réalisations",
-    "home.work.title": "Réalisations récentes.",
+    "home.work.title": "Ce que nous avons déjà construit.",
+    "home.work.lead":
+      "De Paris à Bamako, chaque collaboration WEBLACK est pensée comme un projet à part entière — jamais comme une simple prestation.",
     "home.work.cta": "Voir tous les projets",
 
     "home.perspective.eyebrow": "WEBLACK Perspective",
@@ -75,16 +77,18 @@ export const ui = {
     "perspective.step5.name": "Impact",
     "perspective.step5.desc": "Construire une pertinence durable.",
 
-    "home.talentnetwork.eyebrow": "Notre réseau",
-    "home.talentnetwork.title": "Un réseau créatif sans frontières.",
+    "home.talentnetwork.eyebrow": "Talent",
+    "home.talentnetwork.title": "Une sélection, pas un catalogue.",
+    "home.talentnetwork.body":
+      "WEBLACK ne publie pas un catalogue de profils. Chaque talent rejoint le réseau après une sélection exigeante, au fil des projets et des collaborations en cours. Mannequins, créateurs, artistes, photographes ou stylistes : si votre travail a sa place chez WEBLACK, nous voulons le découvrir.",
     "home.talentnetwork.cta": "Découvrir nos talents",
 
     "home.team.eyebrow": "L'équipe",
     "home.team.title": "Les personnes derrière WEBLACK.",
     "home.team.cta": "Découvrir l'équipe",
 
-    "home.journal.eyebrow": "Journal",
-    "home.journal.title": "Derniers articles du Journal.",
+    "home.journal.eyebrow": "À la une",
+    "home.journal.title": "Ce qui se passe chez WEBLACK.",
     "home.journal.cta": "Lire le Journal",
 
     "home.contact.title": "Un projet, un talent ou une collaboration en tête ?",
@@ -221,15 +225,20 @@ export const ui = {
     "journal.filter.all": "Tous",
     "journal.category.projects": "Projets",
     "journal.category.interviews": "Entretiens",
-    "journal.category.insights": "Regards",
+    "journal.category.insights": "Analyses",
     "journal.category.culture": "Culture",
-    "journal.category.talent-stories": "Histoires de talents",
     "journal.category.industry-perspectives": "Industrie",
     "journal.category.news": "Actualités",
     "journal.category.fashion": "Mode",
     "journal.category.designers": "Créateurs",
-    "journal.category.fashion-weeks": "Fashion Weeks",
     "journal.category.reports": "Reportages",
+    "journal.format.news": "Actualité",
+    "journal.format.analysis": "Analyse",
+    "journal.format.portrait": "Portrait",
+    "journal.format.interview": "Interview",
+    "journal.format.report": "Reportage",
+    "journal.format.opinion": "Opinion",
+    "journal.format.project-partnership": "Communiqué",
     "journal.readMore": "Lire l'article",
     "journal.back": "Tout le Journal",
     "journal.empty": "Aucun article publié pour le moment.",
@@ -327,6 +336,7 @@ export const ui = {
 
     "common.langSwitch": "English",
     "common.readMore": "En savoir plus",
+    "common.discover": "Découvrir",
     "common.backToTop": "Retour en haut",
     "common.skipToContent": "Aller au contenu",
     "common.photoCredit": "Photo",
@@ -388,7 +398,9 @@ export const ui = {
     "division.consulting.tagline": "Brand strategy, positioning and cultural intelligence.",
 
     "home.work.eyebrow": "Selected Work",
-    "home.work.title": "Recent work.",
+    "home.work.title": "What we've already built.",
+    "home.work.lead":
+      "From Paris to Bamako, every WEBLACK collaboration is treated as a project in its own right — never as a simple service.",
     "home.work.cta": "View all work",
 
     "home.perspective.eyebrow": "WEBLACK Perspective",
@@ -404,16 +416,18 @@ export const ui = {
     "perspective.step5.name": "Impact",
     "perspective.step5.desc": "Build lasting relevance.",
 
-    "home.talentnetwork.eyebrow": "Our Network",
-    "home.talentnetwork.title": "A creative network without borders.",
+    "home.talentnetwork.eyebrow": "Talent",
+    "home.talentnetwork.title": "A selection, not a catalogue.",
+    "home.talentnetwork.body":
+      "WEBLACK doesn't publish a catalogue of profiles. Every talent joins the network through a deliberate selection process, shaped by current projects and collaborations. Models, designers, artists, photographers or stylists: if your work belongs at WEBLACK, we want to see it.",
     "home.talentnetwork.cta": "Meet our talent",
 
     "home.team.eyebrow": "The Team",
     "home.team.title": "The people behind WEBLACK.",
     "home.team.cta": "Meet the team",
 
-    "home.journal.eyebrow": "Journal",
-    "home.journal.title": "Latest from the Journal.",
+    "home.journal.eyebrow": "Featured",
+    "home.journal.title": "What's happening at WEBLACK.",
     "home.journal.cta": "Read the Journal",
 
     "home.contact.title": "Have a project, a talent or a collaboration in mind?",
@@ -548,15 +562,20 @@ export const ui = {
     "journal.filter.all": "All",
     "journal.category.projects": "Projects",
     "journal.category.interviews": "Interviews",
-    "journal.category.insights": "Insights",
+    "journal.category.insights": "Analysis",
     "journal.category.culture": "Culture",
-    "journal.category.talent-stories": "Talent Stories",
     "journal.category.industry-perspectives": "Industry",
     "journal.category.news": "News",
     "journal.category.fashion": "Fashion",
     "journal.category.designers": "Designers",
-    "journal.category.fashion-weeks": "Fashion Weeks",
     "journal.category.reports": "Reports",
+    "journal.format.news": "News",
+    "journal.format.analysis": "Analysis",
+    "journal.format.portrait": "Portrait",
+    "journal.format.interview": "Interview",
+    "journal.format.report": "Report",
+    "journal.format.opinion": "Opinion",
+    "journal.format.project-partnership": "Announcement",
     "journal.readMore": "Read the article",
     "journal.back": "All Journal",
     "journal.empty": "No articles published yet.",
@@ -650,6 +669,7 @@ export const ui = {
 
     "common.langSwitch": "Français",
     "common.readMore": "Learn more",
+    "common.discover": "Discover",
     "common.backToTop": "Back to top",
     "common.skipToContent": "Skip to content",
     "common.photoCredit": "Photo",

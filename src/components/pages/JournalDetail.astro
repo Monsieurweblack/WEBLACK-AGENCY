@@ -20,6 +20,7 @@ const date = article.data.publishDate.toLocaleDateString(locale, {
   year: "numeric",
 });
 const categoryLabel = t(`journal.category.${article.data.category}` as UiKey) ?? article.data.category;
+const formatLabel = article.data.format ? t(`journal.format.${article.data.format}` as UiKey) : null;
 
 const allArticles = sortByDateDesc(await getEntriesByLang("journal", lang));
 const related = allArticles
@@ -55,7 +56,9 @@ const structuredData = {
     >
       &larr; {t("journal.back")}
     </a>
-    <p class="label-tracked mt-8 text-(--color-gold)">{categoryLabel}</p>
+    <p class="label-tracked mt-8 text-(--color-gold)">
+      {categoryLabel}{formatLabel && <span class="text-(--color-paper)/40"> · {formatLabel}</span>}
+    </p>
     <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
       {article.data.title}
     </h1>
@@ -87,6 +90,17 @@ const structuredData = {
   </div>
 
   <div class="prose-weblack mx-auto max-w-3xl px-6 py-16 md:px-10" set:html={article.data.bodyHtml} />
+
+  {article.data.relatedWorkSlug && (
+    <div class="mx-auto max-w-3xl px-6 pb-16 md:px-10">
+      <a
+        href={localizedPath(lang, `/selected-work/${article.data.relatedWorkSlug}`)}
+        class="label-tracked inline-flex items-center gap-2 border-t border-(--color-line) pt-6 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+      >
+        {t("partners.cta")} &rarr;
+      </a>
+    </div>
+  )}
 
   {related.length > 0 && (
     <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) px-6 py-16 md:px-10 md:py-20">

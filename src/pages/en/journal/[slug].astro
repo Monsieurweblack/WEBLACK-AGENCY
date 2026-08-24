@@ -16,9 +16,10 @@ const t = useTranslations(lang);
 
 <BaseLayout
   lang={lang}
-  title={`${article.data.title} — ${t("nav.journal")}`}
-  description={article.data.excerpt}
+  title={article.data.seo?.title ?? `${article.data.title} — ${t("nav.journal")}`}
+  description={article.data.seo?.description ?? article.data.excerpt}
   image={article.data.coverImage.url}
+  imageAlt={article.data.coverImage.alt}
 >
   <JournalDetail lang={lang} article={article} />
 </BaseLayout>

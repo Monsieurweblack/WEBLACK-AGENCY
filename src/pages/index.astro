@@ -7,8 +7,10 @@ import SelectedWorkPreview from "../components/sections/SelectedWorkPreview.astr
 import Perspective from "../components/sections/Perspective.astro";
 import TeamPreview from "../components/sections/TeamPreview.astro";
 import JournalPreview from "../components/sections/JournalPreview.astro";
+import TalentNetworkPreview from "../components/sections/TalentNetworkPreview.astro";
 import CtaContact from "../components/sections/CtaContact.astro";
 import { getEntriesByLang, getFeatured, sortByDateDesc } from "../lib/content";
+import type { TalentEntry } from "../lib/content";
 
 const lang = "fr" as const;
 const heroImage = {
@@ -20,16 +22,24 @@ const heroImage = {
 
 const featuredWork = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
 const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).slice(0, 3);
+/**
+ * The Talent collection in Sanity currently only contains seed/demo entries
+ * (stock portraits, no verified WEBLACK talent) — publishing them here would
+ * violate the no-fabrication rule, so the section shows its honest empty-roster
+ * state until real, verified profiles are published in the CMS.
+ */
+const talent: TalentEntry[] = [];
 ---
 
 <BaseLayout lang={lang}>
   <HeroHome lang={lang} heroImage={heroImage} />
-  <ManifestoQuote lang={lang} />
+  <JournalPreview lang={lang} articles={latestJournal} />
   <DivisionsGrid lang={lang} />
   <SelectedWorkPreview lang={lang} work={featuredWork} />
+  <TalentNetworkPreview lang={lang} talent={talent} />
+  <ManifestoQuote lang={lang} />
   <Perspective lang={lang} />
   <TeamPreview lang={lang} />
-  <JournalPreview lang={lang} articles={latestJournal} />
   <CtaContact lang={lang} />
 </BaseLayout>
 

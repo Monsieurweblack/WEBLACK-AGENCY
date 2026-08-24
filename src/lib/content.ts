@@ -42,18 +42,46 @@ export type TalentCategory =
   | "stylists"
   | "other";
 
+/**
+ * Editorial taxonomy: ACTUALITÉS / MODE / CRÉATEURS / INDUSTRIE / CULTURE /
+ * INTERVIEWS / ANALYSES / REPORTAGES — a set the site can realistically
+ * sustain rather than a speculative list of categories with nothing behind
+ * them. "projects" is kept as a 9th, legacy category: it already holds a
+ * real published article and renaming or migrating it requires a Sanity
+ * write (out of scope here — see the editorial audit report).
+ *
+ * Two categories that existed in code with zero published content
+ * ("fashion-weeks", "talent-stories") were removed for this reason; they
+ * can come back the day there is a real, recurring reason to split them
+ * out from "fashion" / "interviews" again.
+ */
 export type JournalCategory =
-  | "projects"
-  | "interviews"
-  | "insights"
-  | "culture"
-  | "talent-stories"
-  | "industry-perspectives"
   | "news"
   | "fashion"
   | "designers"
-  | "fashion-weeks"
-  | "reports";
+  | "industry-perspectives"
+  | "culture"
+  | "interviews"
+  | "insights"
+  | "reports"
+  | "projects";
+
+/**
+ * Editorial treatment, distinct from JournalCategory (the subject). No
+ * document in Sanity has this field yet — it doesn't exist in the Studio
+ * schema, which lives outside this repo and wasn't touched here. This type
+ * plus the optional `format` field below only make the front-end ready to
+ * read and display it the day the field is added on the Sanity side and
+ * populated; until then it's always undefined and nothing renders.
+ */
+export type JournalFormat =
+  | "news"
+  | "analysis"
+  | "portrait"
+  | "interview"
+  | "report"
+  | "opinion"
+  | "project-partnership";
 
 /**
  * Canonical editorial ordering for category tabs. Pages derive the actual
@@ -64,12 +92,10 @@ export const JOURNAL_CATEGORY_ORDER: JournalCategory[] = [
   "news",
   "fashion",
   "designers",
-  "fashion-weeks",
   "industry-perspectives",
   "culture",
   "interviews",
   "insights",
-  "talent-stories",
   "reports",
   "projects",
 ];
@@ -119,6 +145,7 @@ export interface JournalData {
   title: string;
   excerpt: string;
   category: JournalCategory;
+  format?: JournalFormat;
   publishDate: Date;
   updatedAt: Date;
   author?: string;
@@ -268,6 +295,7 @@ function mapEntry<C extends CollectionKey>(collection: C, doc: any): CollectionM
           title: doc.title,
           excerpt: doc.excerpt,
           category: doc.category,
+          format: doc.format,
           publishDate: new Date(doc.publishDate),
           updatedAt: new Date(doc._updatedAt ?? doc.publishDate),
           author: doc.author,

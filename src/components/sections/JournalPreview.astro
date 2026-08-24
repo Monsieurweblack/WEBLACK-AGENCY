@@ -1,7 +1,8 @@
 ---
+import RemoteImage from "../media/RemoteImage.astro";
 import CardJournal from "../cards/CardJournal.astro";
 import type { JournalEntry } from "../../lib/content";
-import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 
 interface Props {
   lang: Lang;
@@ -10,6 +11,21 @@ interface Props {
 
 const { lang, articles } = Astro.props;
 const t = useTranslations(lang);
+
+// Most recent article leads as a full-width feature ("what's happening now"),
+// the rest (if any) follow as smaller cards — same featured/rest split already
+// used on /journal, so this reuses an established pattern rather than
+// inventing a new one.
+const featured = articles.find((a) => a.data.featured) ?? articles[0];
+const rest = articles.filter((a) => a !== featured);
+
+const locale = lang === "fr" ? "fr-FR" : "en-US";
+const featuredDate = featured
+  ? featured.data.publishDate.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })
+  : "";
+const featuredCategoryLabel = featured
+  ? (t(`journal.category.${featured.data.category}` as UiKey) ?? featured.data.category)
+  : "";
 ---
 
 {
@@ -29,11 +45,46 @@ const t = useTranslations(lang);
           </a>
         </div>
 
-        <div class="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article, i) => (
-            <CardJournal lang={lang} article={article} index={i} />
-          ))}
-        </div>
+        {featured && (
+          <a
+            href={localizedPath(lang, `/journal/${featured.data.slug}`)}
+            class="group mt-14 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center lg:gap-12"
+            data-reveal
+            data-reveal-delay="0.05"
+          >
+            <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft) lg:aspect-[16/11]">
+              <RemoteImage
+                src={featured.data.coverImage.url}
+                alt={featured.data.coverImage.alt}
+                width={1100}
+                height={825}
+                credit={featured.data.coverImage.credit}
+                class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+              />
+            </div>
+            <div>
+              <p class="label-tracked mt-4 text-(--color-ink)/50 lg:mt-0">
+                {featuredCategoryLabel} · {featuredDate}
+              </p>
+              <h3 class="font-display mt-4 text-2xl text-(--color-ink) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
+                {featured.data.title}
+              </h3>
+              <p class="mt-4 max-w-xl text-(--color-ink)/70">{featured.data.excerpt}</p>
+              <span class="label-tracked mt-5 inline-flex items-center gap-2 text-(--color-ink)/60 transition-colors group-hover:text-(--color-gold)">
+                {t("journal.readMore")} &rarr;
+              </span>
+            </div>
+          </a>
+        )}
+
+        {rest.length > 0 && (
+          <div class="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:border-t lg:border-(--color-line-on-paper) lg:pt-14">
+            {rest.map((article, i) => (
+              <CardJournal lang={lang} article={article} index={i} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

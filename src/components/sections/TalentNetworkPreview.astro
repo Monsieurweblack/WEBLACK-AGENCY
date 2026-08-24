@@ -12,31 +12,50 @@ const { lang, talent } = Astro.props;
 const t = useTranslations(lang);
 ---
 
-{
-  talent.length > 0 && (
-    <section class="bg-(--color-ink) py-24 md:py-32">
-      <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
-        <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
-          <div class="max-w-2xl">
-            <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.talentnetwork.eyebrow")}</p>
-            <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
-              {t("home.talentnetwork.title")}
-            </h2>
+<section class="bg-(--color-ink) py-24 md:py-32">
+  <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+    {
+      talent.length > 0 ? (
+        <>
+          <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+            <div class="max-w-2xl">
+              <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.talentnetwork.eyebrow")}</p>
+              <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+                {t("home.talentnetwork.title")}
+              </h2>
+            </div>
+            <a
+              href={localizedPath(lang, "/talent")}
+              class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+            >
+              {t("home.talentnetwork.cta")} &rarr;
+            </a>
           </div>
+
+          <div class="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+            {talent.map((person, i) => (
+              <CardTalent lang={lang} talent={person} index={i} />
+            ))}
+          </div>
+        </>
+      ) : (
+        // No real talent roster is published yet — rather than an empty grid,
+        // this is an honest editorial explanation of why (curated, not listed)
+        // plus a direct path to apply. Never fabricate profiles to fill this.
+        <div class="max-w-2xl" data-reveal>
+          <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.talentnetwork.eyebrow")}</p>
+          <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+            {t("home.talentnetwork.title")}
+          </h2>
+          <p class="mt-5 text-lg text-(--color-paper)/70">{t("home.talentnetwork.body")}</p>
           <a
-            href={localizedPath(lang, "/talent")}
-            class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+            href={localizedPath(lang, "/talent/apply")}
+            class="label-tracked mt-8 inline-flex items-center gap-2 text-(--color-gold) transition-colors hover:text-(--color-gold-bright)"
           >
-            {t("home.talentnetwork.cta")} &rarr;
+            {t("talent.cta.apply")} &rarr;
           </a>
         </div>
-
-        <div class="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-          {talent.map((person, i) => (
-            <CardTalent lang={lang} talent={person} index={i} />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
+      )
+    }
+  </div>
+</section>
