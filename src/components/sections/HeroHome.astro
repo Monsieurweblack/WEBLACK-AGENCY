@@ -45,6 +45,7 @@ const t = useTranslations(lang);
     aria-hidden="true"
   >
     <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
+    <span data-hero-ring aria-hidden="true"></span>
     <div
       data-hero-mark
       style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${weblackSymbol.src}); mask-image: url(${weblackSymbol.src});`}
@@ -105,23 +106,50 @@ const t = useTranslations(lang);
     );
   }
 
-  [data-hero-mark] {
-    animation: hero-mark-drift 32s ease-in-out infinite;
+  /*
+   * The symbol is a single flattened image (W + its thin circle baked into
+   * one alpha mask, no separable layers) — isolating just the circle would
+   * mean reconstructing the artwork from an approximation, which risks
+   * visible degradation of the mark. Instead the W stays completely
+   * untouched and static, and an independent ring sits behind it, sized and
+   * centered to match the circle's actual footprint in the source file
+   * (measured from the asset's own alpha channel: a ~618px circle centered
+   * at roughly 50%/47.5% of the 735x720 frame, i.e. ~84% of its width).
+   * Rotation is transform-only, so it's cheap and covered by the site's
+   * existing global prefers-reduced-motion rule (global.css forces
+   * animation-duration to ~0 for every element under that setting).
+   */
+  [data-hero-ring] {
+    position: absolute;
+    left: 50%;
+    top: 47.5%;
+    width: 84%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: conic-gradient(
+      from 0deg,
+      color-mix(in srgb, var(--color-gold) 30%, transparent) 0deg,
+      color-mix(in srgb, var(--color-gold) 30%, transparent) 330deg,
+      var(--color-gold) 344deg,
+      var(--color-gold-bright) 356deg,
+      color-mix(in srgb, var(--color-gold) 30%, transparent) 360deg
+    );
+    -webkit-mask-image: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    mask-image: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    animation: hero-ring-spin 22s linear infinite;
+    will-change: transform;
   }
 
-  @keyframes hero-mark-drift {
-    0%,
-    100% {
-      transform: rotate(-0.5deg) scale(1);
-    }
-    50% {
-      transform: rotate(0.5deg) scale(1.008);
+  @keyframes hero-ring-spin {
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    [data-hero-mark] {
-      animation: none;
+  @media (max-width: 640px) {
+    [data-hero-ring] {
+      opacity: 0.75;
     }
   }
 </style>
