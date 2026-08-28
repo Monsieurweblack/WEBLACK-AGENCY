@@ -39,7 +39,27 @@ const bio = founderBio[lang];
       <p class="label-tracked mt-3 text-(--color-paper)/50">{t("about.founder.role")}</p>
 
       <div class="mt-10 space-y-6 text-(--color-paper)/80">
-        {bio.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
+        {bio.paragraphs.slice(0, 2).map((paragraph) => <p>{paragraph}</p>)}
+      </div>
+
+      {bio.photos.length > 0 && (
+        <div class="mt-10 grid grid-cols-2 gap-4">
+          {bio.photos.map((photo) => (
+            <figure class:list={["overflow-hidden", { "col-span-2": photo.wide }]}>
+              <img
+                src={photo.src}
+                alt={photo.alt}
+                loading="lazy"
+                class:list={["w-full object-cover", photo.wide ? "aspect-[16/10]" : "aspect-[3/4]"]}
+              />
+              <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/45">{photo.caption}</figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+
+      <div class="mt-10 space-y-6 text-(--color-paper)/80">
+        {bio.paragraphs.slice(2).map((paragraph) => <p>{paragraph}</p>)}
       </div>
 
       <blockquote class="mt-12 border-l-2 border-(--color-gold) pl-6 md:pl-8">
