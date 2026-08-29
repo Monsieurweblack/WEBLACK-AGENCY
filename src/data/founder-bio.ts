@@ -19,9 +19,9 @@ export const founderBio: Partial<Record<Lang, FounderBio>> = {
   fr: {
     name: "Deo-Gratias KPODO alias « Monsieur Weblack »",
     paragraphs: [
-      "Entrepreneur, stratège en communication et directeur artistique, Deo-Gratias KPODO est le fondateur et directeur créatif de WEBLACK, agence internationale de conseil en stratégie de marque, communication, direction créative et production d'événements. Depuis plus de quinze ans, il accompagne maisons de mode, institutions, organisations internationales et talents dans leur stratégie de marque, leur image et leur rayonnement international — du branding à la direction artistique, en passant par le management de talents, les relations presse et la production d'expériences premium.",
-      "Il joue un rôle stratégique auprès de la Maison de Couture « Marie Kaba », dont il accompagne le positionnement haut de gamme et l'expansion internationale, et intervient sur plusieurs événements dédiés aux savoir-faire africains : Le FIMO228 (Togo), La Nuit du Textile Africain (Mali), Du Rêve à la Réalité (Côte d'Ivoire), Les Awards du Mannequin africain (Côte d'Ivoire), Le Carrousel international de la Mode (Rép. du Congo), Folies de Mode (Burkina Faso), ZE DEFILE (France) et African Fashion Show (Danemark).",
-      "Visionnaire et bâtisseur d'écosystèmes, il œuvre à la professionnalisation des industries créatives africaines, inspiré par les standards des grandes maisons de luxe, avec l'ambition de faire de WEBLACK une référence internationale au service de la créativité.",
+      "Entrepreneur, stratège en communication et directeur artistique, Deo-Gratias KPODO est le fondateur et directeur créatif de WEBLACK, agence internationale de conseil en stratégie de marque, communication, direction créative et production d’événements. Depuis plus de quinze ans, il accompagne maisons de mode, institutions, organisations internationales et talents dans leur stratégie de marque, leur image et leur rayonnement international — du branding à la direction artistique, en passant par le management de talents, les relations presse et la production d’expériences premium.",
+      "Il joue un rôle stratégique auprès de la Maison de Couture « Marie Kaba », dont il accompagne le positionnement haut de gamme et l’expansion internationale, et intervient sur plusieurs événements dédiés aux savoir-faire africains : Le FIMO228 (Togo), La Nuit du Textile Africain (Mali), Du Rêve à la Réalité (Côte d’Ivoire), Les Awards du Mannequin africain (Côte d’Ivoire), Le Carrousel international de la Mode (Rép. du Congo), Folies de Mode (Burkina Faso), ZE DEFILE (France) et African Fashion Show (Danemark).",
+      "Visionnaire et bâtisseur d’écosystèmes, il œuvre à la professionnalisation des industries créatives africaines, inspiré par les standards des grandes maisons de luxe, avec l’ambition de faire de WEBLACK une référence internationale au service de la créativité.",
     ],
     photos: [
       {
@@ -31,7 +31,7 @@ export const founderBio: Partial<Record<Lang, FounderBio>> = {
       },
       {
         src: "/photos/founder-portrait-profile.jpg",
-        alt: "Deo-Gratias Kpodo en représentation lors d'un événement.",
+        alt: "Deo-Gratias Kpodo en représentation lors d’un événement.",
         caption: "Deo-Gratias Kpodo en représentation",
       },
       {
@@ -42,7 +42,7 @@ export const founderBio: Partial<Record<Lang, FounderBio>> = {
       },
     ],
     quote:
-      "Les plus grandes réussites ne naissent pas uniquement du talent, mais d'une vision capable d'inspirer, de rassembler et de construire dans la durée. Mon ambition est de créer des opportunités qui permettront aux talents africains de s'exprimer, d'innover et de rayonner avec l'excellence qu'ils méritent sur la scène internationale.",
+      "Les plus grandes réussites ne naissent pas uniquement du talent, mais d’une vision capable d’inspirer, de rassembler et de construire dans la durée. Mon ambition est de créer des opportunités qui permettront aux talents africains de s’exprimer, d’innover et de rayonner avec l’excellence qu’ils méritent sur la scène internationale.",
     quoteAttribution: "Deo-Gratias KPODO",
   },
   en: {

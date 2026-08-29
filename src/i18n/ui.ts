@@ -38,6 +38,7 @@ const translations = {
     "nav.ariaLabel": "Navigation principale",
 
     "common.switchTo": "Passer en",
+    "common.language": "Langue",
 
     "theme.toggle.toLight": "Activer le mode clair",
     "theme.toggle.toDark": "Activer le mode sombre",
@@ -77,7 +78,7 @@ const translations = {
     "division.talent.name": "Talent",
     "division.talent.tagline": "Management, représentation et développement de talents.",
     "division.creative.name": "Créatif",
-    "division.creative.tagline": "Direction, campagnes, contenus, production et expériences.",
+    "division.creative.tagline": "Campagnes, contenus, production, expériences et direction créative.",
     "division.consulting.name": "Consulting",
     "division.consulting.tagline": "Stratégie de marque, positionnement et intelligence culturelle.",
 
@@ -88,7 +89,7 @@ const translations = {
     "home.work.cta": "Voir tous les projets",
 
     "home.perspective.eyebrow": "WEBLACK Perspective",
-    "home.perspective.title": "Du potentiel à l'impact durable.",
+    "home.perspective.title": "Du potentiel à l’impact durable.",
     "perspective.step1.name": "Potentiel",
     "perspective.step1.desc": "Identifier.",
     "perspective.step2.name": "Talent",
@@ -103,37 +104,37 @@ const translations = {
     "home.talentnetwork.eyebrow": "Talent",
     "home.talentnetwork.title": "Une sélection, pas un catalogue.",
     "home.talentnetwork.body":
-      "WEBLACK ne publie pas un catalogue de profils. Chaque talent rejoint le réseau après une sélection exigeante, au fil des projets et des collaborations en cours. Mannequins, créateurs, artistes, photographes ou stylistes : si votre travail a sa place chez WEBLACK, nous voulons le découvrir.",
+      "WEBLACK ne publie pas un catalogue de profils. Chaque talent rejoint le réseau après une sélection exigeante, au fil des projets et des collaborations en cours. Mannequins, créateurs, artistes, photographes ou stylistes : si votre travail a sa place chez WEBLACK, nous voulons le découvrir.",
     "home.talentnetwork.cta": "Découvrir nos talents",
 
-    "home.team.eyebrow": "L'équipe",
+    "home.team.eyebrow": "L’équipe",
     "home.team.title": "Les personnes derrière WEBLACK.",
-    "home.team.cta": "Découvrir l'équipe",
+    "home.team.cta": "Découvrir l’équipe",
 
     "home.journal.eyebrow": "À la une",
     "home.journal.title": "Ce qui se passe chez WEBLACK.",
     "home.journal.cta": "Lire le Journal",
 
-    "home.contact.title": "Un projet, un talent ou une collaboration en tête ?",
+    "home.contact.title": "Un projet, un talent ou une collaboration en tête ?",
     "home.contact.lead": "Faisons-le ensemble.",
     "home.contact.cta": "Contacter WEBLACK",
 
     "about.hero.eyebrow": "À propos",
     "about.hero.title": "Une agence créative indépendante.",
     "about.intro":
-      "Fondée en 2010, WEBLACK est une structure indépendante qui évolue à l'intersection du talent, de la création et de la stratégie.",
+      "Fondée en 2010, WEBLACK est une structure indépendante qui évolue à l’intersection du talent, de la création et de la stratégie.",
     "about.body1":
       "WEBLACK accompagne talents, créateurs et marques dans la construction de leur identité, leur développement et leur rayonnement, de la conception à la mise en œuvre des projets.",
     "about.body2":
-      "Son approche repose sur une conviction simple : le potentiel ne prend de la valeur que lorsqu'il est accompagné d'une vision, d'une exigence et d'un véritable savoir-faire.",
+      "Son approche repose sur une conviction simple : le potentiel ne prend de la valeur que lorsqu’il est accompagné d’une vision, d’une exigence et d’un véritable savoir-faire.",
     "about.body3":
-      "Basée entre la France et l'Afrique de l'Ouest, WEBLACK développe des collaborations et des projets à dimension internationale, en connectant talents, industries créatives et marchés au-delà des frontières.",
+      "Basée entre la France et l’Afrique de l’Ouest, WEBLACK développe des collaborations et des projets à dimension internationale, en connectant talents, industries créatives et marchés au-delà des frontières.",
     "about.vision.title": "Notre ambition",
     "about.vision.body":
-      "Construire une référence indépendante dans le management des talents et les industries créatives, en faisant émerger des personnalités, des marques et des projets qui comptent. Chaque collaboration est pensée comme un projet à part entière : une vision claire, une exécution exigeante, et une valeur culturelle qui dépasse le temps d'une campagne.",
+      "Construire une référence indépendante dans le management des talents et les industries créatives, en faisant émerger des personnalités, des marques et des projets qui comptent. Chaque collaboration est pensée comme un projet à part entière : une vision claire, une exécution exigeante, et une valeur culturelle qui dépasse le temps d’une campagne.",
     "about.method.eyebrow": "Notre méthode",
     "about.method.title": "WEBLACK Perspective",
-    "about.team.eyebrow": "L'équipe",
+    "about.team.eyebrow": "L’équipe",
     "about.team.title": "Notre équipe",
     "about.founder.eyebrow": "Fondateur",
     "about.founder.name": "Deo-Gratias Kpodo",
@@ -165,7 +166,7 @@ const translations = {
 
     "talent.apply.title": "Postuler chez WEBLACK",
     "talent.apply.lead":
-      "Mannequin, créateur·rice, artiste ou autre professionnel·le créatif·ve : présentez-vous à l'équipe WEBLACK.",
+      "Mannequin, créateur·rice, artiste ou autre professionnel·le créatif·ve : présentez-vous à l’équipe WEBLACK.",
     "talent.apply.firstName": "Prénom",
     "talent.apply.lastName": "Nom",
     "talent.apply.email": "E-mail",
@@ -180,18 +181,18 @@ const translations = {
     "talent.apply.mobility": "Mobilité",
     "talent.apply.message": "Message",
     "talent.apply.consent":
-      "J'accepte que mes données soient utilisées par WEBLACK dans le cadre du traitement de ma candidature, conformément à la Politique de confidentialité.",
+      "J’accepte que mes données soient utilisées par WEBLACK dans le cadre du traitement de ma candidature, conformément à la Politique de confidentialité.",
     "talent.apply.submit": "Envoyer ma candidature",
     "talent.apply.emailSubject": "Candidature Talent",
 
     "creative.hero.eyebrow": "Créatif",
-    "creative.hero.title": "Direction, campagnes, contenus, production et expériences.",
+    "creative.hero.title": "Campagnes, contenus, production, expériences et direction créative.",
     "creative.hero.lead":
       "WEBLACK conçoit et produit des univers visuels et des expériences pour marques, talents et institutions.",
     "creative.capability.direction.name": "Direction créative",
-    "creative.capability.direction.desc": "Construction de l'univers visuel et narratif d'une marque ou d'un projet.",
+    "creative.capability.direction.desc": "Construction de l’univers visuel et narratif d’une marque ou d’un projet.",
     "creative.capability.artdirection.name": "Direction artistique",
-    "creative.capability.artdirection.desc": "Traduction d'une stratégie en direction artistique concrète.",
+    "creative.capability.artdirection.desc": "Traduction d’une stratégie en direction artistique concrète.",
     "creative.capability.campaign.name": "Développement de campagnes",
     "creative.capability.campaign.desc": "Conception et déploiement de campagnes de marque.",
     "creative.capability.fashion.name": "Production mode",
@@ -201,9 +202,9 @@ const translations = {
     "creative.capability.content.name": "Production de contenu",
     "creative.capability.content.desc": "Production de contenus photo et vidéo pour marques et talents.",
     "creative.capability.events.name": "Événements & expériences",
-    "creative.capability.events.desc": "Conception et production d'événements et d'expériences de marque.",
+    "creative.capability.events.desc": "Conception et production d’événements et d’expériences de marque.",
     "creative.capability.storytelling.name": "Récit visuel",
-    "creative.capability.storytelling.desc": "Récits visuels au service du positionnement d'une marque ou d'un talent.",
+    "creative.capability.storytelling.desc": "Récits visuels au service du positionnement d’une marque ou d’un talent.",
 
     "consulting.hero.eyebrow": "Consulting",
     "consulting.hero.title": "Stratégie de marque, positionnement et intelligence culturelle.",
@@ -214,7 +215,7 @@ const translations = {
     "consulting.offer.positioning.name": "Positionnement",
     "consulting.offer.positioning.desc": "Clarification du positionnement face au marché et à la concurrence.",
     "consulting.offer.development.name": "Développement de marque",
-    "consulting.offer.development.desc": "Structuration de l'identité et du modèle de marque.",
+    "consulting.offer.development.desc": "Structuration de l’identité et du modèle de marque.",
     "consulting.offer.creativestrategy.name": "Stratégie créative",
     "consulting.offer.creativestrategy.desc": "Alignement entre ambition de marque et expression créative.",
     "consulting.offer.cultural.name": "Intelligence culturelle",
@@ -224,13 +225,13 @@ const translations = {
     "consulting.offer.partnerships.name": "Partenariats",
     "consulting.offer.partnerships.desc": "Identification et structuration de partenariats stratégiques.",
     "consulting.offer.market.name": "Développement de marché",
-    "consulting.offer.market.desc": "Accompagnement à l'expansion vers de nouveaux marchés.",
+    "consulting.offer.market.desc": "Accompagnement à l’expansion vers de nouveaux marchés.",
     "consulting.cta": "Discuter de votre projet",
 
     "selectedwork.hero.eyebrow": "Réalisations",
     "selectedwork.hero.title": "Des projets choisis pour leur exigence.",
     "selectedwork.seo.description":
-      "Une sélection de projets menés par WEBLACK en direction créative, stratégie de marque et production d'expériences.",
+      "Une sélection de projets menés par WEBLACK en direction créative, stratégie de marque et production d’expériences.",
     "selectedwork.detail.context": "Contexte",
     "selectedwork.detail.challenge": "Enjeu",
     "selectedwork.detail.role": "Rôle de WEBLACK",
@@ -244,7 +245,7 @@ const translations = {
     "journal.hero.eyebrow": "Journal",
     "journal.hero.title": "Projets, entretiens et regards sur la création.",
     "journal.seo.description":
-      "Récits de projets, entretiens et regards sur la création, la mode et la culture par l'équipe WEBLACK.",
+      "Récits de projets, entretiens et regards sur la création, la mode et la culture par l’équipe WEBLACK.",
     "journal.filter.all": "Tous",
     "journal.category.projects": "Projets",
     "journal.category.interviews": "Entretiens",
@@ -262,7 +263,7 @@ const translations = {
     "journal.format.report": "Reportage",
     "journal.format.opinion": "Opinion",
     "journal.format.project-partnership": "Communiqué",
-    "journal.readMore": "Lire l'article",
+    "journal.readMore": "Lire l’article",
     "journal.back": "Tout le Journal",
     "journal.empty": "Aucun article publié pour le moment.",
     "journal.featured.eyebrow": "À la une",
@@ -271,15 +272,15 @@ const translations = {
     "journal.related.title": "Articles associés",
 
     "comments.title": "Commentaires",
-    "comments.empty": "Aucun commentaire pour l'instant.",
+    "comments.empty": "Aucun commentaire pour l’instant.",
     "comments.form.title": "Laisser un commentaire",
     "comments.form.notice": "Les commentaires sont modérés avant publication, dans la bienveillance.",
     "comments.form.name": "Nom",
     "comments.form.text": "Votre commentaire",
     "comments.form.submit": "Envoyer",
     "comments.form.submitting": "Ouverture de votre messagerie…",
-    "comments.form.success": "Votre client mail va s'ouvrir avec votre commentaire pré-rempli. Il ne vous reste qu'à l'envoyer.",
-    "comments.form.error": "Merci de renseigner votre nom et votre commentaire avant d'envoyer.",
+    "comments.form.success": "Votre client mail va s’ouvrir avec votre commentaire pré-rempli. Il ne vous reste qu’à l’envoyer.",
+    "comments.form.error": "Merci de renseigner votre nom et votre commentaire avant d’envoyer.",
 
     "live.hero.eyebrow": "Live",
     "live.hero.title": "WEBLACK Live",
@@ -292,13 +293,13 @@ const translations = {
     "live.countdown.hour": "h",
     "live.countdown.minute": "min",
     "live.chat.title": "Chat en direct",
-    "live.chat.unavailable": "Le chat n'est pas disponible pour ce direct.",
+    "live.chat.unavailable": "Le chat n’est pas disponible pour ce direct.",
     "live.empty": "Aucun direct ni vidéo publiée pour le moment.",
 
     "responsibility.hero.eyebrow": "Responsabilité",
     "responsibility.hero.title": "Une pratique documentée, pas une promesse.",
     "responsibility.hero.lead":
-      "WEBLACK s'engage sur des principes concrets, sans allégation que nous ne pouvons pas justifier.",
+      "WEBLACK s’engage sur des principes concrets, sans allégation que nous ne pouvons pas justifier.",
     "responsibility.people.name": "Personnes",
     "responsibility.people.desc":
       "Égalité des chances, développement des talents et représentation équitable dans chaque collaboration.",
@@ -307,7 +308,7 @@ const translations = {
       "Échange culturel, représentation juste des créateurs et préservation des savoir-faire créatifs.",
     "responsibility.practice.name": "Pratique",
     "responsibility.practice.desc":
-      "Choix de production responsables lorsqu'ils sont applicables, et réduction du gaspillage dans nos productions.",
+      "Choix de production responsables lorsqu’ils sont applicables, et réduction du gaspillage dans nos productions.",
 
     "partners.hero.eyebrow": "Partenaires",
     "partners.hero.title": "Des collaborations réelles, choisies avec exigence.",
@@ -315,7 +316,7 @@ const translations = {
     "partners.cta": "Voir le projet lié",
 
     "contact.hero.eyebrow": "Contact",
-    "contact.hero.title": "Un projet, un talent ou une collaboration en tête ?",
+    "contact.hero.title": "Un projet, un talent ou une collaboration en tête ?",
     "contact.hero.lead": "Faisons-le ensemble.",
     "contact.seo.description":
       "Contactez WEBLACK pour un projet, une collaboration ou une candidature talent — agence, marque, créatif, partenaire ou média.",
@@ -346,11 +347,11 @@ const translations = {
     "contact.form.message": "Votre projet",
     "contact.form.submit": "Envoyer le message",
     "contact.form.submitting": "Ouverture de votre messagerie…",
-    "contact.form.success": "Votre client mail va s'ouvrir avec le message pré-rempli. Il ne vous reste qu'à l'envoyer.",
-    "contact.form.error": "Merci de renseigner tous les champs obligatoires avant d'envoyer.",
+    "contact.form.success": "Votre client mail va s’ouvrir avec le message pré-rempli. Il ne vous reste qu’à l’envoyer.",
+    "contact.form.error": "Merci de renseigner tous les champs obligatoires avant d’envoyer.",
     "contact.form.mailto": "Ou écrivez-nous directement à",
     "contact.form.back": "Changer de profil",
-    "contact.info.address.label": "WEBLACK — Agence créative indépendante entre la France et l'Afrique de l'Ouest, au rayonnement international.",
+    "contact.info.address.label": "WEBLACK — Agence créative indépendante entre la France et l’Afrique de l’Ouest, au rayonnement international.",
     "contact.info.email.label": "E-mail",
 
     "footer.tagline": "Talent. Créativité. Culture.",
@@ -363,7 +364,7 @@ const translations = {
     "footer.rights": "Tous droits réservés.",
     "footer.since": "Fondée en 2010",
 
-    "consent.banner.text": "Nous utilisons Google Analytics pour mesurer l'audience du site. Ces données ne sont collectées qu'avec votre accord.",
+    "consent.banner.text": "Nous utilisons Google Analytics pour mesurer l’audience du site. Ces données ne sont collectées qu’avec votre accord.",
     "consent.banner.learnMore": "En savoir plus",
     "consent.accept": "Accepter",
     "consent.reject": "Refuser",
@@ -372,7 +373,7 @@ const translations = {
     "consent.preferences.lead": "Choisissez les catégories de traceurs autorisées sur ce site. Vous pouvez modifier ce choix à tout moment depuis le pied de page.",
     "consent.category.necessary.title": "Nécessaires",
     "consent.category.necessary.desc": "Indispensables au fonctionnement du site. Toujours actifs.",
-    "consent.category.analytics.title": "Mesure d'audience",
+    "consent.category.analytics.title": "Mesure d’audience",
     "consent.category.analytics.desc": "Google Analytics (GA4) — statistiques de visite, utilisées uniquement avec votre accord.",
     "consent.save": "Enregistrer mes choix",
     "consent.acceptAll": "Tout accepter",
@@ -403,8 +404,8 @@ const translations = {
     "common.location": "Lieu",
     "common.client": "Client",
 
-    "notFound.title": "Cette page n'existe pas.",
-    "notFound.cta": "Retour à l'accueil",
+    "notFound.title": "Cette page n’existe pas.",
+    "notFound.cta": "Retour à l’accueil",
   },
   en: {
     "nav.about": "About",
@@ -422,6 +423,7 @@ const translations = {
     "nav.ariaLabel": "Main navigation",
 
     "common.switchTo": "Switch to",
+    "common.language": "Language",
 
     "theme.toggle.toLight": "Switch to light mode",
     "theme.toggle.toDark": "Switch to dark mode",
@@ -813,6 +815,7 @@ const nb: Partial<Record<UiKey, string>> = {
   "nav.ariaLabel": "Hovednavigasjon",
 
   "common.switchTo": "Bytt til",
+  "common.language": "Språk",
   "common.discover": "Utforsk",
   "common.skipToContent": "Gå til innhold",
 
@@ -843,7 +846,7 @@ const nb: Partial<Record<UiKey, string>> = {
   "division.talent.name": "Talent",
   "division.talent.tagline": "Management, representasjon og utvikling av talenter.",
   "division.creative.name": "Kreativt",
-  "division.creative.tagline": "Kreativ ledelse, kampanjer, innhold, produksjon og opplevelser.",
+  "division.creative.tagline": "Kampanjer, innhold, produksjon, opplevelser og kreativ ledelse.",
   "division.consulting.name": "Rådgivning",
   "division.consulting.tagline": "Merkevarestrategi, posisjonering og kulturell innsikt.",
 
@@ -972,6 +975,7 @@ const zh: Partial<Record<UiKey, string>> = {
   "nav.ariaLabel": "主导航",
 
   "common.switchTo": "切换至",
+  "common.language": "语言",
   "common.discover": "探索",
   "common.skipToContent": "跳至内容",
 
@@ -1001,7 +1005,7 @@ const zh: Partial<Record<UiKey, string>> = {
   "division.talent.name": "人才",
   "division.talent.tagline": "人才管理、代理与发展。",
   "division.creative.name": "创意",
-  "division.creative.tagline": "创意指导、campaign 策划、内容制作与体验设计。",
+  "division.creative.tagline": "创意指导、营销策划、内容制作与体验设计。",
   "division.consulting.name": "咨询",
   "division.consulting.tagline": "品牌战略、市场定位与文化洞察。",
 

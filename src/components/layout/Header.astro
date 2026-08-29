@@ -117,18 +117,6 @@ const liveHref = localizedPath(lang, "/live");
           ))
         }
         <li>
-          <a
-            href={liveHref}
-            class:list={[
-              "label-tracked inline-flex items-center",
-              isOnAir ? "gap-2 live-on-air" : "text-(--color-paper)",
-            ]}
-          >
-            {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
-            {t("nav.live")}
-          </a>
-        </li>
-        <li>
           <a href={contactHref} class="label-tracked text-(--color-gold)">
             {t("nav.contact")}
           </a>
@@ -146,14 +134,14 @@ const liveHref = localizedPath(lang, "/live");
   inert
 >
   <nav
-    class="mx-auto flex w-full max-w-(--container-content) flex-col gap-3 px-6 sm:gap-4 md:px-10"
+    class="menu-nav mx-auto flex w-full max-w-(--container-content) flex-col px-6 md:px-10"
     aria-label={t("nav.ariaLabel")}
   >
     {
       navItems.map((item, i) => (
         <a
           href={item.href}
-          class="menu-link translate-y-4 font-display text-4xl text-(--color-paper) opacity-0 transition-colors duration-300 hover:text-(--color-gold) sm:text-6xl lg:text-7xl"
+          class="menu-link translate-y-4 font-display text-(--color-paper) opacity-0 transition-colors duration-300 hover:text-(--color-gold)"
           style={`transition-delay:${i * 40}ms`}
           aria-current={item.isActive ? "page" : undefined}
         >
@@ -191,6 +179,62 @@ const liveHref = localizedPath(lang, "/live");
 </div>
 
 <style>
+  /*
+   * Centralized here (rather than as stacked Tailwind text-[…]/lg:/3xl:
+   * utilities) because Tailwind v4 orders a custom breakpoint's generated
+   * CSS by registration order, not by the pixel value in --breakpoint-3xl
+   * (global.css) — at 1920px both the lg: (1024px) and 3xl: (1920px) media
+   * queries match simultaneously, and lg: happened to be emitted *after*
+   * 3xl: in the bundle, so it silently won every time. A single, explicitly
+   * mobile-first block removes that ambiguity and is also the one place to
+   * tune the whole scale. Four tiers, one per requested screen class
+   * (mobile / tablet / desktop / very large) — deliberately not a naive
+   * uniform cut of the previous text-4xl/6xl/7xl scale: each step is tuned
+   * so the menu stays large and editorial without dominating the viewport,
+   * with denser leading and tighter vertical gaps at every tier.
+   */
+  .menu-nav {
+    gap: 0.5rem;
+  }
+
+  .menu-link {
+    font-size: 2rem;
+    line-height: 1.15;
+  }
+
+  @media (min-width: 640px) {
+    .menu-nav {
+      gap: 0.625rem;
+    }
+
+    .menu-link {
+      font-size: 2.75rem;
+      line-height: 1.1;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .menu-nav {
+      gap: 0.75rem;
+    }
+
+    .menu-link {
+      font-size: 3.5rem;
+      line-height: 1.05;
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .menu-nav {
+      gap: 0.875rem;
+    }
+
+    .menu-link {
+      font-size: 4.25rem;
+      line-height: 1.05;
+    }
+  }
+
   .live-on-air {
     color: #e11d2e;
   }

@@ -42,6 +42,15 @@ export interface LocaleDefinition {
   direction: "ltr";
   /** Whether this locale currently has real, published pages. See module docblock. */
   enabled: boolean;
+  /**
+   * Compact label for the language-switcher trigger button ("FR ▾"). An
+   * ISO code for Latin-script locales (unambiguous, universally recognized
+   * in that form); the language's own name in its own script for Chinese,
+   * since two Latin letters ("ZH") don't read as "Chinese" the way "中文"
+   * immediately does. Deliberately "NB", never the ISO macrolanguage code
+   * "no" — Bokmål-specific, matching every other locale field here.
+   */
+  shortLabel: string;
 }
 
 export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
@@ -54,6 +63,7 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
     script: "Latin",
     direction: "ltr",
     enabled: true,
+    shortLabel: "FR",
   },
   en: {
     code: "en",
@@ -64,6 +74,7 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
     script: "Latin",
     direction: "ltr",
     enabled: true,
+    shortLabel: "EN",
   },
   nb: {
     code: "nb",
@@ -74,6 +85,7 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
     script: "Latin",
     direction: "ltr",
     enabled: false,
+    shortLabel: "NB",
   },
   zh: {
     code: "zh",
@@ -84,6 +96,7 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
     script: "Hans",
     direction: "ltr",
     enabled: false,
+    shortLabel: "中文",
   },
 };
 

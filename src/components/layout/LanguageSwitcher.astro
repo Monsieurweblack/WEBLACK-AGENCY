@@ -1,6 +1,6 @@
 ---
 import { resolveTranslations, useTranslations, type Lang, type TranslationMap } from "../../i18n/utils";
-import { LOCALES } from "../../i18n/locales";
+import { LOCALES, type LocaleCode } from "../../i18n/locales";
 
 interface Props {
   lang: Lang;
@@ -24,28 +24,121 @@ const resolved = resolveTranslations(lang, Astro.url.pathname, translations);
 interface SwitcherItem {
   lang: Lang;
   nativeName: string;
-  href: string;
+  href: string | null;
+  active: boolean;
 }
 
-const items: SwitcherItem[] = resolved.map((entry) => ({
-  lang: entry.lang,
-  nativeName: LOCALES[entry.lang].nativeName,
-  href: entry.path,
-}));
+/**
+ * Registry order (fr, en, nb, zh), not resolution order, so the open menu
+ * always lists languages the same way regardless of which ones happen to
+ * resolve on a given page. The active language is always included (it's
+ * simply not a link); any other locale appears only when `resolved`
+ * actually found a real URL for it — a locale with no translation for this
+ * page is never listed, let alone linked.
+ */
+const items: SwitcherItem[] = (Object.keys(LOCALES) as LocaleCode[])
+  .map((code): SwitcherItem | null => {
+    if (code === lang) {
+      return { lang: code, nativeName: LOCALES[code].nativeName, href: null, active: true };
+    }
+    const match = resolved.find((entry) => entry.lang === code);
+    return match ? { lang: code, nativeName: LOCALES[code].nativeName, href: match.path, active: false } : null;
+  })
+  .filter((item): item is SwitcherItem => item !== null);
+
+const currentShortLabel = LOCALES[lang].shortLabel;
+const uid = `${lang}-${Math.random().toString(36).slice(2, 8)}`;
 ---
 
-{
-  items.length > 0 && (
-    <div class:list={["items-center gap-2", className]}>
-      {items.map((item) => (
-        <a
-          href={item.href}
-          class="label-tracked border border-(--color-line) px-3 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
-          aria-label={`${t("common.switchTo")} ${item.nativeName}`}
-        >
-          {item.nativeName}
-        </a>
-      ))}
-    </div>
-  )
-}
+<div class:list={["language-switcher relative", className]} data-language-switcher>
+  <button
+    type="button"
+    id={`language-trigger-${uid}`}
+    class="label-tracked inline-flex items-center gap-1.5 border border-(--color-line) px-3 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+    aria-haspopup="menu"
+    aria-expanded="false"
+    aria-controls={`language-menu-${uid}`}
+    aria-label={t("common.language")}
+    data-language-trigger
+  >
+    {currentShortLabel}
+    <svg viewBox="0 0 12 8" class="language-switcher-caret h-2 w-2.5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">
+      <path d="M1 1.5 6 6.5 11 1.5" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </button>
+  <ul
+    id={`language-menu-${uid}`}
+    class="language-switcher-menu absolute right-0 top-full z-20 mt-2 min-w-[9.5rem] border border-(--color-line) bg-(--color-ink) py-1 shadow-[0_16px_40px_rgba(0,0,0,0.4)]"
+    role="menu"
+    aria-label={t("common.language")}
+    data-language-menu
+    data-state="closed"
+    inert
+  >
+    {
+      items.map((item) =>
+        item.active ? (
+          <li role="none">
+            <span role="menuitemradio" aria-checked="true" aria-disabled="true" class="flex items-center justify-between gap-4 px-4 py-2.5 text-sm text-(--color-gold)">
+              {item.nativeName}
+              <svg viewBox="0 0 16 16" class="h-3 w-3 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M3 8.5 6.5 12 13 4.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </li>
+        ) : (
+          <li role="none">
+            <a
+              href={item.href!}
+              role="menuitemradio"
+              aria-checked="false"
+              class="block px-4 py-2.5 text-sm text-(--color-paper) transition-colors duration-150 hover:bg-(--color-ink-soft) hover:text-(--color-gold)"
+            >
+              {item.nativeName}
+            </a>
+          </li>
+        ),
+      )
+    }
+  </ul>
+</div>
+
+<style>
+  .language-switcher-caret {
+    transition: transform 200ms ease;
+  }
+
+  [data-language-trigger][aria-expanded="true"] .language-switcher-caret {
+    transform: rotate(180deg);
+  }
+
+  .language-switcher-menu {
+    opacity: 0;
+    transform: translateY(-4px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 150ms ease,
+      transform 150ms ease,
+      visibility 150ms;
+  }
+
+  .language-switcher-menu[data-state="open"] {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .language-switcher-caret,
+    .language-switcher-menu {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  import { initLanguageSwitcher } from "../../scripts/language-switcher";
+  initLanguageSwitcher();
+</script>

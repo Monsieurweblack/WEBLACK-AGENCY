@@ -8,7 +8,17 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
-const bio = founderBio[lang] ?? founderBio[defaultLang]!;
+// nb/zh have no bio content yet and fall back to the French text — the
+// quote marks must match whichever language the *quoted text* is actually
+// in, not the page's own lang, or a French quote would render inside
+// English-style curly quotes on an nb/zh page.
+const bioLang = founderBio[lang] ? lang : defaultLang;
+const bio = founderBio[bioLang]!;
+/**
+ * French typographic convention uses « » (with a non-breaking space) rather
+ * than the English-style “ ” curly quotes hardcoded here previously.
+ */
+const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["« ", " »"] : ["“", "”"];
 ---
 
 <div
@@ -64,7 +74,7 @@ const bio = founderBio[lang] ?? founderBio[defaultLang]!;
 
       <blockquote class="mt-12 border-l-2 border-(--color-gold) pl-6 md:pl-8">
         <p class="font-display text-2xl italic leading-snug text-(--color-paper) sm:text-3xl">
-          “{bio.quote}”
+          {openQuote}{bio.quote}{closeQuote}
         </p>
         <cite class="label-tracked mt-4 block not-italic text-(--color-gold)">{bio.quoteAttribution}</cite>
       </blockquote>

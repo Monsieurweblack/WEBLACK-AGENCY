@@ -7,6 +7,18 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
+
+/**
+ * French and Norwegian typographic convention uses « » (with a non-breaking
+ * space, so the mark never separates from the text at a line break) rather
+ * than the English-style “ ” curly quotes — hardcoding “ ” regardless of
+ * language was incorrect on fr/nb pages.
+ */
+const QUOTES: Partial<Record<Lang, [string, string]>> = {
+  fr: ["« ", " »"],
+  nb: ["« ", " »"],
+};
+const [openQuote, closeQuote] = QUOTES[lang] ?? ["“", "”"];
 ---
 
 <section class="bg-(--color-paper) py-28 md:py-36" data-reveal>
@@ -14,7 +26,7 @@ const t = useTranslations(lang);
     <p
       class="font-display text-balance text-3xl leading-[1.25] text-(--color-ink) sm:text-4xl lg:text-5xl"
     >
-      “{t("home.manifesto")}”
+      {openQuote}{t("home.manifesto")}{closeQuote}
     </p>
     <div class="mx-auto mt-8 h-px w-16 bg-(--color-gold)"></div>
   </div>
