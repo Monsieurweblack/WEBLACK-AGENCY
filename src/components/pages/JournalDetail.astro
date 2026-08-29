@@ -6,6 +6,7 @@ import ShareButtons from "../layout/ShareButtons.astro";
 import CommentSection from "../sections/CommentSection.astro";
 import type { JournalEntry } from "../../lib/content";
 import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
+import { getProjectForArticle } from "../../lib/content-graph";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 
 interface Props {
@@ -28,6 +29,8 @@ const allArticles = sortByDateDesc(await getEntriesByLang("journal", lang));
 const related = allArticles
   .filter((a) => a.data.slug !== article.data.slug && a.data.category === article.data.category)
   .slice(0, 3);
+
+const relatedProject = getProjectForArticle(article, await getEntriesByLang("work", lang));
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
 const imageUrl = new URL(article.data.coverImage.url, Astro.site).toString();
@@ -99,10 +102,10 @@ const structuredData = {
 
   <div class="prose-weblack mx-auto max-w-3xl px-6 py-16 md:px-10" set:html={article.data.bodyHtml} />
 
-  {article.data.relatedWorkSlug && (
+  {relatedProject && (
     <div class="mx-auto max-w-3xl px-6 pb-16 md:px-10">
       <a
-        href={localizedPath(lang, `/selected-work/${article.data.relatedWorkSlug}`)}
+        href={localizedPath(lang, `/selected-work/${relatedProject.data.slug}`)}
         class="label-tracked inline-flex items-center gap-2 border-t border-(--color-line) pt-6 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
       >
         {t("partners.cta")} &rarr;

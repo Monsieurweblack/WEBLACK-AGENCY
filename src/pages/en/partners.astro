@@ -4,10 +4,12 @@ import RemoteImage from "../../components/media/RemoteImage.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
 import { useTranslations, localizedPath } from "../../i18n/utils";
 import { getEntriesByLang } from "../../lib/content";
+import { getProjectForPartner } from "../../lib/content-graph";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
 const partners = await getEntriesByLang("partners", lang);
+const projects = await getEntriesByLang("work", lang);
 ---
 
 <BaseLayout lang={lang} title={t("partners.hero.title")} description={t("partners.hero.lead")}>
@@ -24,33 +26,36 @@ const partners = await getEntriesByLang("partners", lang);
   <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
     <div class="mx-auto max-w-(--container-content) divide-y divide-(--color-line) border-t border-(--color-line)">
       {
-        partners.map((partner, i) => (
-          <div class="grid grid-cols-1 gap-8 py-14 lg:grid-cols-[1fr_1.4fr] lg:items-center" data-reveal data-reveal-delay={String(i * 0.08)}>
-            <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
-              <RemoteImage
-                src={partner.data.coverImage.url}
-                alt={partner.data.coverImage.alt}
-                width={900}
-                height={675}
-                credit={partner.data.coverImage.credit}
-                class="h-full w-full"
-              />
+        partners.map((partner, i) => {
+          const relatedProject = getProjectForPartner(partner, projects);
+          return (
+            <div class="grid grid-cols-1 gap-8 py-14 lg:grid-cols-[1fr_1.4fr] lg:items-center" data-reveal data-reveal-delay={String(i * 0.08)}>
+              <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
+                <RemoteImage
+                  src={partner.data.coverImage.url}
+                  alt={partner.data.coverImage.alt}
+                  width={900}
+                  height={675}
+                  credit={partner.data.coverImage.credit}
+                  class="h-full w-full"
+                />
+              </div>
+              <div>
+                <p class="label-tracked text-(--color-gold)">{partner.data.location.city}, {partner.data.location.country}</p>
+                <h2 class="font-display mt-3 text-2xl text-(--color-paper)">{partner.data.name}</h2>
+                <p class="mt-4 text-(--color-paper)/70">{partner.data.description}</p>
+                {relatedProject && (
+                  <a
+                    href={localizedPath(lang, `/selected-work/${relatedProject.data.slug}`)}
+                    class="label-tracked mt-6 inline-flex items-center gap-2 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+                  >
+                    {t("partners.cta")} &rarr;
+                  </a>
+                )}
+              </div>
             </div>
-            <div>
-              <p class="label-tracked text-(--color-gold)">{partner.data.location.city}, {partner.data.location.country}</p>
-              <h2 class="font-display mt-3 text-2xl text-(--color-paper)">{partner.data.name}</h2>
-              <p class="mt-4 text-(--color-paper)/70">{partner.data.description}</p>
-              {partner.data.relatedWorkSlug && (
-                <a
-                  href={localizedPath(lang, `/selected-work/${partner.data.relatedWorkSlug}`)}
-                  class="label-tracked mt-6 inline-flex items-center gap-2 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
-                >
-                  {t("partners.cta")} &rarr;
-                </a>
-              )}
-            </div>
-          </div>
-        ))
+          );
+        })
       }
     </div>
   </section>

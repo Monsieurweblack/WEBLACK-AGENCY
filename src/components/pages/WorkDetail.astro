@@ -4,6 +4,7 @@ import CardWork from "../cards/CardWork.astro";
 import CtaContact from "../sections/CtaContact.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { getEntriesByLang, type WorkEntry } from "../../lib/content";
+import { getRelatedProjects } from "../../lib/content-graph";
 
 interface Props {
   lang: Lang;
@@ -13,9 +14,7 @@ interface Props {
 const { lang, work } = Astro.props;
 const t = useTranslations(lang);
 
-const related = work.data.relatedWorkSlugs?.length
-  ? (await getEntriesByLang("work", lang)).filter((w) => work.data.relatedWorkSlugs!.includes(w.data.slug))
-  : [];
+const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
 ---
 
 <article class="bg-(--color-ink)">
