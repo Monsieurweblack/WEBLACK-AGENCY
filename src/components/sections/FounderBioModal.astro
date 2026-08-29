@@ -1,5 +1,5 @@
 ---
-import { useTranslations, type Lang } from "../../i18n/utils";
+import { useTranslations, defaultLang, type Lang } from "../../i18n/utils";
 import { founderBio } from "../../data/founder-bio";
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
-const bio = founderBio[lang];
+const bio = founderBio[lang] ?? founderBio[defaultLang]!;
 ---
 
 <div

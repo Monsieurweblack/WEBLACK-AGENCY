@@ -8,6 +8,7 @@ import type { JournalEntry } from "../../lib/content";
 import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
 import { getProjectForArticle } from "../../lib/content-graph";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import { LOCALES, intlTagFor } from "../../i18n/locales";
 
 interface Props {
   lang: Lang;
@@ -16,8 +17,7 @@ interface Props {
 
 const { lang, article } = Astro.props;
 const t = useTranslations(lang);
-const locale = lang === "fr" ? "fr-FR" : "en-US";
-const date = article.data.publishDate.toLocaleDateString(locale, {
+const date = article.data.publishDate.toLocaleDateString(intlTagFor(lang), {
   day: "numeric",
   month: "long",
   year: "numeric",
@@ -42,7 +42,7 @@ const structuredData = {
   image: imageUrl,
   datePublished: article.data.publishDate.toISOString(),
   dateModified: article.data.updatedAt.toISOString(),
-  inLanguage: lang === "fr" ? "fr-FR" : "en-GB",
+  inLanguage: LOCALES[lang].hreflang,
   mainEntityOfPage: canonicalUrl,
   author: article.data.author
     ? { "@type": "Person", name: article.data.author }

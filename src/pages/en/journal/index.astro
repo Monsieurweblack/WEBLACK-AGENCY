@@ -4,6 +4,7 @@ import RemoteImage from "../../../components/media/RemoteImage.astro";
 import CardJournal from "../../../components/cards/CardJournal.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
 import { useTranslations, localizedPath, type UiKey } from "../../../i18n/utils";
+import { intlTagFor } from "../../../i18n/locales";
 import { getEntriesByLang, sortByDateDesc, JOURNAL_CATEGORY_ORDER } from "../../../lib/content";
 
 const lang = "en" as const;
@@ -18,7 +19,7 @@ const categories = JOURNAL_CATEGORY_ORDER.filter((category) =>
 );
 
 const leadDate = featuredFirst
-  ? featuredFirst.data.publishDate.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
+  ? featuredFirst.data.publishDate.toLocaleDateString(intlTagFor(lang), { day: "numeric", month: "long", year: "numeric" })
   : "";
 const leadCategoryLabel = featuredFirst
   ? (t(`journal.category.${featuredFirst.data.category}` as UiKey) ?? featuredFirst.data.category)

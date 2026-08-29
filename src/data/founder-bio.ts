@@ -15,7 +15,7 @@ export interface FounderBio {
   quoteAttribution: string;
 }
 
-export const founderBio: Record<Lang, FounderBio> = {
+export const founderBio: Partial<Record<Lang, FounderBio>> = {
   fr: {
     name: "Deo-Gratias KPODO alias « Monsieur Weblack »",
     paragraphs: [

@@ -46,6 +46,20 @@
 }
 
 /*
+ * Chinese pages (<html lang="zh-CN">) fall back to the visitor's own system
+ * CJK fonts instead of Fraunces/Manrope, which ship no Chinese glyphs at
+ * all (verified: neither font's subsets cover CJK — see docs/i18n.md,
+ * "Typography"). Bundling a custom CJK webfont (routinely 1-10MB+ even
+ * subsetted) purely for a locale that isn't live yet would be a real,
+ * needless performance cost — this rule adds zero bytes and only ever
+ * applies within a zh-scoped page.
+ */
+:lang(zh) {
+  --font-display: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Heiti SC", var(--font-sans);
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Heiti SC", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
  * Light mode overrides. Dark mode (the @theme block above) is the
  * unconditional default — the bare :root values apply unless the user has
  * explicitly chosen light via the header toggle ([data-theme="light"]).

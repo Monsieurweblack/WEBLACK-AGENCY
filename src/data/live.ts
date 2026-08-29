@@ -1,8 +1,17 @@
+import { defaultLang, type Lang } from "../i18n/utils";
+
 export type LiveStatus = "offline" | "upcoming" | "live" | "replay";
 
 export interface LocalizedText {
   fr: string;
   en: string;
+  nb?: string;
+  zh?: string;
+}
+
+/** Falls back to the default locale when this text hasn't been written for `lang` yet. */
+export function localizedText(text: LocalizedText, lang: Lang): string {
+  return text[lang] ?? text[defaultLang];
 }
 
 export interface LiveEventConfig {

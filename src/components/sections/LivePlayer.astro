@@ -1,6 +1,7 @@
 ---
 import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
-import type { LiveEventConfig } from "../../data/live";
+import { intlTagFor } from "../../i18n/locales";
+import { localizedText, type LiveEventConfig } from "../../data/live";
 
 interface Props {
   lang: Lang;
@@ -10,8 +11,8 @@ interface Props {
 const { lang, event } = Astro.props;
 const t = useTranslations(lang);
 const { status, youtubeVideoId, showChat, scheduledStart } = event;
-const title = event.title[lang];
-const description = event.description[lang];
+const title = localizedText(event.title, lang);
+const description = localizedText(event.description, lang);
 
 const embedDomain = Astro.site ? new URL(Astro.site).hostname : Astro.url.hostname;
 const playerUrl = `https://www.youtube-nocookie.com/embed/${youtubeVideoId}`;
@@ -21,7 +22,7 @@ const statusLabel = t(`live.status.${status}` as UiKey);
 const showPlayer = status === "live" || status === "replay";
 const showChatPanel = status === "live" && showChat;
 const scheduledDate = scheduledStart ? new Date(scheduledStart) : null;
-const dateFormatter = new Intl.DateTimeFormat(lang === "fr" ? "fr-FR" : "en-US", {
+const dateFormatter = new Intl.DateTimeFormat(intlTagFor(lang), {
   dateStyle: "long",
   timeStyle: "short",
 });

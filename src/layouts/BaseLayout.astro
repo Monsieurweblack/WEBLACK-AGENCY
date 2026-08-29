@@ -4,7 +4,8 @@ import Header from "../components/layout/Header.astro";
 import Footer from "../components/layout/Footer.astro";
 import Seo from "../components/layout/Seo.astro";
 import ConsentBanner from "../components/layout/ConsentBanner.astro";
-import { useTranslations, type Lang } from "../i18n/utils";
+import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
+import { LOCALES } from "../i18n/locales";
 
 interface Props {
   lang: Lang;
@@ -14,15 +15,15 @@ interface Props {
   imageAlt?: string;
   noindex?: boolean;
   bodyClass?: string;
-  altLangHref?: string;
+  translations?: TranslationMap;
 }
 
-const { lang, title, description, image, imageAlt, noindex, bodyClass, altLangHref } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex, bodyClass, translations } = Astro.props;
 const t = useTranslations(lang);
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html lang={LOCALES[lang].htmlLang}>
   <head>
     <meta charset="UTF-8" />
     <script is:inline>
@@ -92,7 +93,7 @@ const t = useTranslations(lang);
       image={image}
       imageAlt={imageAlt}
       noindex={noindex}
-      altLangHref={altLangHref}
+      translations={translations}
     />
   </head>
   <body class:list={["bg-(--color-ink)", bodyClass]}>
@@ -102,7 +103,7 @@ const t = useTranslations(lang);
     >
       {t("common.skipToContent")}
     </a>
-    <Header lang={lang} altLangHref={altLangHref} />
+    <Header lang={lang} translations={translations} />
     <main id="main-content">
       <slot />
     </main>

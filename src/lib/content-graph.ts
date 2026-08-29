@@ -29,6 +29,7 @@
  */
 
 import type { Lang } from "../i18n/utils";
+import { defaultLocale } from "../i18n/locales.ts";
 import type { JournalEntry, PartnerEntry, WorkEntry } from "./content";
 
 // ---------------------------------------------------------------------------
@@ -55,42 +56,49 @@ export type GraphEntityType = "work" | "journal" | "partners" | "talent";
  */
 export type ContentId = string;
 
-interface ContentIdAlias {
+export interface ContentIdAlias {
   type: GraphEntityType;
-  fr: string;
-  en: string;
+  /** Slug in each locale where it's known to differ from the canonical form. Partial by design — an alias only needs entries for the locales it actually covers. */
+  slugs: Partial<Record<Lang, string>>;
 }
 
 /**
- * Hand-verified exceptions where the FR and EN slug differ for what is the
- * same real-world content. This table is NEVER inferred automatically —
- * every entry is a deliberate human decision, re-verified against the live
- * Sanity data before being added (see docs/content-graph.md, "Adding an
- * alias"). Do not add an entry here on a guess.
+ * Hand-verified exceptions where a locale's slug differs from the default
+ * locale's for what is the same real-world content. This table is NEVER
+ * inferred automatically — every entry is a deliberate human decision,
+ * re-verified against the live Sanity data before being added (see
+ * docs/content-graph.md, "Adding an alias"). Do not add an entry here on a
+ * guess. Generic across every locale in the registry (fr/en today, nb/zh
+ * the day either has content that needs it) — nothing here is hardcoded to
+ * exactly two languages.
  *
- * Verified 2026-08-29 directly against Sanity: both documents share
+ * Verified 2026-08-29 directly against Sanity: both fr/en documents share
  * relatedWorkSlug = "nuit-du-textile-africain-bamako", confirming they cover
  * the same announcement.
  */
-const CONTENT_ID_ALIASES: ContentIdAlias[] = [
+export const CONTENT_ID_ALIASES: ContentIdAlias[] = [
   {
     type: "journal",
-    fr: "l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine",
-    en: "partenariat-nuit-du-textile-africain",
+    slugs: {
+      fr: "l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine",
+      en: "partenariat-nuit-du-textile-africain",
+    },
   },
 ];
 
 /**
  * Resolves a (type, lang, slug) triple to a stable contentId. The canonical
- * form is always anchored on the FR slug when an alias applies, so the same
- * contentId is produced regardless of which language's document you start
+ * form is anchored on the default locale's slug when the alias declares
+ * one, otherwise on whichever slug the alias declares first — so the same
+ * contentId is produced regardless of which locale's document you start
  * from.
  */
 export function resolveContentId(type: GraphEntityType, lang: Lang, slug: string): ContentId {
-  const alias = CONTENT_ID_ALIASES.find(
-    (a) => a.type === type && ((lang === "fr" && a.fr === slug) || (lang === "en" && a.en === slug)),
-  );
-  if (alias) return `${type}:${alias.fr}`;
+  const alias = CONTENT_ID_ALIASES.find((a) => a.type === type && a.slugs[lang] === slug);
+  if (alias) {
+    const canonicalSlug = alias.slugs[defaultLocale] ?? Object.values(alias.slugs)[0]!;
+    return `${type}:${canonicalSlug}`;
+  }
   return `${type}:${slug}`;
 }
 

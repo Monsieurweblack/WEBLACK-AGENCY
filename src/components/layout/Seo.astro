@@ -1,6 +1,6 @@
 ---
-import { getAbsoluteLocaleUrl } from "astro:i18n";
-import { useTranslations, languages, type Lang } from "../../i18n/utils";
+import { useTranslations, resolveTranslations, type Lang, type TranslationMap } from "../../i18n/utils";
+import { LOCALES, defaultLocale, ogLocaleFor } from "../../i18n/locales";
 import { SOCIAL_LINKS } from "../../lib/social";
 
 interface Props {
@@ -11,19 +11,21 @@ interface Props {
   imageAlt?: string;
   noindex?: boolean;
   /**
-   * Set by the calling route when the naive same-path swap doesn't resolve
-   * to a real alternate-language page (e.g. a Journal article published in
-   * only one language, or FR/EN slugs that differ) — see LanguageSwitcher's
-   * `hrefOverride`. When set, this page has no known translation: hreflang
-   * must not claim one, so the whole alternate/x-default block is omitted
-   * rather than pointing crawlers at a URL that doesn't exist.
+   * Per-locale map of this exact content's URL in each other locale —
+   * supplied by the calling route only when the naive same-slug swap
+   * doesn't resolve (e.g. a Journal article published in only one
+   * language, or with different FR/EN slugs). When omitted, every enabled
+   * locale is assumed reachable via the same-slug swap (correct for static
+   * pages and most content). A locale missing from this map — or the whole
+   * map resolving to zero entries — means hreflang must not claim a
+   * translation for it: never point crawlers at a URL that doesn't exist.
+   * See src/i18n/utils.ts `resolveTranslations`.
    */
-  altLangHref?: string;
+  translations?: TranslationMap;
 }
 
-const { lang, title, description, image, imageAlt, noindex = false, altLangHref } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex = false, translations } = Astro.props;
 const t = useTranslations(lang);
-const hasKnownTranslation = altLangHref === undefined;
 
 const pageTitle = title ? `${title} — WEBLACK` : t("seo.default.title");
 const pageDescription = description ?? t("seo.default.description");
@@ -32,13 +34,24 @@ const ogImage = new URL(image ?? DEFAULT_OG_IMAGE, Astro.site);
 const isDefaultOgImage = !image;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const logoUrl = new URL("/apple-touch-icon.png", Astro.site);
+const homeUrl = new URL(lang === defaultLocale ? "/" : `/${lang}/`, Astro.site).toString();
 
-const pathWithoutLang = Astro.url.pathname.replace(/^\/(fr|en)(?=\/|$)/, "") || "/";
-const homeUrl = getAbsoluteLocaleUrl(lang, "/");
+const ogLocale = ogLocaleFor(lang);
+const schemaLang = LOCALES[lang].hreflang;
 
-const ogLocale = lang === "fr" ? "fr_FR" : "en_GB";
-const ogLocaleAlternate = lang === "fr" ? "en_GB" : "fr_FR";
-const schemaLang = lang === "fr" ? "fr-FR" : "en-GB";
+// Resolved alternate-locale entries for this exact page. Empty when no
+// translation is known anywhere — the whole hreflang block is then omitted
+// (see the E-2/D-1 fix this preserves) rather than pointing at a guess.
+const alternates = resolveTranslations(lang, Astro.url.pathname, translations);
+const hasAlternates = alternates.length > 0;
+
+function hrefFor(targetLang: Lang): string {
+  if (targetLang === lang) return canonicalUrl.toString();
+  const found = alternates.find((entry) => entry.lang === targetLang);
+  return found ? new URL(found.path, Astro.site).toString() : "";
+}
+
+const xDefaultHref = hasAlternates ? hrefFor(defaultLocale) || canonicalUrl.toString() : "";
 
 const structuredData = [
   {
@@ -65,18 +78,23 @@ const structuredData = [
 <meta name="description" content={pageDescription} />
 <link rel="canonical" href={canonicalUrl} />
 {
-  !noindex && hasKnownTranslation &&
-    (Object.keys(languages) as Lang[]).map((locale) => (
+  !noindex && hasAlternates && (
+    <link rel="alternate" hreflang={LOCALES[lang].hreflang} href={canonicalUrl.toString()} />
+  )
+}
+{
+  !noindex &&
+    alternates.map((entry) => (
       <link
         rel="alternate"
-        hreflang={locale}
-        href={getAbsoluteLocaleUrl(locale, pathWithoutLang)}
+        hreflang={LOCALES[entry.lang].hreflang}
+        href={new URL(entry.path, Astro.site).toString()}
       />
     ))
 }
 {
-  !noindex && hasKnownTranslation && (
-    <link rel="alternate" hreflang="x-default" href={getAbsoluteLocaleUrl("fr", pathWithoutLang)} />
+  !noindex && hasAlternates && (
+    <link rel="alternate" hreflang="x-default" href={xDefaultHref} />
   )
 }
 {noindex && <meta name="robots" content="noindex,nofollow" />}
@@ -90,7 +108,7 @@ const structuredData = [
 <meta property="og:image:alt" content={imageAlt ?? t("seo.ogImage.alt")} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:locale" content={ogLocale} />
-<meta property="og:locale:alternate" content={ogLocaleAlternate} />
+{alternates.map((entry) => <meta property="og:locale:alternate" content={ogLocaleFor(entry.lang)} />)}
 <meta property="og:site_name" content="WEBLACK" />
 
 <meta name="twitter:card" content="summary_large_image" />

@@ -1,5 +1,5 @@
 import { getEntriesByLang } from "./content";
-import { localizedPath, type Lang } from "../i18n/utils";
+import { localizedPath, defaultLang, type Lang } from "../i18n/utils";
 
 export interface SearchEntry {
   title: string;
@@ -8,7 +8,7 @@ export interface SearchEntry {
   type: "page" | "journal" | "work" | "talent";
 }
 
-const STATIC_PAGES: Record<Lang, { path: string; title: string; description: string }[]> = {
+const STATIC_PAGES: Partial<Record<Lang, { path: string; title: string; description: string }[]>> = {
   fr: [
     { path: "/", title: "Accueil", description: "WEBLACK — Agence créative indépendante" },
     { path: "/about", title: "À propos", description: "L'agence, sa méthode, son équipe" },
@@ -44,7 +44,7 @@ export async function buildSearchIndex(lang: Lang): Promise<SearchEntry[]> {
     getEntriesByLang("talent", lang),
   ]);
 
-  const pages: SearchEntry[] = STATIC_PAGES[lang].map((page) => ({
+  const pages: SearchEntry[] = (STATIC_PAGES[lang] ?? STATIC_PAGES[defaultLang]!).map((page) => ({
     title: page.title,
     description: page.description,
     url: page.path,

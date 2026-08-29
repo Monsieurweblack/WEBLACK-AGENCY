@@ -1,6 +1,7 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
 import { localizedPath, useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import { intlTagFor } from "../../i18n/locales";
 import type { JournalEntry } from "../../lib/content";
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
 const { lang, article, index = 0, wide = false } = Astro.props;
 const t = useTranslations(lang);
 const href = localizedPath(lang, `/journal/${article.data.slug}`);
-const date = article.data.publishDate.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
+const date = article.data.publishDate.toLocaleDateString(intlTagFor(lang), {
   day: "numeric",
   month: "long",
   year: "numeric",

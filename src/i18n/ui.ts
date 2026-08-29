@@ -1,13 +1,27 @@
-export const languages = {
-  fr: "Français",
-  en: "English",
-} as const;
+import { defaultLocale, ENABLED_LOCALE_CODES, LOCALES, type LocaleCode } from "./locales";
 
-export type Lang = keyof typeof languages;
+export type Lang = LocaleCode;
 
-export const defaultLang: Lang = "fr";
+/**
+ * Native names for the currently *enabled* locales only (see
+ * src/i18n/locales.ts) — grows automatically the day nb/zh are enabled.
+ * Everything that loops over "which locales does this site actually serve"
+ * (hreflang generation, the language switcher, URL-prefix parsing) reads
+ * this, never the full LOCALES registry directly, so a disabled locale
+ * never appears anywhere on the live site.
+ */
+export const languages: Partial<Record<Lang, string>> = Object.fromEntries(
+  ENABLED_LOCALE_CODES.map((code) => [code, LOCALES[code].nativeName]),
+);
 
-export const ui = {
+/**
+ * Kept as the literal "fr" type (inferred from `defaultLocale`), not widened
+ * to `Lang` — see src/i18n/locales.ts for why this precision matters for
+ * `ui[defaultLang]` below.
+ */
+export const defaultLang = defaultLocale;
+
+const translations = {
   fr: {
     "nav.about": "À propos",
     "nav.live": "Live",
@@ -23,8 +37,7 @@ export const ui = {
     "nav.close": "Fermer",
     "nav.ariaLabel": "Navigation principale",
 
-    "common.switchToFr": "Passer en français",
-    "common.switchToEn": "Passer en anglais",
+    "common.switchTo": "Passer en",
 
     "theme.toggle.toLight": "Activer le mode clair",
     "theme.toggle.toDark": "Activer le mode sombre",
@@ -408,8 +421,7 @@ export const ui = {
     "nav.close": "Close",
     "nav.ariaLabel": "Main navigation",
 
-    "common.switchToFr": "Switch to French",
-    "common.switchToEn": "Switch to English",
+    "common.switchTo": "Switch to",
 
     "theme.toggle.toLight": "Switch to light mode",
     "theme.toggle.toDark": "Switch to dark mode",
@@ -774,4 +786,24 @@ export const ui = {
   },
 } as const;
 
-export type UiKey = keyof (typeof ui)["fr"];
+export type UiKey = keyof (typeof translations)["fr"];
+
+/**
+ * `nb`/`zh` start as empty dictionaries — no placeholder or machine
+ * translation is written here on a guess. `useTranslations()` below falls
+ * back to French for any key missing in the current locale, so an empty
+ * dictionary is a safe, honest starting point: real Bokmål/Chinese strings
+ * are added key by key as content is actually translated, never invented
+ * wholesale to satisfy the type system.
+ */
+export const ui: {
+  fr: Record<UiKey, string>;
+  en: Record<UiKey, string>;
+  nb: Partial<Record<UiKey, string>>;
+  zh: Partial<Record<UiKey, string>>;
+} = {
+  fr: translations.fr,
+  en: translations.en,
+  nb: {},
+  zh: {},
+};

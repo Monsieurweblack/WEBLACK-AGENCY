@@ -14,7 +14,7 @@ export async function initScrollChoreography() {
       el.style.opacity = "1";
       el.style.transform = "none";
     });
-    const locale = document.documentElement.lang === "fr" ? "fr-FR" : "en-US";
+    const locale = document.documentElement.lang || "fr";
     document.querySelectorAll<HTMLElement>("[data-counter]").forEach((el) => {
       const numeric = parseFloat(el.dataset.counter || "0");
       const suffix = el.dataset.counterSuffix ?? "";
@@ -55,7 +55,7 @@ export async function initScrollChoreography() {
     const numeric = parseFloat(el.dataset.counter || "0");
     if (Number.isNaN(numeric)) return;
     const suffix = el.dataset.counterSuffix ?? "";
-    const locale = document.documentElement.lang === "fr" ? "fr-FR" : "en-US";
+    const locale = document.documentElement.lang || "fr";
     const counterObj = { value: 0 };
     ScrollTrigger.create({
       trigger: el,

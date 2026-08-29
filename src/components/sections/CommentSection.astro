@@ -1,5 +1,6 @@
 ---
 import { useTranslations, type Lang } from "../../i18n/utils";
+import { intlTagFor } from "../../i18n/locales";
 import { CONTACT_EMAIL } from "../../lib/contact";
 import type { JournalComment } from "../../lib/content";
 
@@ -12,7 +13,7 @@ interface Props {
 
 const { lang, articleTitle, articleUrl, comments = [] } = Astro.props;
 const t = useTranslations(lang);
-const locale = lang === "fr" ? "fr-FR" : "en-US";
+const locale = intlTagFor(lang);
 ---
 
 <section class="mx-auto max-w-3xl border-t border-(--color-line) px-6 py-16 md:px-10 md:py-20">

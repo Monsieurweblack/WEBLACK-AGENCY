@@ -1,33 +1,53 @@
 ---
-import { otherLang, switchLocalePath, useTranslations, type Lang } from "../../i18n/utils";
+import { otherEnabledLocales, resolveTranslations, useTranslations, type Lang, type TranslationMap } from "../../i18n/utils";
+import { LOCALES } from "../../i18n/locales";
 
 interface Props {
   lang: Lang;
   class?: string;
   /**
-   * Overrides the naive same-slug path swap below — needed wherever the
-   * current page has no guaranteed counterpart at the same slug in the
-   * other language (e.g. a Journal article only published in one
-   * language). Without this, the switcher can link straight to a 404.
+   * Per-locale map of this exact page's URL in each other locale — see
+   * src/i18n/utils.ts `resolveTranslations`. Omitted for pages whose slug
+   * is identical across locales (the naive swap then applies). A locale
+   * with no known translation for this page is never linked to — no naive
+   * `/fr/` → `/nb/` substitution, ever (see the brief this component
+   * implements: resolve from content identity, not path guessing).
    */
-  hrefOverride?: string;
+  translations?: TranslationMap;
 }
 
-const { lang, class: className, hrefOverride } = Astro.props;
+const { lang, class: className, translations } = Astro.props;
 const t = useTranslations(lang);
-const target = otherLang(lang);
-const href = hrefOverride ?? switchLocalePath(Astro.url.pathname, target);
-const label = target === "fr" ? "FR" : "EN";
-const switchLabel = target === "fr" ? t("common.switchToFr") : t("common.switchToEn");
+
+const resolved = resolveTranslations(lang, Astro.url.pathname, translations);
+const resolvedByLang = new Map(resolved.map((entry) => [entry.lang, entry.path]));
+
+interface SwitcherItem {
+  lang: Lang;
+  nativeName: string;
+  href: string;
+}
+
+const items: SwitcherItem[] = otherEnabledLocales(lang)
+  .map((targetLang) => {
+    const href = resolvedByLang.get(targetLang);
+    return href ? { lang: targetLang, nativeName: LOCALES[targetLang].nativeName, href } : null;
+  })
+  .filter((item): item is SwitcherItem => item !== null);
 ---
 
-<a
-  href={href}
-  class:list={[
-    "label-tracked items-center gap-2 border border-(--color-line) px-3 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)",
-    className,
-  ]}
-  aria-label={switchLabel}
->
-  {label}
-</a>
+{
+  items.length > 0 && (
+    <div class:list={["items-center gap-2", className]}>
+      {items.map((item) => (
+        <a
+          href={item.href}
+          class="label-tracked border border-(--color-line) px-3 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+          aria-label={`${t("common.switchTo")} ${item.nativeName}`}
+        >
+          {item.nativeName}
+        </a>
+      ))}
+    </div>
+  )
+}

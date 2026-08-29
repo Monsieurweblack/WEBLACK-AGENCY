@@ -1,32 +1,43 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import JournalDetail from "../../../components/pages/JournalDetail.astro";
-import { useTranslations, localizedPath } from "../../../i18n/utils";
+import { useTranslations, localizedPath, type TranslationMap } from "../../../i18n/utils";
 import { getEntriesByLang } from "../../../lib/content";
+import { resolveContentId } from "../../../lib/content-graph";
 
 /**
  * Not every article is published in both languages, and even paired
- * articles don't always share the same slug (see the FR/EN NTA pair) — the
- * language switcher can't assume a same-slug counterpart exists. When it
- * doesn't, `altLangHref` sends it to the other language's Journal index
- * instead of a 404.
+ * articles don't always share the same slug (see the FR/EN NTA pair) —
+ * matched here by contentId (src/lib/content-graph.ts), not by slug, so a
+ * genuinely paired article is still found even when its slug differs.
+ * A locale absent from `translations` has no known counterpart for this
+ * article: never fabricate one (see src/i18n/utils.ts `resolveTranslations`).
  */
 export async function getStaticPaths() {
   const [entries, frEntries] = await Promise.all([
     getEntriesByLang("journal", "en"),
     getEntriesByLang("journal", "fr"),
   ]);
-  const frSlugs = new Set(frEntries.map((entry) => entry.data.slug));
-  return entries.map((article) => ({
-    params: { slug: article.data.slug },
-    props: { article, hasAltLang: frSlugs.has(article.data.slug) },
-  }));
+  const frByContentId = new Map(
+    frEntries.map((entry) => [resolveContentId("journal", "fr", entry.data.slug), entry]),
+  );
+  return entries.map((article) => {
+    const frMatch = frByContentId.get(resolveContentId("journal", "en", article.data.slug));
+    // Always an explicit map (possibly {}), never undefined — see the FR
+    // route's identical comment for why that distinction matters here.
+    const translations: TranslationMap = frMatch
+      ? { fr: localizedPath("fr", `/journal/${frMatch.data.slug}/`) }
+      : {};
+    return {
+      params: { slug: article.data.slug },
+      props: { article, translations },
+    };
+  });
 }
 
-const { article, hasAltLang } = Astro.props;
+const { article, translations } = Astro.props;
 const lang = "en" as const;
 const t = useTranslations(lang);
-const altLangHref = hasAltLang ? undefined : localizedPath("fr", "/journal");
 ---
 
 <BaseLayout
@@ -35,7 +46,7 @@ const altLangHref = hasAltLang ? undefined : localizedPath("fr", "/journal");
   description={article.data.seo?.description ?? article.data.excerpt}
   image={article.data.coverImage.url}
   imageAlt={article.data.coverImage.alt}
-  altLangHref={altLangHref}
+  translations={translations}
 >
   <JournalDetail lang={lang} article={article} />
 </BaseLayout>

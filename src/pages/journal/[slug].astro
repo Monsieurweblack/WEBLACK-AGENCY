@@ -1,32 +1,45 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import JournalDetail from "../../components/pages/JournalDetail.astro";
-import { useTranslations, localizedPath } from "../../i18n/utils";
+import { useTranslations, localizedPath, type TranslationMap } from "../../i18n/utils";
 import { getEntriesByLang } from "../../lib/content";
+import { resolveContentId } from "../../lib/content-graph";
 
 /**
  * Not every article is published in both languages, and even paired
- * articles don't always share the same slug (see the FR/EN NTA pair) — the
- * language switcher can't assume a same-slug counterpart exists. When it
- * doesn't, `altLangHref` sends it to the other language's Journal index
- * instead of a 404.
+ * articles don't always share the same slug (see the FR/EN NTA pair) —
+ * matched here by contentId (src/lib/content-graph.ts), not by slug, so a
+ * genuinely paired article is still found even when its slug differs.
+ * A locale absent from `translations` has no known counterpart for this
+ * article: never fabricate one (see src/i18n/utils.ts `resolveTranslations`).
  */
 export async function getStaticPaths() {
   const [entries, enEntries] = await Promise.all([
     getEntriesByLang("journal", "fr"),
     getEntriesByLang("journal", "en"),
   ]);
-  const enSlugs = new Set(enEntries.map((entry) => entry.data.slug));
-  return entries.map((article) => ({
-    params: { slug: article.data.slug },
-    props: { article, hasAltLang: enSlugs.has(article.data.slug) },
-  }));
+  const enByContentId = new Map(
+    enEntries.map((entry) => [resolveContentId("journal", "en", entry.data.slug), entry]),
+  );
+  return entries.map((article) => {
+    const enMatch = enByContentId.get(resolveContentId("journal", "fr", article.data.slug));
+    // Always an explicit map (possibly {}), never undefined: this route HAS
+    // checked for a translation, so an empty result must be reported as
+    // "checked, none found" — not "not checked, assume the naive swap is
+    // fine" (undefined means the latter to resolveTranslations/Seo.astro).
+    const translations: TranslationMap = enMatch
+      ? { en: localizedPath("en", `/journal/${enMatch.data.slug}/`) }
+      : {};
+    return {
+      params: { slug: article.data.slug },
+      props: { article, translations },
+    };
+  });
 }
 
-const { article, hasAltLang } = Astro.props;
+const { article, translations } = Astro.props;
 const lang = "fr" as const;
 const t = useTranslations(lang);
-const altLangHref = hasAltLang ? undefined : localizedPath("en", "/journal");
 ---
 
 <BaseLayout
@@ -35,7 +48,7 @@ const altLangHref = hasAltLang ? undefined : localizedPath("en", "/journal");
   description={article.data.seo?.description ?? article.data.excerpt}
   image={article.data.coverImage.url}
   imageAlt={article.data.coverImage.alt}
-  altLangHref={altLangHref}
+  translations={translations}
 >
   <JournalDetail lang={lang} article={article} />
 </BaseLayout>

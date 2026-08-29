@@ -5,15 +5,15 @@ import ThemeToggle from "./ThemeToggle.astro";
 import SocialLinks from "./SocialLinks.astro";
 import SearchOverlay from "./SearchOverlay.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
-import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { useTranslations, localizedPath, type Lang, type TranslationMap } from "../../i18n/utils";
 import { liveEvent } from "../../data/live";
 
 interface Props {
   lang: Lang;
-  altLangHref?: string;
+  translations?: TranslationMap;
 }
 
-const { lang, altLangHref } = Astro.props;
+const { lang, translations } = Astro.props;
 const t = useTranslations(lang);
 const isOnAir = liveEvent.status === "live";
 
@@ -74,7 +74,7 @@ const liveHref = localizedPath(lang, "/live");
         {t("nav.contact")}
       </a>
       <ThemeToggle lang={lang} class="hidden sm:inline-flex" />
-      <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" hrefOverride={altLangHref} />
+      <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" translations={translations} />
       <SearchOverlay lang={lang} class="hidden sm:inline-flex" />
       <button
         type="button"
@@ -186,7 +186,7 @@ const liveHref = localizedPath(lang, "/live");
       </svg>
     </button>
     <ThemeToggle lang={lang} class="inline-flex" />
-    <LanguageSwitcher lang={lang} class="inline-flex" hrefOverride={altLangHref} />
+    <LanguageSwitcher lang={lang} class="inline-flex" translations={translations} />
   </div>
 </div>
 
