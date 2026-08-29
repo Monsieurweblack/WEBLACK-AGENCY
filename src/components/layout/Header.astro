@@ -67,6 +67,7 @@ const liveHref = localizedPath(lang, "/live");
         {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
         {t("nav.live")}
       </a>
+      <LanguageSwitcher lang={lang} translations={translations} />
       <button
         type="button"
         id="menu-trigger"
@@ -156,7 +157,6 @@ const liveHref = localizedPath(lang, "/live");
       <SocialLinks />
       <SearchOverlay lang={lang} class="inline-flex" />
       <ThemeToggle lang={lang} class="inline-flex" />
-      <LanguageSwitcher lang={lang} class="inline-flex" translations={translations} />
     </div>
   </div>
 </div>
