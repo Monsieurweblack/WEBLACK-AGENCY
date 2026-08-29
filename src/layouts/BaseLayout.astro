@@ -85,7 +85,15 @@ const t = useTranslations(lang);
     <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/png" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <Seo lang={lang} title={title} description={description} image={image} imageAlt={imageAlt} noindex={noindex} />
+    <Seo
+      lang={lang}
+      title={title}
+      description={description}
+      image={image}
+      imageAlt={imageAlt}
+      noindex={noindex}
+      altLangHref={altLangHref}
+    />
   </head>
   <body class:list={["bg-(--color-ink)", bodyClass]}>
     <a
