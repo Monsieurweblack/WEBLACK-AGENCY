@@ -67,31 +67,22 @@ const liveHref = localizedPath(lang, "/live");
         {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
         {t("nav.live")}
       </a>
-      <a
-        href={contactHref}
-        class="label-tracked hidden text-(--color-paper) transition-[color,transform] duration-300 hover:-translate-y-px hover:text-(--color-gold) sm:inline-flex"
-      >
-        {t("nav.contact")}
-      </a>
-      <ThemeToggle lang={lang} class="hidden sm:inline-flex" />
-      <LanguageSwitcher lang={lang} class="hidden sm:inline-flex" translations={translations} />
-      <SearchOverlay lang={lang} class="hidden sm:inline-flex" />
       <button
         type="button"
         id="menu-trigger"
-        class="label-tracked inline-flex items-center gap-3 border border-(--color-line) px-4 py-2 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+        class="label-tracked inline-flex min-h-10 items-center gap-2 border border-(--color-line) px-3.5 py-1.5 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
         aria-haspopup="true"
         aria-expanded="false"
         aria-controls="site-menu"
         data-close-label={t("nav.close")}
       >
         <span data-menu-label>{t("nav.menu")}</span>
-        <span class="relative block h-3 w-5" aria-hidden="true">
+        <span class="relative block h-2.5 w-4" aria-hidden="true">
           <span
-            class="absolute left-0 top-0 block h-px w-5 bg-current transition-transform duration-300"
+            class="absolute left-0 top-0 block h-px w-4 bg-current transition-transform duration-300"
             data-menu-bar-top></span>
           <span
-            class="absolute bottom-0 left-0 block h-px w-5 bg-current transition-transform duration-300"
+            class="absolute bottom-0 left-0 block h-px w-4 bg-current transition-transform duration-300"
             data-menu-bar-bottom></span>
         </span>
       </button>
@@ -128,30 +119,32 @@ const liveHref = localizedPath(lang, "/live");
 
 <div
   id="site-menu"
-  class="fixed inset-0 z-40 flex flex-col justify-start overflow-y-auto pt-32 bg-(--color-ink) opacity-0 pointer-events-none sm:justify-center sm:pt-0"
+  class="menu-overlay fixed inset-0 z-40 flex flex-col bg-(--color-ink) opacity-0 pointer-events-none"
   data-menu-panel
   aria-hidden="true"
   inert
 >
-  <nav
-    class="menu-nav mx-auto flex w-full max-w-(--container-content) flex-col px-6 md:px-10"
-    aria-label={t("nav.ariaLabel")}
-  >
-    {
-      navItems.map((item, i) => (
-        <a
-          href={item.href}
-          class="menu-link translate-y-4 font-display text-(--color-paper) opacity-0 transition-colors duration-300 hover:text-(--color-gold)"
-          style={`transition-delay:${i * 40}ms`}
-          aria-current={item.isActive ? "page" : undefined}
-        >
-          {item.label}
-        </a>
-      ))
-    }
-  </nav>
+  <div class="menu-content flex min-h-0 flex-1 flex-col justify-center overflow-y-auto">
+    <nav
+      class="menu-nav mx-auto flex w-full max-w-(--container-content) flex-col px-6 md:px-10"
+      aria-label={t("nav.ariaLabel")}
+    >
+      {
+        navItems.map((item, i) => (
+          <a
+            href={item.href}
+            class="menu-link translate-y-4 font-display text-(--color-paper) opacity-0 transition-colors duration-300 hover:text-(--color-gold)"
+            style={`transition-delay:${i * 40}ms`}
+            aria-current={item.isActive ? "page" : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
   <div
-    class="mx-auto mt-8 flex w-full max-w-(--container-content) items-center justify-between gap-6 border-t border-(--color-line) px-6 pt-8 md:mt-12 md:px-10"
+    class="menu-footer mx-auto flex w-full max-w-(--container-content) shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-(--color-line) px-6 py-5 md:px-10"
   >
     <a
       href={contactHref}
@@ -159,22 +152,12 @@ const liveHref = localizedPath(lang, "/live");
     >
       {t("nav.contact")}
     </a>
-    <SocialLinks class="hidden sm:flex" />
-    <button
-      type="button"
-      data-search-trigger
-      aria-label={t("search.trigger")}
-      aria-haspopup="dialog"
-      aria-controls="search-panel"
-      class="inline-flex h-9 w-9 items-center justify-center text-(--color-paper) transition-colors duration-300 hover:text-(--color-gold)"
-    >
-      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-        <circle cx="10.8" cy="10.8" r="6.3" />
-        <path d="m19.5 19.5-4.15-4.15" stroke-linecap="round" />
-      </svg>
-    </button>
-    <ThemeToggle lang={lang} class="inline-flex" />
-    <LanguageSwitcher lang={lang} class="inline-flex" translations={translations} />
+    <div class="flex items-center gap-4">
+      <SocialLinks />
+      <SearchOverlay lang={lang} class="inline-flex" />
+      <ThemeToggle lang={lang} class="inline-flex" />
+      <LanguageSwitcher lang={lang} class="inline-flex" translations={translations} />
+    </div>
   </div>
 </div>
 
@@ -193,6 +176,24 @@ const liveHref = localizedPath(lang, "/live");
    * so the menu stays large and editorial without dominating the viewport,
    * with denser leading and tighter vertical gaps at every tier.
    */
+  /*
+   * --header-h is measured live off the real header (see nav.ts) rather
+   * than guessed as a fixed padding value — a hardcoded guess is exactly
+   * what let the first item render partly behind the header whenever the
+   * real header's rendered height didn't match the guess (different font
+   * metrics while webfonts are still loading, a wrapped Live label, etc).
+   * The fallback here only matters for the instant before that first
+   * measurement lands, which happens synchronously on init, before the
+   * menu can possibly be opened.
+   */
+  .menu-content {
+    padding-top: var(--header-h, 80px);
+  }
+
+  .menu-footer {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .menu-nav {
     gap: 0.375rem;
   }

@@ -16,6 +16,21 @@ export function initNav() {
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let isOpen = false;
 
+  /**
+   * The fullscreen menu's content must start exactly where the real header
+   * ends, on every device — not at a guessed pixel value (see the comment
+   * on `.menu-content` in Header.astro for what a guess broke). Measuring
+   * the header's actual rendered height and re-measuring on resize covers
+   * font-swap reflows, orientation changes, and breakpoint changes without
+   * any hardcoded number.
+   */
+  const setHeaderHeightVar = () => {
+    document.documentElement.style.setProperty("--header-h", `${header.getBoundingClientRect().height}px`);
+  };
+  setHeaderHeightVar();
+  window.addEventListener("resize", setHeaderHeightVar);
+  new ResizeObserver(setHeaderHeightVar).observe(header);
+
   const setHeaderSolid = (solid: boolean) => {
     header.classList.toggle("bg-(--color-ink)/90", solid);
     header.classList.toggle("backdrop-blur-md", solid);
