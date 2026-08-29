@@ -10,7 +10,7 @@ const t = useTranslations(lang);
 const isOffline = liveEvent.status === "offline";
 ---
 
-<BaseLayout lang={lang} title={t("live.hero.title")} description={t("live.hero.lead")}>
+<BaseLayout lang={lang} title={t("live.hero.title")} description={t("live.seo.description")}>
   {
     isOffline ? (
       <section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">

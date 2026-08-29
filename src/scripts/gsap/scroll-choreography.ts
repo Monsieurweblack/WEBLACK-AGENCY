@@ -23,6 +23,21 @@ export async function initScrollChoreography() {
     return;
   }
 
+  /**
+   * gsap + ScrollTrigger (~110KB combined) is real weight to fetch and parse
+   * on every single page purely for a scroll-reveal effect nobody sees until
+   * they scroll. Elements start at their normal opacity (no CSS pre-hides
+   * them), so deferring this to idle time costs nothing visually — at worst
+   * a very fast scroll before the browser goes idle shows content without
+   * its fade-in, which reads as a bonus (content available sooner), not a
+   * regression. requestIdleCallback isn't in Safari; the timeout fallback
+   * still gets this off the critical initial-load path.
+   */
+  const runWhenIdle =
+    window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({} as IdleDeadline), 200));
+
+  await new Promise<void>((resolve) => runWhenIdle(() => resolve()));
+
   const [{ gsap }, ScrollTriggerModule] = await Promise.all([
     import("gsap"),
     import("gsap/ScrollTrigger"),

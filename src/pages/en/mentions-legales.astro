@@ -7,7 +7,7 @@ const lang = "en" as const;
 const t = useTranslations(lang);
 ---
 
-<BaseLayout lang={lang} title={t("footer.mentions")}>
+<BaseLayout lang={lang} title={t("footer.mentions")} description={t("mentions.seo.description")}>
   <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
     <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
       <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.mentions")}</h1>

@@ -148,6 +148,7 @@ const translations = {
 
     "talent.hero.eyebrow": "Talent",
     "talent.hero.title": "Management, représentation et développement de talents.",
+    "talent.seo.title": "Talent — Management et développement",
     "talent.hero.lead":
       "WEBLACK accompagne mannequins, créateurs, artistes et professionnels créatifs dans le développement de leur carrière, sans frontière géographique.",
     "talent.filter.all": "Tous",
@@ -227,6 +228,8 @@ const translations = {
     "consulting.offer.market.name": "Développement de marché",
     "consulting.offer.market.desc": "Accompagnement à l’expansion vers de nouveaux marchés.",
     "consulting.cta": "Discuter de votre projet",
+    "consulting.seo.title": "Consulting — Stratégie de marque",
+    "creative.seo.title": "Créatif — Direction créative & production",
 
     "selectedwork.hero.eyebrow": "Réalisations",
     "selectedwork.hero.title": "Des projets choisis pour leur exigence.",
@@ -244,6 +247,7 @@ const translations = {
 
     "journal.hero.eyebrow": "Journal",
     "journal.hero.title": "Projets, entretiens et regards sur la création.",
+    "journal.seo.title": "Journal — Récits, entretiens, analyses",
     "journal.seo.description":
       "Récits de projets, entretiens et regards sur la création, la mode et la culture par l’équipe WEBLACK.",
     "journal.filter.all": "Tous",
@@ -285,6 +289,7 @@ const translations = {
     "live.hero.eyebrow": "Live",
     "live.hero.title": "WEBLACK Live",
     "live.hero.lead": "Suivez les directs WEBLACK sur YouTube.",
+    "live.seo.description": "Suivez les directs et replays WEBLACK sur YouTube : événements, coulisses et prises de parole en direct.",
     "live.status.upcoming": "À venir",
     "live.status.live": "En direct",
     "live.status.replay": "Replay",
@@ -313,6 +318,7 @@ const translations = {
     "partners.hero.eyebrow": "Partenaires",
     "partners.hero.title": "Des collaborations réelles, choisies avec exigence.",
     "partners.hero.lead": "WEBLACK collabore avec des organisations qui font rayonner la création et la culture.",
+    "partners.seo.title": "Partenaires — Collaborations et réseau",
     "partners.cta": "Voir le projet lié",
 
     "contact.hero.eyebrow": "Contact",
@@ -359,6 +365,9 @@ const translations = {
     "footer.studio": "Agence",
     "footer.legal": "Informations légales",
     "footer.mentions": "Mentions légales",
+    "mentions.seo.description": "Mentions légales de WEBLACK, agence créative indépendante.",
+    "privacy.seo.description":
+      "Politique de confidentialité de WEBLACK : données collectées, finalités et droits des utilisateurs.",
     "footer.privacy": "Politique de confidentialité",
     "footer.privacyPreferences": "Préférences de confidentialité",
     "footer.rights": "Tous droits réservés.",
@@ -391,7 +400,7 @@ const translations = {
 
     "seo.default.title": "WEBLACK — Agence créative indépendante",
     "seo.default.description":
-      "WEBLACK est une agence créative indépendante qui relie talents, créativité, culture et opportunités au-delà des frontières. Talent management, direction créative et conseil de marque.",
+      "WEBLACK est une agence créative indépendante — talent management, direction créative et conseil de marque, au-delà des frontières.",
     "seo.ogImage.alt": "WEBLACK — Agence créative indépendante. Talent · Créativité · Culture.",
 
     "common.langSwitch": "English",
@@ -533,6 +542,7 @@ const translations = {
 
     "talent.hero.eyebrow": "Talent",
     "talent.hero.title": "Management, representation and development.",
+    "talent.seo.title": "Talent — Management & Development",
     "talent.hero.lead":
       "WEBLACK supports models, creators, artists and creative professionals in developing their careers, without geographic limits.",
     "talent.filter.all": "All",
@@ -610,6 +620,8 @@ const translations = {
     "consulting.offer.market.name": "Market Development",
     "consulting.offer.market.desc": "Supporting expansion into new markets.",
     "consulting.cta": "Discuss your project",
+    "consulting.seo.title": "Consulting — Brand Strategy",
+    "creative.seo.title": "Creative — Direction & Production",
 
     "selectedwork.hero.eyebrow": "Selected Work",
     "selectedwork.hero.title": "Projects chosen for their rigour.",
@@ -627,6 +639,7 @@ const translations = {
 
     "journal.hero.eyebrow": "Journal",
     "journal.hero.title": "Projects, interviews and perspectives on creativity.",
+    "journal.seo.title": "Journal — Stories & Perspectives",
     "journal.seo.description":
       "Project stories, interviews and perspectives on creation, fashion and culture from the WEBLACK team.",
     "journal.filter.all": "All",
@@ -668,6 +681,7 @@ const translations = {
     "live.hero.eyebrow": "Live",
     "live.hero.title": "WEBLACK Live",
     "live.hero.lead": "Follow WEBLACK's live broadcasts on YouTube.",
+    "live.seo.description": "Follow WEBLACK's live broadcasts and replays on YouTube: events, behind the scenes and live talks.",
     "live.status.upcoming": "Upcoming",
     "live.status.live": "Live now",
     "live.status.replay": "Replay",
@@ -692,6 +706,7 @@ const translations = {
     "partners.hero.eyebrow": "Partners",
     "partners.hero.title": "Real collaborations, chosen with rigour.",
     "partners.hero.lead": "WEBLACK works with organisations that champion creativity and culture.",
+    "partners.seo.title": "Partners — Collaborations & Network",
     "partners.cta": "See the related project",
 
     "contact.hero.eyebrow": "Contact",
@@ -738,6 +753,9 @@ const translations = {
     "footer.studio": "Agency",
     "footer.legal": "Legal",
     "footer.mentions": "Legal notice",
+    "mentions.seo.description": "Legal notice for WEBLACK, an independent creative agency.",
+    "privacy.seo.description":
+      "WEBLACK's privacy policy: what data is collected, why, and your rights as a user.",
     "footer.privacy": "Privacy policy",
     "footer.privacyPreferences": "Privacy preferences",
     "footer.rights": "All rights reserved.",
@@ -770,7 +788,7 @@ const translations = {
 
     "seo.default.title": "WEBLACK — Independent Creative Agency",
     "seo.default.description":
-      "WEBLACK is an independent creative agency connecting talent, creativity, culture and opportunity across borders. Talent management, creative direction and brand consulting.",
+      "WEBLACK is an independent creative agency — talent management, creative direction and brand consulting, across borders.",
     "seo.ogImage.alt": "WEBLACK — Independent Creative Agency. Talent · Creativity · Culture.",
 
     "common.langSwitch": "Français",
@@ -955,7 +973,7 @@ const nb: Partial<Record<UiKey, string>> = {
 
   "seo.default.title": "WEBLACK — Uavhengig kreativt byrå",
   "seo.default.description":
-    "WEBLACK er et uavhengig kreativt byrå som forener talent, kreativitet, kultur og muligheter på tvers av landegrenser. Talent management, kreativ ledelse og merkevarerådgivning.",
+    "WEBLACK er et uavhengig kreativt byrå — talent management, kreativ ledelse og merkevarerådgivning, på tvers av landegrenser.",
   "seo.ogImage.alt": "WEBLACK — Uavhengig kreativt byrå. Talent · Kreativitet · Kultur.",
 };
 

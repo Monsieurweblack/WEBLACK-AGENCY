@@ -17,7 +17,7 @@ const talent: TalentEntry[] = [];
 const categories = [...new Set(talent.map((person) => person.data.category))];
 ---
 
-<BaseLayout lang={lang} title={t("talent.hero.title")} description={t("talent.hero.lead")}>
+<BaseLayout lang={lang} title={t("talent.seo.title")} description={t("talent.hero.lead")}>
   <section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.hero.eyebrow")}</p>

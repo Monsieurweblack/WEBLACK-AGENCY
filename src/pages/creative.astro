@@ -23,7 +23,7 @@ const capabilities = [
 const work = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
 ---
 
-<BaseLayout lang={lang} title={t("creative.hero.title")} description={t("creative.hero.lead")}>
+<BaseLayout lang={lang} title={t("creative.seo.title")} description={t("creative.hero.lead")}>
   <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("creative.hero.eyebrow")}</p>

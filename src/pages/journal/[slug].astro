@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import JournalDetail from "../../components/pages/JournalDetail.astro";
-import { useTranslations, localizedPath, type TranslationMap } from "../../i18n/utils";
+import { localizedPath, type TranslationMap } from "../../i18n/utils";
 import { getEntriesByLang } from "../../lib/content";
 import { resolveContentId } from "../../lib/content-graph";
 
@@ -39,12 +39,11 @@ export async function getStaticPaths() {
 
 const { article, translations } = Astro.props;
 const lang = "fr" as const;
-const t = useTranslations(lang);
 ---
 
 <BaseLayout
   lang={lang}
-  title={article.data.seo?.title ?? `${article.data.title} — ${t("nav.journal")}`}
+  title={article.data.seo?.title ?? article.data.title}
   description={article.data.seo?.description ?? article.data.excerpt}
   image={article.data.coverImage.url}
   imageAlt={article.data.coverImage.alt}

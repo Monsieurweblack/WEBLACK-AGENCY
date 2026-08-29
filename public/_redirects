@@ -1,0 +1,23 @@
+# Real, edge-level 301s for retired routes (mirrors astro.config.mjs `redirects`).
+# Cloudflare Pages serves these before any HTML is generated — without this
+# file, visitors and crawlers only ever saw Astro's client-side fallback (a
+# 0-delay meta-refresh page, itself still generated and left in place as a
+# safety net for anything not covered here).
+/institut       /about       301
+/en/institut    /en/about    301
+/poles          /about       301
+/en/poles       /en/about    301
+/a-propos       /about       301
+/en/a-propos    /en/about    301
+/talents        /talent      301
+/en/talents     /en/talent   301
+/talents/*      /talent/:splat      301
+/en/talents/*   /en/talent/:splat   301
+/evenements       /selected-work     301
+/en/evenements    /en/selected-work  301
+/etudes-de-cas    /selected-work     301
+/en/etudes-de-cas /en/selected-work  301
+/actualites       /journal     301
+/en/actualites    /en/journal  301
+/partenaires      /partners    301
+/en/partenaires   /en/partners 301
