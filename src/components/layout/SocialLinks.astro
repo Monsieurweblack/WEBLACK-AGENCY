@@ -15,7 +15,7 @@ const links = [
 ] as const;
 ---
 
-<ul class:list={["flex items-center gap-4", className]}>
+<ul class:list={["flex items-center gap-1", className]}>
   {
     links.map((link) => (
       <li>
@@ -24,7 +24,7 @@ const links = [
           target="_blank"
           rel="noopener noreferrer"
           aria-label={link.name}
-          class="inline-flex text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+          class="inline-flex min-h-11 min-w-11 items-center justify-center p-3 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
         >
           {link.icon === "facebook" && (
             <svg viewBox="0 0 24 24" class={iconClass} fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">

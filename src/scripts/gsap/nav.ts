@@ -75,9 +75,10 @@ export function initNav() {
         delay: 0.1,
       });
     }
+    links?.[0]?.focus();
   }
 
-  async function closeMenu() {
+  async function closeMenu(returnFocus = false) {
     isOpen = false;
     trigger!.setAttribute("aria-expanded", "false");
     panel!.setAttribute("aria-hidden", "true");
@@ -87,6 +88,7 @@ export function initNav() {
     barBottom?.style.setProperty("transform", "none");
     document.body.style.overflow = "";
     setHeaderSolid(window.scrollY > 24);
+    if (returnFocus) trigger!.focus();
 
     if (prefersReducedMotion) {
       panel!.style.opacity = "0";
@@ -111,6 +113,6 @@ export function initNav() {
   links?.forEach((link) => link.addEventListener("click", () => closeMenu()));
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && isOpen) closeMenu();
+    if (event.key === "Escape" && isOpen) closeMenu(true);
   });
 }

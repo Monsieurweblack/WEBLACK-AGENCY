@@ -43,7 +43,7 @@ const liveHref = localizedPath(lang, "/live");
   data-header
 >
   <div
-    class="mx-auto flex max-w-(--container-content) items-center justify-between px-6 py-5 md:px-10"
+    class="site-header-row mx-auto flex max-w-(--container-content) items-center justify-between px-6 pb-5 md:px-10"
   >
     <a
       href={homeHref}
@@ -71,7 +71,7 @@ const liveHref = localizedPath(lang, "/live");
       <button
         type="button"
         id="menu-trigger"
-        class="label-tracked inline-flex min-h-10 items-center gap-2 border border-(--color-line) px-3.5 py-1.5 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
+        class="label-tracked inline-flex min-h-11 items-center gap-2 border border-(--color-line) px-3.5 py-1.5 text-(--color-paper) transition-colors duration-300 hover:border-(--color-gold) hover:text-(--color-gold)"
         aria-haspopup="true"
         aria-expanded="false"
         aria-controls="site-menu"
@@ -125,9 +125,10 @@ const liveHref = localizedPath(lang, "/live");
   aria-hidden="true"
   inert
 >
-  <div class="menu-content flex min-h-0 flex-1 flex-col justify-center overflow-y-auto">
+  <div class="menu-content flex min-h-0 flex-1 flex-col overflow-y-auto">
+    <div class="menu-spacer-top shrink" aria-hidden="true"></div>
     <nav
-      class="menu-nav mx-auto flex w-full max-w-(--container-content) flex-col px-6 md:px-10"
+      class="menu-nav mx-auto flex w-full shrink-0 max-w-(--container-content) flex-col px-6 md:px-10"
       aria-label={t("nav.ariaLabel")}
     >
       {
@@ -143,6 +144,7 @@ const liveHref = localizedPath(lang, "/live");
         ))
       }
     </nav>
+    <div class="menu-spacer-bottom shrink" aria-hidden="true"></div>
   </div>
   <div
     class="menu-footer mx-auto flex w-full max-w-(--container-content) shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-4 border-t border-(--color-line) px-6 py-5 md:px-10"
@@ -177,6 +179,16 @@ const liveHref = localizedPath(lang, "/live");
    * with denser leading and tighter vertical gaps at every tier.
    */
   /*
+   * Inert today (the viewport meta has no viewport-fit=cover, so the
+   * browser already keeps fixed content clear of a notch/dynamic island on
+   * its own and env() resolves to 0) — kept ready rather than added later
+   * as an afterthought, at zero cost while inactive.
+   */
+  .site-header-row {
+    padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  }
+
+  /*
    * --header-h is measured live off the real header (see nav.ts) rather
    * than guessed as a fixed padding value — a hardcoded guess is exactly
    * what let the first item render partly behind the header whenever the
@@ -185,42 +197,77 @@ const liveHref = localizedPath(lang, "/live");
    * The fallback here only matters for the instant before that first
    * measurement lands, which happens synchronously on init, before the
    * menu can possibly be opened.
+   *
+   * The nav sits between two spacers rather than being centered or
+   * top-locked. The top one is a *fixed* size (header clearance plus a
+   * breathing amount that itself scales with svh, so a tall screen gets
+   * more top margin than a short one) — not a flex-grow share, because a
+   * grow ratio here loses the fight to the min-height floor the instant
+   * that floor exceeds the ratio's natural share (which it does on most
+   * phone heights), collapsing back to "everything ends up below." The
+   * bottom spacer absorbs whatever's actually left via flex-grow. Net
+   * effect: the group reads as "slightly toward the top" — proportionally
+   * more so on tall screens — never mathematically centered (explicitly
+   * ruled out) and never a tiny island stranded in one huge bottom void.
+   * On short viewports the bottom spacer shrinks to its floor and
+   * .menu-content's own scroll takes over — no item is ever pushed
+   * off-screen to make this "work."
    */
-  .menu-content {
-    padding-top: var(--header-h, 80px);
+  .menu-spacer-top {
+    flex: 0 0 auto;
+    height: calc(var(--header-h, 80px) + clamp(1.5rem, 6svh, 4rem));
+  }
+
+  .menu-spacer-bottom {
+    flex: 1 1 0;
+    min-height: 1.5rem;
   }
 
   .menu-footer {
     padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   }
 
+  /*
+   * Two viewports can share a width and differ hugely in height (a 390px
+   * phone is 844px tall in portrait, 667px in some Android landscape
+   * modes) — sizing the nav purely off width means either overflow on
+   * short screens or a tiny island of text in a tall one. clamp()'s
+   * preferred value reads from svh (the *small* viewport height, already
+   * accounting for mobile browser chrome) so the link size and rhythm
+   * scale with genuinely available vertical space, within bounds that
+   * never overflow and never shrink past readable.
+   */
   .menu-nav {
-    gap: 0.375rem;
+    gap: clamp(0.25rem, 1svh, 0.625rem);
   }
 
   .menu-link {
-    font-size: 1.625rem;
+    font-size: clamp(1.375rem, 3.2svh, 1.875rem);
     line-height: 1.15;
   }
 
   @media (min-width: 640px) {
+    .menu-content {
+      padding-top: calc(var(--header-h, 80px) + 2rem);
+    }
+
     .menu-nav {
-      gap: 0.625rem;
+      gap: clamp(0.5rem, 1.4svh, 1rem);
     }
 
     .menu-link {
-      font-size: 2.75rem;
+      font-size: clamp(2rem, 5svh, 2.75rem);
       line-height: 1.1;
     }
   }
 
   @media (min-width: 1024px) {
     .menu-nav {
-      gap: 0.75rem;
+      gap: clamp(0.625rem, 1.6svh, 1.25rem);
     }
 
     .menu-link {
-      font-size: 3.5rem;
+      font-size: clamp(2.5rem, 5.5svh, 3.5rem);
       line-height: 1.05;
     }
   }
