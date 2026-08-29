@@ -13,28 +13,27 @@ import { getEntriesByLang, getFeatured, sortByDateDesc } from "../../lib/content
 import type { TalentEntry } from "../../lib/content";
 import { localizedPath, type TranslationMap } from "../../i18n/utils";
 
-const lang = "en" as const;
+const lang = "zh" as const;
 const heroImage = {
   url: "/photos/hero-home.jpg",
-  alt: "Fashion show runway in a packed venue, model under a spotlight.",
+  alt: "时装秀现场座无虚席，模特在聚光灯下走秀。",
   width: 1440,
   height: 959,
 };
 
+/**
+ * No zh-lang entries exist yet in Sanity for work/journal — these correctly
+ * resolve to empty arrays, and each preview section already hides itself
+ * when its list is empty (no placeholder content is fabricated here).
+ */
 const featuredWork = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
 const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).slice(0, 3);
-/**
- * The Talent collection in Sanity currently only contains seed/demo entries
- * (stock portraits, no verified WEBLACK talent) — publishing them here would
- * violate the no-fabrication rule, so the section shows its honest empty-roster
- * state until real, verified profiles are published in the CMS.
- */
 const talent: TalentEntry[] = [];
 
 const translations: TranslationMap = {
   fr: localizedPath("fr", "/"),
+  en: localizedPath("en", "/"),
   nb: localizedPath("nb", "/"),
-  zh: localizedPath("zh", "/"),
 };
 ---
 

@@ -3,14 +3,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import RemoteImage from "../components/media/RemoteImage.astro";
 import CtaContact from "../components/sections/CtaContact.astro";
 import FounderBioModal from "../components/sections/FounderBioModal.astro";
-import { useTranslations, type UiKey } from "../i18n/utils";
+import { useTranslations, localizedPath, type UiKey, type TranslationMap } from "../i18n/utils";
 
 const lang = "fr" as const;
 const t = useTranslations(lang);
 const steps = [1, 2, 3, 4, 5] as const;
+
+const translations: TranslationMap = {
+  en: localizedPath("en", "/about/"),
+  nb: localizedPath("nb", "/about/"),
+  zh: localizedPath("zh", "/about/"),
+};
 ---
 
-<BaseLayout lang={lang} title={t("about.hero.title")} description={t("about.intro")}>
+<BaseLayout lang={lang} title={t("about.hero.title")} description={t("about.intro")} translations={translations}>
   <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.hero.eyebrow")}</p>

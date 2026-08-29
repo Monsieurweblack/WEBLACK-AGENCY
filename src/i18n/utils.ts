@@ -74,25 +74,32 @@ export interface ResolvedTranslation {
 }
 
 /**
- * Resolves every enabled locale (other than `lang`) to a path for the
- * current page, or omits it entirely when no translation is known.
+ * Resolves this page's known translations to a path per locale, or omits a
+ * locale entirely when no translation is known.
  * - No `translations` map supplied at all: naive slug-swap for every
- *   enabled locale (today's default behavior, unchanged).
- * - `translations` supplied: authoritative — a locale missing from the map
- *   is reported as unavailable, full stop, never guessed.
+ *   *enabled* locale (today's default behavior, unchanged) — safe only
+ *   because it's limited to locales with full page parity.
+ * - `translations` supplied: authoritative and trusted for ANY locale in
+ *   the map, regardless of that locale's global `enabled` flag. This is
+ *   what lets a single page (e.g. the homepage) opt in to a not-yet-`enabled`
+ *   locale like nb/zh without that locale's `enabled: false` suppressing it
+ *   — and, symmetrically, without flipping `enabled` globally and breaking
+ *   every other page's naive-swap fallback for a locale that doesn't have
+ *   pages yet. A locale missing from the map is reported as unavailable,
+ *   full stop, never guessed.
  */
 export function resolveTranslations(
   lang: Lang,
   pathname: string,
   translations?: TranslationMap,
 ): ResolvedTranslation[] {
-  return otherEnabledLocales(lang)
-    .map((targetLang): ResolvedTranslation | null => {
-      if (translations) {
-        const path = translations[targetLang];
-        return path ? { lang: targetLang, path } : null;
-      }
-      return { lang: targetLang, path: switchLocalePath(pathname, targetLang) };
-    })
-    .filter((entry): entry is ResolvedTranslation => entry !== null);
+  if (translations) {
+    return (Object.keys(translations) as Lang[])
+      .filter((targetLang) => targetLang !== lang)
+      .map((targetLang): ResolvedTranslation => ({ lang: targetLang, path: translations[targetLang]! }));
+  }
+  return otherEnabledLocales(lang).map((targetLang): ResolvedTranslation => ({
+    lang: targetLang,
+    path: switchLocalePath(pathname, targetLang),
+  }));
 }

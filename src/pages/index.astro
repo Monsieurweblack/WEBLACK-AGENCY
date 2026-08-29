@@ -11,6 +11,7 @@ import TalentNetworkPreview from "../components/sections/TalentNetworkPreview.as
 import CtaContact from "../components/sections/CtaContact.astro";
 import { getEntriesByLang, getFeatured, sortByDateDesc } from "../lib/content";
 import type { TalentEntry } from "../lib/content";
+import { localizedPath, type TranslationMap } from "../i18n/utils";
 
 const lang = "fr" as const;
 const heroImage = {
@@ -29,9 +30,15 @@ const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).sl
  * state until real, verified profiles are published in the CMS.
  */
 const talent: TalentEntry[] = [];
+
+const translations: TranslationMap = {
+  en: localizedPath("en", "/"),
+  nb: localizedPath("nb", "/"),
+  zh: localizedPath("zh", "/"),
+};
 ---
 
-<BaseLayout lang={lang}>
+<BaseLayout lang={lang} translations={translations}>
   <HeroHome lang={lang} heroImage={heroImage} />
   <JournalPreview lang={lang} articles={latestJournal} />
   <DivisionsGrid lang={lang} />

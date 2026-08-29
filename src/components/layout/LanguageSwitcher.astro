@@ -1,5 +1,5 @@
 ---
-import { otherEnabledLocales, resolveTranslations, useTranslations, type Lang, type TranslationMap } from "../../i18n/utils";
+import { resolveTranslations, useTranslations, type Lang, type TranslationMap } from "../../i18n/utils";
 import { LOCALES } from "../../i18n/locales";
 
 interface Props {
@@ -20,7 +20,6 @@ const { lang, class: className, translations } = Astro.props;
 const t = useTranslations(lang);
 
 const resolved = resolveTranslations(lang, Astro.url.pathname, translations);
-const resolvedByLang = new Map(resolved.map((entry) => [entry.lang, entry.path]));
 
 interface SwitcherItem {
   lang: Lang;
@@ -28,12 +27,11 @@ interface SwitcherItem {
   href: string;
 }
 
-const items: SwitcherItem[] = otherEnabledLocales(lang)
-  .map((targetLang) => {
-    const href = resolvedByLang.get(targetLang);
-    return href ? { lang: targetLang, nativeName: LOCALES[targetLang].nativeName, href } : null;
-  })
-  .filter((item): item is SwitcherItem => item !== null);
+const items: SwitcherItem[] = resolved.map((entry) => ({
+  lang: entry.lang,
+  nativeName: LOCALES[entry.lang].nativeName,
+  href: entry.path,
+}));
 ---
 
 {

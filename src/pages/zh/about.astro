@@ -5,14 +5,14 @@ import CtaContact from "../../components/sections/CtaContact.astro";
 import FounderBioModal from "../../components/sections/FounderBioModal.astro";
 import { useTranslations, localizedPath, type UiKey, type TranslationMap } from "../../i18n/utils";
 
-const lang = "en" as const;
+const lang = "zh" as const;
 const t = useTranslations(lang);
 const steps = [1, 2, 3, 4, 5] as const;
 
 const translations: TranslationMap = {
   fr: localizedPath("fr", "/about/"),
+  en: localizedPath("en", "/about/"),
   nb: localizedPath("nb", "/about/"),
-  zh: localizedPath("zh", "/about/"),
 };
 ---
 

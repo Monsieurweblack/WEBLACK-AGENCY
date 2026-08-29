@@ -789,13 +789,323 @@ const translations = {
 export type UiKey = keyof (typeof translations)["fr"];
 
 /**
- * `nb`/`zh` start as empty dictionaries — no placeholder or machine
- * translation is written here on a guess. `useTranslations()` below falls
- * back to French for any key missing in the current locale, so an empty
- * dictionary is a safe, honest starting point: real Bokmål/Chinese strings
- * are added key by key as content is actually translated, never invented
- * wholesale to satisfy the type system.
+ * `nb`/`zh` are filled in key by key as real pages are published in that
+ * locale — never wholesale or by machine translation. A key genuinely not
+ * yet translated is simply absent; `useTranslations()` below falls back to
+ * French for it. Currently covers exactly the keys rendered by the NB/ZH
+ * homepage (`src/pages/nb/index.astro`, `src/pages/zh/index.astro`) and the
+ * layout chrome every page shares (header, footer, search, consent, theme
+ * toggle) — see docs/i18n.md, "Enabling a locale," step 2.
  */
+const nb: Partial<Record<UiKey, string>> = {
+  "nav.about": "Om oss",
+  "nav.live": "Live",
+  "nav.talent": "Talent",
+  "nav.creative": "Kreativt",
+  "nav.consulting": "Rådgivning",
+  "nav.selectedwork": "Prosjekter",
+  "nav.journal": "Journal",
+  "nav.responsibility": "Ansvar",
+  "nav.partners": "Partnere",
+  "nav.contact": "Kontakt",
+  "nav.menu": "Meny",
+  "nav.close": "Lukk",
+  "nav.ariaLabel": "Hovednavigasjon",
+
+  "common.switchTo": "Bytt til",
+  "common.discover": "Utforsk",
+  "common.skipToContent": "Gå til innhold",
+
+  "theme.toggle.toLight": "Aktiver lyst tema",
+  "theme.toggle.toDark": "Aktiver mørkt tema",
+
+  "search.trigger": "Søk",
+  "search.placeholder": "Søk på WEBLACK…",
+  "search.close": "Lukk søk",
+  "search.noResults": "Ingen resultater.",
+  "search.hint": "Talenter, prosjekter, artikler fra Journal, sider på nettstedet…",
+  "search.type.page": "Side",
+  "search.type.journal": "Journal",
+  "search.type.work": "Prosjekt",
+  "search.type.talent": "Talent",
+
+  "home.hero.tagline": "Uavhengig kreativt byrå",
+  "home.hero.pillars": "Talent. Kreativitet. Kultur.",
+  "home.hero.cta.explore": "Utforsk WEBLACK",
+  "home.hero.cta.work": "Samarbeid med oss",
+  "home.hero.scroll": "Skroll",
+
+  "home.manifesto":
+    "WEBLACK forener talent, kreativ visjon og kulturell relevans for å skape muligheter som betyr noe — for merkevarer og mennesker.",
+
+  "home.divisions.eyebrow": "Det vi gjør",
+  "home.divisions.title": "Tre ekspertiseområder, én visjon.",
+  "division.talent.name": "Talent",
+  "division.talent.tagline": "Management, representasjon og utvikling av talenter.",
+  "division.creative.name": "Kreativt",
+  "division.creative.tagline": "Kreativ ledelse, kampanjer, innhold, produksjon og opplevelser.",
+  "division.consulting.name": "Rådgivning",
+  "division.consulting.tagline": "Merkevarestrategi, posisjonering og kulturell innsikt.",
+
+  "home.work.eyebrow": "Utvalgte prosjekter",
+  "home.work.title": "Det vi allerede har bygget.",
+  "home.work.lead":
+    "Fra Paris til Bamako behandles hvert WEBLACK-samarbeid som et selvstendig prosjekt — aldri som en enkel leveranse.",
+  "home.work.cta": "Se alle prosjekter",
+
+  "home.perspective.eyebrow": "WEBLACK Perspective",
+  "home.perspective.title": "Fra potensial til varig gjennomslagskraft.",
+  "perspective.step1.name": "Potensial",
+  "perspective.step1.desc": "Identifisere.",
+  "perspective.step2.name": "Talent",
+  "perspective.step2.desc": "Utvikle.",
+  "perspective.step3.name": "Verdi",
+  "perspective.step3.desc": "Strukturere.",
+  "perspective.step4.name": "Mulighet",
+  "perspective.step4.desc": "Forbinde.",
+  "perspective.step5.name": "Gjennomslagskraft",
+  "perspective.step5.desc": "Bygge varig relevans.",
+
+  "home.talentnetwork.eyebrow": "Talent",
+  "home.talentnetwork.title": "Et utvalg, ikke en katalog.",
+  "home.talentnetwork.body":
+    "WEBLACK publiserer ikke en katalog med profiler. Hvert talent tas opp i nettverket gjennom en grundig utvelgelse, i takt med pågående prosjekter og samarbeid. Modeller, designere, kunstnere, fotografer eller stylister: hvis arbeidet ditt hører hjemme hos WEBLACK, vil vi gjerne se det.",
+  "home.talentnetwork.cta": "Møt våre talenter",
+  "talent.cta.apply": "Søk hos WEBLACK",
+
+  "home.team.eyebrow": "Teamet",
+  "home.team.title": "Menneskene bak WEBLACK.",
+  "home.team.cta": "Møt teamet",
+  "about.founder.eyebrow": "Grunnlegger",
+  "about.founder.role": "Grunnlegger & kreativ direktør",
+  "about.founder.bio.short":
+    "Entreprenør og strateg, Deo-Gratias Kpodo grunnla WEBLACK i 2010. Siden den gang har han rådgitt moteher, institusjoner og talenter innen merkevarestrategi og internasjonal utvikling.",
+  "about.founder.bio.cta": "Les biografien",
+
+  "about.hero.eyebrow": "Om oss",
+  "about.hero.title": "Et uavhengig kreativt byrå.",
+  "about.intro":
+    "WEBLACK ble grunnlagt i 2010 og er en uavhengig virksomhet som opererer i skjæringspunktet mellom talent, kreasjon og strategi.",
+  "about.body1":
+    "WEBLACK støtter talenter, skapere og merkevarer i å bygge sin identitet, sin utvikling og sin gjennomslagskraft — fra idé til gjennomføring.",
+  "about.body2":
+    "Tilnærmingen bygger på en enkel overbevisning: potensial får først verdi når det møtes av en klar visjon, høye krav og reell fagkunnskap.",
+  "about.body3":
+    "Med base mellom Frankrike og Vest-Afrika utvikler WEBLACK samarbeid og prosjekter med internasjonal rekkevidde, og forbinder talenter, kreative næringer og markeder på tvers av landegrenser.",
+  "about.vision.title": "Vår ambisjon",
+  "about.vision.body":
+    "Å bygge en uavhengig referanse innen talentmanagement og de kreative næringene, og løfte frem personligheter, merkevarer og prosjekter som virkelig betyr noe. Hvert samarbeid behandles som et selvstendig prosjekt: en klar visjon, en krevende gjennomføring, og en kulturell verdi som varer lenger enn selve kampanjen.",
+  "about.method.eyebrow": "Vår metode",
+  "about.method.title": "WEBLACK Perspective",
+  "about.team.eyebrow": "Teamet",
+  "about.team.title": "Vårt team",
+  "about.network.title": "Nettverk og samarbeid",
+  "about.network.body":
+    "WEBLACK har bygget reelle samarbeid med arrangementer og organisasjoner i den kreative scenen, blant annet ZÉ DÉFILÉ by WAXFASHION og Nuit du Textile Africain (NTA).",
+
+  "home.journal.eyebrow": "Aktuelt",
+  "home.journal.title": "Det som skjer hos WEBLACK.",
+  "home.journal.cta": "Les Journal",
+  "journal.readMore": "Les artikkelen",
+
+  "home.contact.title": "Har du et prosjekt, et talent eller et samarbeid i tankene?",
+  "home.contact.lead": "La oss gjøre det sammen.",
+  "home.contact.cta": "Kontakt WEBLACK",
+
+  "footer.tagline": "Talent. Kreativitet. Kultur.",
+  "footer.explore": "Utforsk",
+  "footer.studio": "Byrå",
+  "footer.legal": "Juridisk informasjon",
+  "footer.mentions": "Juridiske merknader",
+  "footer.privacy": "Personvernerklæring",
+  "footer.privacyPreferences": "Personverninnstillinger",
+  "footer.rights": "Med enerett.",
+  "footer.since": "Grunnlagt i 2010",
+  "contact.info.address.label":
+    "WEBLACK — Uavhengig kreativt byrå mellom Frankrike og Vest-Afrika, med internasjonal rekkevidde.",
+
+  "consent.banner.text":
+    "Vi bruker Google Analytics til å måle besøkstall på nettstedet. Disse dataene samles kun inn med ditt samtykke.",
+  "consent.banner.learnMore": "Les mer",
+  "consent.accept": "Godta",
+  "consent.reject": "Avvis",
+  "consent.customize": "Tilpass",
+  "consent.preferences.title": "Personverninnstillinger",
+  "consent.preferences.lead":
+    "Velg hvilke kategorier sporing du tillater på dette nettstedet. Du kan endre dette valget når som helst fra bunnteksten.",
+  "consent.category.necessary.title": "Nødvendige",
+  "consent.category.necessary.desc": "Nødvendige for at nettstedet skal fungere. Alltid aktive.",
+  "consent.category.analytics.title": "Besøksstatistikk",
+  "consent.category.analytics.desc": "Google Analytics (GA4) — besøksstatistikk, kun brukt med ditt samtykke.",
+  "consent.save": "Lagre mine valg",
+  "consent.acceptAll": "Godta alle",
+  "consent.close": "Lukk",
+
+  "share.site": "Del WEBLACK",
+  "share.whatsapp": "Del på WhatsApp",
+  "share.facebook": "Del på Facebook",
+  "share.x": "Del på X",
+  "share.linkedin": "Del på LinkedIn",
+  "share.email": "Del på e-post",
+  "share.copy": "Kopier lenke",
+  "share.copied": "Lenke kopiert",
+
+  "seo.default.title": "WEBLACK — Uavhengig kreativt byrå",
+  "seo.default.description":
+    "WEBLACK er et uavhengig kreativt byrå som forener talent, kreativitet, kultur og muligheter på tvers av landegrenser. Talent management, kreativ ledelse og merkevarerådgivning.",
+  "seo.ogImage.alt": "WEBLACK — Uavhengig kreativt byrå. Talent · Kreativitet · Kultur.",
+};
+
+const zh: Partial<Record<UiKey, string>> = {
+  "nav.about": "关于我们",
+  "nav.live": "直播",
+  "nav.talent": "人才",
+  "nav.creative": "创意",
+  "nav.consulting": "咨询",
+  "nav.selectedwork": "精选项目",
+  "nav.journal": "期刊",
+  "nav.responsibility": "社会责任",
+  "nav.partners": "合作伙伴",
+  "nav.contact": "联系我们",
+  "nav.menu": "菜单",
+  "nav.close": "关闭",
+  "nav.ariaLabel": "主导航",
+
+  "common.switchTo": "切换至",
+  "common.discover": "探索",
+  "common.skipToContent": "跳至内容",
+
+  "theme.toggle.toLight": "切换至浅色模式",
+  "theme.toggle.toDark": "切换至深色模式",
+
+  "search.trigger": "搜索",
+  "search.placeholder": "搜索 WEBLACK…",
+  "search.close": "关闭搜索",
+  "search.noResults": "未找到结果。",
+  "search.hint": "人才、项目、期刊文章、网站页面……",
+  "search.type.page": "页面",
+  "search.type.journal": "期刊",
+  "search.type.work": "项目",
+  "search.type.talent": "人才",
+
+  "home.hero.tagline": "独立创意机构",
+  "home.hero.pillars": "人才、创意、文化。",
+  "home.hero.cta.explore": "探索 WEBLACK",
+  "home.hero.cta.work": "与我们合作",
+  "home.hero.scroll": "向下滚动",
+
+  "home.manifesto": "WEBLACK 汇聚人才、创意愿景与文化洞察力，为品牌与个人构建真正有意义的机遇。",
+
+  "home.divisions.eyebrow": "业务领域",
+  "home.divisions.title": "三大专长，一致愿景。",
+  "division.talent.name": "人才",
+  "division.talent.tagline": "人才管理、代理与发展。",
+  "division.creative.name": "创意",
+  "division.creative.tagline": "创意指导、campaign 策划、内容制作与体验设计。",
+  "division.consulting.name": "咨询",
+  "division.consulting.tagline": "品牌战略、市场定位与文化洞察。",
+
+  "home.work.eyebrow": "精选项目",
+  "home.work.title": "我们已经完成的工作。",
+  "home.work.lead": "从巴黎到巴马科，WEBLACK 的每一次合作都被视为一个独立的项目，而非简单的服务交付。",
+  "home.work.cta": "查看全部项目",
+
+  "home.perspective.eyebrow": "WEBLACK Perspective",
+  "home.perspective.title": "从潜力到持久影响力。",
+  "perspective.step1.name": "潜力",
+  "perspective.step1.desc": "发掘。",
+  "perspective.step2.name": "人才",
+  "perspective.step2.desc": "培养。",
+  "perspective.step3.name": "价值",
+  "perspective.step3.desc": "构建。",
+  "perspective.step4.name": "机遇",
+  "perspective.step4.desc": "连接。",
+  "perspective.step5.name": "影响力",
+  "perspective.step5.desc": "建立持久的影响力。",
+
+  "home.talentnetwork.eyebrow": "人才",
+  "home.talentnetwork.title": "精心甄选，而非目录罗列。",
+  "home.talentnetwork.body":
+    "WEBLACK 不发布人才目录。每一位人才都通过严格的甄选加入我们的网络，并随着实际项目与合作持续演进。无论是模特、设计师、艺术家、摄影师还是造型师：如果您的作品与 WEBLACK 相契合，我们期待与您相识。",
+  "home.talentnetwork.cta": "认识我们的人才",
+  "talent.cta.apply": "申请加入 WEBLACK",
+
+  "home.team.eyebrow": "团队",
+  "home.team.title": "WEBLACK 背后的团队。",
+  "home.team.cta": "认识团队",
+  "about.founder.eyebrow": "创始人",
+  "about.founder.role": "创始人兼创意总监",
+  "about.founder.bio.short":
+    "Deo-Gratias Kpodo 是一位企业家与战略顾问，于 2010 年创立 WEBLACK。自此，他持续为时装品牌、机构与人才提供品牌战略与国际发展方面的指导。",
+  "about.founder.bio.cta": "阅读完整简介",
+
+  "about.hero.eyebrow": "关于我们",
+  "about.hero.title": "一家独立创意机构。",
+  "about.intro": "WEBLACK 成立于 2010 年，是一家独立机构，致力于人才、创意与战略的交汇领域。",
+  "about.body1": "WEBLACK 陪伴人才、创作者与品牌，从构思到落地，全程支持其身份塑造、成长与影响力拓展。",
+  "about.body2": "我们的方法基于一个简单的信念：唯有辅以清晰的愿景、严谨的要求与真正的专业能力，潜力才能真正转化为价值。",
+  "about.body3": "WEBLACK 立足于法国与西非之间，开展具有国际视野的合作与项目，跨越国界连接人才、创意产业与市场。",
+  "about.vision.title": "我们的愿景",
+  "about.vision.body":
+    "致力于成为人才管理与创意产业领域的独立标杆，发掘真正举足轻重的人物、品牌与项目。我们将每一次合作都视为一个独立的项目：清晰的愿景、严谨的执行，以及超越单次营销活动周期的文化价值。",
+  "about.method.eyebrow": "我们的方法",
+  "about.method.title": "WEBLACK Perspective",
+  "about.team.eyebrow": "团队",
+  "about.team.title": "我们的团队",
+  "about.network.title": "网络与合作",
+  "about.network.body":
+    "WEBLACK 已与创意领域的多个活动和机构建立了真实的合作关系，其中包括 ZÉ DÉFILÉ by WAXFASHION 以及非洲纺织之夜（Nuit du Textile Africain，NTA）。",
+
+  "home.journal.eyebrow": "焦点",
+  "home.journal.title": "WEBLACK 的最新动态。",
+  "home.journal.cta": "阅读期刊",
+  "journal.readMore": "阅读文章",
+
+  "home.contact.title": "有项目、人才合作或其他合作意向？",
+  "home.contact.lead": "让我们携手实现。",
+  "home.contact.cta": "联系 WEBLACK",
+
+  "footer.tagline": "人才、创意、文化。",
+  "footer.explore": "探索",
+  "footer.studio": "机构",
+  "footer.legal": "法律信息",
+  "footer.mentions": "法律声明",
+  "footer.privacy": "隐私政策",
+  "footer.privacyPreferences": "隐私偏好设置",
+  "footer.rights": "版权所有。",
+  "footer.since": "成立于 2010 年",
+  "contact.info.address.label": "WEBLACK —— 立足法国与西非之间、面向国际的独立创意机构。",
+
+  "consent.banner.text": "我们使用 Google Analytics 来统计网站访问量。相关数据仅在您同意后才会被收集。",
+  "consent.banner.learnMore": "了解更多",
+  "consent.accept": "接受",
+  "consent.reject": "拒绝",
+  "consent.customize": "自定义设置",
+  "consent.preferences.title": "隐私偏好设置",
+  "consent.preferences.lead": "请选择您允许本网站使用的追踪类别。您可以随时在页脚处修改此设置。",
+  "consent.category.necessary.title": "必要类",
+  "consent.category.necessary.desc": "网站正常运行所必需，始终处于启用状态。",
+  "consent.category.analytics.title": "访问统计",
+  "consent.category.analytics.desc": "Google Analytics（GA4）—— 访问统计数据，仅在您同意后使用。",
+  "consent.save": "保存我的选择",
+  "consent.acceptAll": "全部接受",
+  "consent.close": "关闭",
+
+  "share.site": "分享 WEBLACK",
+  "share.whatsapp": "通过 WhatsApp 分享",
+  "share.facebook": "通过 Facebook 分享",
+  "share.x": "通过 X 分享",
+  "share.linkedin": "通过 LinkedIn 分享",
+  "share.email": "通过邮件分享",
+  "share.copy": "复制链接",
+  "share.copied": "链接已复制",
+
+  "seo.default.title": "WEBLACK — 独立创意机构",
+  "seo.default.description":
+    "WEBLACK 是一家独立创意机构，致力于跨越国界连接人才、创意、文化与机遇，业务涵盖人才管理、创意指导与品牌咨询。",
+  "seo.ogImage.alt": "WEBLACK — 独立创意机构。人才 · 创意 · 文化。",
+};
+
 export const ui: {
   fr: Record<UiKey, string>;
   en: Record<UiKey, string>;
@@ -804,6 +1114,6 @@ export const ui: {
 } = {
   fr: translations.fr,
   en: translations.en,
-  nb: {},
-  zh: {},
+  nb,
+  zh,
 };
