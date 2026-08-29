@@ -24,21 +24,35 @@ Une fois ces points ajustés, relancer `npm run build` avant de publier.
 
 Alternative : upload via FTP (FileZilla) avec les identifiants fournis par Hostinger, en déposant le contenu du zip dans `public_html`.
 
-## Option B — Cloudflare Pages (recommandé, gratuit, CDN mondial)
+## Option B — Cloudflare Pages (production officielle, déjà en place)
 
-**Méthode simple (upload direct, sans Git) :**
-1. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Upload assets**.
-2. Glisser-déposer le contenu du dossier `dist/` (ou le zip `weblack-dist-hostinger.zip` décompressé).
-3. Cloudflare génère une URL `*.pages.dev` immédiatement ; ajouter ensuite votre domaine personnalisé dans **Custom domains**.
+C'est la plateforme réellement utilisée pour `weblack.fr` / `www.weblack.fr`. Le projet Cloudflare Pages `weblack` est connecté nativement au dépôt GitHub `Monsieurweblack/WEBLACK-AGENCY` (intégration Git de Cloudflare, pas de GitHub Actions) :
 
-**Méthode avec Git (recommandé pour les mises à jour futures) :**
-1. Pousser `weblack-source.zip` (décompressé) vers un dépôt GitHub/GitLab.
-2. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
-3. Sélectionner le dépôt, puis configurer :
-   - **Build command** : `npm run build`
-   - **Build output directory** : `dist`
-   - **Node version** : 22 (variable d'environnement `NODE_VERSION=22`)
-4. Chaque `git push` redéploie automatiquement le site.
+```text
+git push origin main
+        ↓
+Cloudflare Pages — intégration Git native (déclenchement automatique)
+        ↓
+npm run build → dist/
+        ↓
+weblack.pages.dev / weblack.fr / www.weblack.fr
+```
+
+- **Déclencheur** : tout push sur `main` (`production_branch: main`) — confirmé, aucune action manuelle requise.
+- **Build command** : `npm run build`
+- **Build output directory** : `dist`
+- **Variables d'environnement configurées côté Cloudflare** : `SANITY_PROJECT_ID`, `SANITY_DATASET`
+- **Preview deployments** : activés pour toutes les branches (utile pour prévisualiser une branche avant de merger sur `main`, sans affecter la production)
+
+**Il n'existe volontairement aucun workflow GitHub Actions pour ce déploiement** — l'intégration Git native de Cloudflare joue déjà ce rôle. Ne pas en recréer un : cela produirait un second pipeline de production concurrent pour la même cible.
+
+**Déploiement manuel (`wrangler`) — dépannage exceptionnel uniquement :**
+
+```bash
+npx wrangler pages deploy dist --project-name=weblack --branch=main
+```
+
+Cette commande n'est **pas nécessaire** pour un déploiement normal (le push suffit) — à réserver à un cas de récupération (ex. redéployer un ancien commit sans repasser par `git push`, ou déployer depuis une machine où le dépôt n'a pas accès à GitHub).
 
 ---
 
