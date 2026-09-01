@@ -372,10 +372,14 @@ export async function getEntriesByLang<C extends CollectionKey>(
   collection: C,
   lang: Lang,
 ): Promise<CollectionMap[C][]> {
-  const docs = await sanityClient.fetch(`*[_type == $type && lang == $lang]`, {
-    type: collection,
-    lang,
-  });
+  const docs = await sanityClient.fetch(
+    `*[_type == $type && lang == $lang]{
+      ...,
+      "relatedWorkSlug": coalesce(relatedWork->slug.current, relatedWorkSlug),
+      "relatedWorkSlugs": coalesce(relatedWorks[]->slug.current, relatedWorkSlugs)
+    }`,
+    { type: collection, lang },
+  );
   return docs.map((doc: any) => mapEntry(collection, doc));
 }
 
@@ -385,7 +389,11 @@ export async function getEntryBySlugAndLang<C extends CollectionKey>(
   lang: Lang,
 ): Promise<CollectionMap[C] | undefined> {
   const doc = await sanityClient.fetch(
-    `*[_type == $type && lang == $lang && slug.current == $slug][0]`,
+    `*[_type == $type && lang == $lang && slug.current == $slug][0]{
+      ...,
+      "relatedWorkSlug": coalesce(relatedWork->slug.current, relatedWorkSlug),
+      "relatedWorkSlugs": coalesce(relatedWorks[]->slug.current, relatedWorkSlugs)
+    }`,
     { type: collection, lang, slug },
   );
   return doc ? mapEntry(collection, doc) : undefined;
