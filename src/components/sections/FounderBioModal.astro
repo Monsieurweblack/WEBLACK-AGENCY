@@ -1,24 +1,34 @@
 ---
 import { useTranslations, defaultLang, type Lang } from "../../i18n/utils";
 import { founderBio } from "../../data/founder-bio";
+import type { TeamMemberData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
+  /** From the `teamMember` Sanity type — falls back to src/data/founder-bio.ts when not set or incomplete. */
+  member?: TeamMemberData;
 }
 
-const { lang } = Astro.props;
+const { lang, member } = Astro.props;
 const t = useTranslations(lang);
 // nb/zh have no bio content yet and fall back to the French text — the
 // quote marks must match whichever language the *quoted text* is actually
 // in, not the page's own lang, or a French quote would render inside
 // English-style curly quotes on an nb/zh page.
 const bioLang = founderBio[lang] ? lang : defaultLang;
-const bio = founderBio[bioLang]!;
+const fallbackBio = founderBio[bioLang]!;
+
+const hasSanityBio = Boolean(member?.bioHtml && member?.quote);
+const name = member?.name ?? fallbackBio.name;
+const role = member?.role ?? t("about.founder.role");
+const quote = member?.quote ?? fallbackBio.quote;
+const quoteAttribution = member?.quoteAttribution ?? fallbackBio.quoteAttribution;
+
 /**
  * French typographic convention uses « » (with a non-breaking space) rather
  * than the English-style “ ” curly quotes hardcoded here previously.
  */
-const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["« ", " »"] : ["“", "”"];
+const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["« ", " »"] : ["“", "”"];
 ---
 
 <div
@@ -44,17 +54,30 @@ const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["« ", "�
     <div class="max-w-3xl">
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.founder.eyebrow")}</p>
       <h2 id="founder-bio-heading" class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
-        {bio.name}
+        {name}
       </h2>
-      <p class="label-tracked mt-3 text-(--color-paper)/50">{t("about.founder.role")}</p>
+      <p class="label-tracked mt-3 text-(--color-paper)/50">{role}</p>
 
-      <div class="mt-10 space-y-6 text-(--color-paper)/80">
-        {bio.paragraphs.slice(0, 2).map((paragraph) => <p>{paragraph}</p>)}
-      </div>
+      {hasSanityBio ? (
+        <div class="prose-weblack prose-weblack--ink mt-10 max-w-none" set:html={member!.bioHtml} />
+      ) : (
+        <div class="mt-10 space-y-6 text-(--color-paper)/80">
+          {fallbackBio.paragraphs.slice(0, 2).map((paragraph) => <p>{paragraph}</p>)}
+        </div>
+      )}
 
-      {bio.photos.length > 0 && (
+      {hasSanityBio && member!.gallery.length > 0 ? (
         <div class="mt-10 grid grid-cols-2 gap-4">
-          {bio.photos.map((photo) => (
+          {member!.gallery.map((photo) => (
+            <figure class="overflow-hidden">
+              <img src={photo.url} alt={photo.alt} loading="lazy" class="aspect-[3/4] w-full object-cover" />
+              {photo.caption && <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/45">{photo.caption}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      ) : !hasSanityBio && fallbackBio.photos.length > 0 ? (
+        <div class="mt-10 grid grid-cols-2 gap-4">
+          {fallbackBio.photos.map((photo) => (
             <figure class:list={["overflow-hidden", { "col-span-2": photo.wide }]}>
               <img
                 src={photo.src}
@@ -66,17 +89,19 @@ const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["« ", "�
             </figure>
           ))}
         </div>
-      )}
+      ) : null}
 
-      <div class="mt-10 space-y-6 text-(--color-paper)/80">
-        {bio.paragraphs.slice(2).map((paragraph) => <p>{paragraph}</p>)}
-      </div>
+      {!hasSanityBio && (
+        <div class="mt-10 space-y-6 text-(--color-paper)/80">
+          {fallbackBio.paragraphs.slice(2).map((paragraph) => <p>{paragraph}</p>)}
+        </div>
+      )}
 
       <blockquote class="mt-12 border-l-2 border-(--color-gold) pl-6 md:pl-8">
         <p class="font-display text-2xl italic leading-snug text-(--color-paper) sm:text-3xl">
-          {openQuote}{bio.quote}{closeQuote}
+          {openQuote}{quote}{closeQuote}
         </p>
-        <cite class="label-tracked mt-4 block not-italic text-(--color-gold)">{bio.quoteAttribution}</cite>
+        <cite class="label-tracked mt-4 block not-italic text-(--color-gold)">{quoteAttribution}</cite>
       </blockquote>
     </div>
   </div>

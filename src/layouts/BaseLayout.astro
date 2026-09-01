@@ -6,6 +6,7 @@ import Seo from "../components/layout/Seo.astro";
 import ConsentBanner from "../components/layout/ConsentBanner.astro";
 import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
 import { LOCALES } from "../i18n/locales";
+import { getSiteSettings } from "../lib/content";
 
 interface Props {
   lang: Lang;
@@ -20,6 +21,7 @@ interface Props {
 
 const { lang, title, description, image, imageAlt, noindex, bodyClass, translations } = Astro.props;
 const t = useTranslations(lang);
+const siteSettings = await getSiteSettings(lang);
 ---
 
 <!doctype html>
@@ -94,6 +96,7 @@ const t = useTranslations(lang);
       imageAlt={imageAlt}
       noindex={noindex}
       translations={translations}
+      siteSettings={siteSettings}
     />
   </head>
   <body class:list={["bg-(--color-ink)", bodyClass]}>
@@ -103,11 +106,11 @@ const t = useTranslations(lang);
     >
       {t("common.skipToContent")}
     </a>
-    <Header lang={lang} translations={translations} />
+    <Header lang={lang} translations={translations} siteSettings={siteSettings} />
     <main id="main-content">
       <slot />
     </main>
-    <Footer lang={lang} />
+    <Footer lang={lang} siteSettings={siteSettings} />
     <ConsentBanner lang={lang} />
   </body>
 </html>

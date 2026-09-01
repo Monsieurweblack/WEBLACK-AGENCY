@@ -1,26 +1,47 @@
 ---
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import type { ExpertiseData, HomepageTextSection } from "../../lib/content";
 
 interface Props {
   lang: Lang;
+  /** From the `expertise` Sanity type — falls back to i18n copy below when empty. */
+  expertises?: ExpertiseData[];
+  /** From the "homepage" Sanity singleton's expertisesSection — falls back to i18n copy when not set. */
+  section?: HomepageTextSection;
 }
 
-const { lang } = Astro.props;
+const { lang, expertises, section } = Astro.props;
 const t = useTranslations(lang);
 
-const divisions = [
+const fallbackDivisions = [
   { key: "talent", href: "/talent" },
   { key: "creative", href: "/creative" },
   { key: "consulting", href: "/consulting" },
 ] as const;
+
+const divisions =
+  expertises && expertises.length > 0
+    ? expertises.map((e) => ({
+        name: e.title,
+        tagline: e.tagline ?? "",
+        href: `/${e.slug}`,
+      }))
+    : fallbackDivisions.map((d) => ({
+        name: t(`division.${d.key}.name` as UiKey),
+        tagline: t(`division.${d.key}.tagline` as UiKey),
+        href: d.href,
+      }));
+
+const eyebrow = t("home.divisions.eyebrow");
+const title = section?.title ?? t("home.divisions.title");
 ---
 
 <section class="bg-(--color-ink) py-24 md:py-32">
   <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
     <div class="max-w-2xl" data-reveal>
-      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.divisions.eyebrow")}</p>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{eyebrow}</p>
       <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
-        {t("home.divisions.title")}
+        {title}
       </h2>
     </div>
 
@@ -36,14 +57,12 @@ const divisions = [
             <div>
               <span class="label-tracked text-(--color-paper)/40">0{i + 1}</span>
               <h3 class="font-display mt-6 text-3xl text-(--color-paper) transition-colors duration-300 group-hover:text-(--color-gold)">
-                {t(`division.${division.key}.name` as UiKey)}
+                {division.name}
               </h3>
-              <p class="mt-4 max-w-xs text-(--color-paper)/60">
-                {t(`division.${division.key}.tagline` as UiKey)}
-              </p>
+              <p class="mt-4 max-w-xs text-(--color-paper)/60">{division.tagline}</p>
             </div>
             <span class="label-tracked mt-10 inline-flex items-center gap-2 text-(--color-paper)/50 transition-colors duration-300 group-hover:text-(--color-gold)">
-              {t("common.discover")} {t(`division.${division.key}.name` as UiKey)} &rarr;
+              {t("common.discover")} {division.name} &rarr;
             </span>
           </a>
         ))

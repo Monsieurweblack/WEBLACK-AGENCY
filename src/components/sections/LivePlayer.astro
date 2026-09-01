@@ -1,18 +1,18 @@
 ---
 import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
 import { intlTagFor } from "../../i18n/locales";
-import { localizedText, type LiveEventConfig } from "../../data/live";
+import type { LiveData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
-  event: LiveEventConfig;
+  event: LiveData;
 }
 
 const { lang, event } = Astro.props;
 const t = useTranslations(lang);
-const { status, youtubeVideoId, showChat, scheduledStart } = event;
-const title = localizedText(event.title, lang);
-const description = localizedText(event.description, lang);
+const { status, youtubeVideoId, showChat, date: scheduledStart } = event;
+const title = event.title;
+const description = event.description;
 
 const embedDomain = Astro.site ? new URL(Astro.site).hostname : Astro.url.hostname;
 const playerUrl = `https://www.youtube-nocookie.com/embed/${youtubeVideoId}`;

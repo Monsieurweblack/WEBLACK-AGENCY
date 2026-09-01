@@ -1,17 +1,20 @@
 ---
 import { SOCIAL_LINKS } from "../../lib/social";
+import type { SiteSettingsData } from "../../lib/content";
 
 interface Props {
   class?: string;
   iconClass?: string;
+  /** From the "siteSettings" Sanity singleton — falls back to src/lib/social.ts when not set. */
+  siteSettings?: SiteSettingsData;
 }
 
-const { class: className, iconClass = "h-5 w-5" } = Astro.props;
+const { class: className, iconClass = "h-5 w-5", siteSettings } = Astro.props;
 
 const links = [
-  { name: "Facebook", href: SOCIAL_LINKS.facebook, icon: "facebook" },
-  { name: "Instagram", href: SOCIAL_LINKS.instagram, icon: "instagram" },
-  { name: "WhatsApp", href: SOCIAL_LINKS.whatsapp, icon: "whatsapp" },
+  { name: "Facebook", href: siteSettings?.facebookUrl ?? SOCIAL_LINKS.facebook, icon: "facebook" },
+  { name: "Instagram", href: siteSettings?.instagramUrl ?? SOCIAL_LINKS.instagram, icon: "instagram" },
+  { name: "WhatsApp", href: siteSettings?.whatsappUrl ?? SOCIAL_LINKS.whatsapp, icon: "whatsapp" },
 ] as const;
 ---
 

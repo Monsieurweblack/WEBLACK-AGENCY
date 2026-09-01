@@ -2,6 +2,7 @@
 import { useTranslations, resolveTranslations, type Lang, type TranslationMap } from "../../i18n/utils";
 import { LOCALES, defaultLocale, ogLocaleFor } from "../../i18n/locales";
 import { SOCIAL_LINKS } from "../../lib/social";
+import type { SiteSettingsData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
@@ -10,6 +11,8 @@ interface Props {
   image?: string;
   imageAlt?: string;
   noindex?: boolean;
+  /** From the "siteSettings" Sanity singleton — used only as the fallback source for title/description/OG image when the page doesn't supply its own. Falls back to i18n copy when unavailable. */
+  siteSettings?: SiteSettingsData;
   /**
    * Per-locale map of this exact content's URL in each other locale —
    * supplied by the calling route only when the naive same-slug swap
@@ -24,14 +27,16 @@ interface Props {
   translations?: TranslationMap;
 }
 
-const { lang, title, description, image, imageAlt, noindex = false, translations } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex = false, translations, siteSettings } = Astro.props;
 const t = useTranslations(lang);
 
-const pageTitle = title ? `${title} — WEBLACK` : t("seo.default.title");
-const pageDescription = description ?? t("seo.default.description");
+const pageTitle = title ? `${title} — WEBLACK` : (siteSettings?.seoTitle ?? t("seo.default.title"));
+const pageDescription = description ?? siteSettings?.seoDescription ?? t("seo.default.description");
 const DEFAULT_OG_IMAGE = lang === "fr" ? "/photos/og-weblack-fr.jpg" : "/photos/og-weblack-en.jpg";
-const ogImage = new URL(image ?? DEFAULT_OG_IMAGE, Astro.site);
+const ogImage = new URL(image ?? siteSettings?.ogImage?.url ?? DEFAULT_OG_IMAGE, Astro.site);
 const isDefaultOgImage = !image;
+const ogImageWidth = image ? 1200 : (siteSettings?.ogImage?.width ?? 1200);
+const ogImageHeight = image ? 630 : (siteSettings?.ogImage?.height ?? 630);
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
 const logoUrl = new URL("/apple-touch-icon.png", Astro.site);
 const homeUrl = new URL(lang === defaultLocale ? "/" : `/${lang}/`, Astro.site).toString();
@@ -53,21 +58,28 @@ function hrefFor(targetLang: Lang): string {
 
 const xDefaultHref = hasAlternates ? hrefFor(defaultLocale) || canonicalUrl.toString() : "";
 
+const sameAs = [
+  siteSettings?.facebookUrl ?? SOCIAL_LINKS.facebook,
+  siteSettings?.instagramUrl ?? SOCIAL_LINKS.instagram,
+  siteSettings?.linkedinUrl,
+  siteSettings?.youtubeUrl,
+].filter((url): url is string => Boolean(url));
+
 const structuredData = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "WEBLACK",
+    name: siteSettings?.siteName ?? "WEBLACK",
     url: homeUrl,
     logo: logoUrl,
-    description: t("seo.default.description"),
-    sameAs: [SOCIAL_LINKS.facebook, SOCIAL_LINKS.instagram],
+    description: siteSettings?.seoDescription ?? t("seo.default.description"),
+    sameAs,
     inLanguage: schemaLang,
   },
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "WEBLACK",
+    name: siteSettings?.siteName ?? "WEBLACK",
     url: homeUrl,
     inLanguage: schemaLang,
   },
@@ -103,13 +115,13 @@ const structuredData = [
 <meta property="og:title" content={pageTitle} />
 <meta property="og:description" content={pageDescription} />
 <meta property="og:image" content={ogImage} />
-{isDefaultOgImage && <meta property="og:image:width" content="1200" />}
-{isDefaultOgImage && <meta property="og:image:height" content="630" />}
+{isDefaultOgImage && <meta property="og:image:width" content={String(ogImageWidth)} />}
+{isDefaultOgImage && <meta property="og:image:height" content={String(ogImageHeight)} />}
 <meta property="og:image:alt" content={imageAlt ?? t("seo.ogImage.alt")} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:locale" content={ogLocale} />
 {alternates.map((entry) => <meta property="og:locale:alternate" content={ogLocaleFor(entry.lang)} />)}
-<meta property="og:site_name" content="WEBLACK" />
+<meta property="og:site_name" content={siteSettings?.siteName ?? "WEBLACK"} />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={pageTitle} />

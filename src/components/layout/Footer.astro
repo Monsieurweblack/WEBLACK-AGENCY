@@ -4,13 +4,18 @@ import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import SocialLinks from "./SocialLinks.astro";
 import ShareButtons from "./ShareButtons.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { SiteSettingsData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
+  /** From the "siteSettings" Sanity singleton — falls back to i18n copy below when a field isn't set. */
+  siteSettings?: SiteSettingsData;
 }
 
-const { lang } = Astro.props;
+const { lang, siteSettings } = Astro.props;
 const t = useTranslations(lang);
+const tagline = siteSettings?.baseline ?? t("footer.tagline");
+const sinceText = siteSettings?.footerText ?? t("footer.since");
 const year = new Date().getFullYear();
 const currentUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
@@ -42,8 +47,8 @@ const legalLinks = [
           <Image src={weblackIcon} alt="WEBLACK" width={36} height={36} />
           <p class="font-display text-2xl tracking-[0.05em]">WEBLACK</p>
         </div>
-        <p class="label-tracked mt-4 text-(--color-paper)/60">{t("footer.tagline")}</p>
-        <p class="mt-6 max-w-xs text-sm text-(--color-paper)/50">{t("footer.since")}</p>
+        <p class="label-tracked mt-4 text-(--color-paper)/60">{tagline}</p>
+        <p class="mt-6 max-w-xs text-sm text-(--color-paper)/50">{sinceText}</p>
       </div>
 
       <nav aria-label={t("footer.explore")}>
@@ -125,7 +130,7 @@ const legalLinks = [
         <p>&copy; {year} WEBLACK. {t("footer.rights")}</p>
         <p>{t("contact.info.address.label")}</p>
       </div>
-      <SocialLinks />
+      <SocialLinks siteSettings={siteSettings} />
     </div>
 
     <div class="mt-8 border-t border-(--color-line) pt-8">

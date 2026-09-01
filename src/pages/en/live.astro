@@ -3,11 +3,12 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import LivePlayer from "../../components/sections/LivePlayer.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
 import { useTranslations } from "../../i18n/utils";
-import { liveEvent } from "../../data/live";
+import { getLiveEvents, getPrimaryLive } from "../../lib/content";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
-const isOffline = liveEvent.status === "offline";
+const liveEvent = getPrimaryLive(await getLiveEvents(lang));
+const isOffline = !liveEvent;
 ---
 
 <BaseLayout lang={lang} title={t("live.hero.title")} description={t("live.seo.description")}>
@@ -26,7 +27,7 @@ const isOffline = liveEvent.status === "offline";
         </div>
       </section>
     ) : (
-      <LivePlayer lang={lang} event={liveEvent} />
+      <LivePlayer lang={lang} event={liveEvent!} />
     )
   }
 

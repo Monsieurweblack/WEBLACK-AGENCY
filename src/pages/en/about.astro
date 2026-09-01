@@ -4,10 +4,17 @@ import RemoteImage from "../../components/media/RemoteImage.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
 import FounderBioModal from "../../components/sections/FounderBioModal.astro";
 import { useTranslations, localizedPath, type UiKey, type TranslationMap } from "../../i18n/utils";
+import { getTeamMembers } from "../../lib/content";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
 const steps = [1, 2, 3, 4, 5] as const;
+
+const [founder] = await getTeamMembers(lang);
+const founderName = founder?.name ?? t("about.founder.name");
+const founderRole = founder?.role ?? t("about.founder.role");
+const founderPhotoUrl = founder?.photo?.url ?? "/photos/founder-deo-gratias-kpodo.png";
+const founderPhotoAlt = founder?.photo?.alt || founderName;
 
 const translations: TranslationMap = {
   fr: localizedPath("fr", "/about/"),
@@ -89,11 +96,11 @@ const translations: TranslationMap = {
             type="button"
             class="group relative block aspect-[3/4] w-full overflow-hidden bg-(--color-ink-soft)"
             data-founder-bio-trigger
-            aria-label={`${t("about.founder.bio.cta")} — ${t("about.founder.name")}`}
+            aria-label={`${t("about.founder.bio.cta")} — ${founderName}`}
           >
             <RemoteImage
-              src="/photos/founder-deo-gratias-kpodo.png"
-              alt={t("about.founder.name")}
+              src={founderPhotoUrl}
+              alt={founderPhotoAlt}
               width={950}
               height={1266}
               class="h-full w-full object-cover transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
@@ -103,14 +110,14 @@ const translations: TranslationMap = {
               <span class="label-tracked text-(--color-paper)">{t("about.founder.bio.cta")} &rarr;</span>
             </div>
           </button>
-          <h3 class="font-display mt-5 text-xl text-(--color-paper)">{t("about.founder.name")}</h3>
-          <p class="label-tracked mt-1 text-(--color-gold)/80">{t("about.founder.role")}</p>
+          <h3 class="font-display mt-5 text-xl text-(--color-paper)">{founderName}</h3>
+          <p class="label-tracked mt-1 text-(--color-gold)/80">{founderRole}</p>
         </div>
       </div>
     </div>
   </section>
 
-  <FounderBioModal lang={lang} />
+  <FounderBioModal lang={lang} member={founder} />
 
   <section class="bg-(--color-ink) px-6 pb-20 md:px-10 md:pb-28">
     <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) pt-16">

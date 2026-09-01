@@ -6,16 +6,17 @@ import SocialLinks from "./SocialLinks.astro";
 import SearchOverlay from "./SearchOverlay.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import { useTranslations, localizedPath, type Lang, type TranslationMap } from "../../i18n/utils";
-import { liveEvent } from "../../data/live";
+import { getLiveEvents, getPrimaryLive, type SiteSettingsData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
   translations?: TranslationMap;
+  siteSettings?: SiteSettingsData;
 }
 
-const { lang, translations } = Astro.props;
+const { lang, translations, siteSettings } = Astro.props;
 const t = useTranslations(lang);
-const isOnAir = liveEvent.status === "live";
+const isOnAir = getPrimaryLive(await getLiveEvents(lang))?.status === "live";
 
 const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
@@ -156,7 +157,7 @@ const liveHref = localizedPath(lang, "/live");
       {t("nav.contact")}
     </a>
     <div class="flex items-center gap-4">
-      <SocialLinks />
+      <SocialLinks siteSettings={siteSettings} />
       <SearchOverlay lang={lang} class="inline-flex" />
       <ThemeToggle lang={lang} class="inline-flex" />
     </div>

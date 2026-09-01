@@ -4,32 +4,90 @@ import HeroHome from "../../components/sections/HeroHome.astro";
 import ManifestoQuote from "../../components/sections/ManifestoQuote.astro";
 import DivisionsGrid from "../../components/sections/DivisionsGrid.astro";
 import SelectedWorkPreview from "../../components/sections/SelectedWorkPreview.astro";
+import PartnersPreview from "../../components/sections/PartnersPreview.astro";
 import Perspective from "../../components/sections/Perspective.astro";
 import TeamPreview from "../../components/sections/TeamPreview.astro";
 import JournalPreview from "../../components/sections/JournalPreview.astro";
 import TalentNetworkPreview from "../../components/sections/TalentNetworkPreview.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
-import { getEntriesByLang, getFeatured, sortByDateDesc } from "../../lib/content";
-import type { TalentEntry } from "../../lib/content";
+import {
+  getEntriesByLang,
+  getFeatured,
+  sortByDateDesc,
+  getHomepage,
+  getExpertises,
+  getTeamMembers,
+  getPartnerLogos,
+  type JournalEntry,
+  type WorkEntry,
+} from "../../lib/content";
 import { localizedPath, type TranslationMap } from "../../i18n/utils";
 
 const lang = "en" as const;
-const heroImage = {
+
+const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJournal, allWork, featuredWork, allTalent] =
+  await Promise.all([
+    getHomepage(lang),
+    getExpertises(lang),
+    getTeamMembers(lang),
+    getPartnerLogos(lang),
+    getEntriesByLang("journal", lang),
+    getFeatured("journal", lang),
+    getEntriesByLang("work", lang),
+    getFeatured("work", lang),
+    getEntriesByLang("talent", lang),
+  ]);
+
+const heroImage = homepage?.hero.image ?? {
   url: "/photos/hero-home.jpg",
   alt: "Fashion show runway in a packed venue, model under a spotlight.",
   width: 1440,
   height: 959,
 };
 
-const featuredWork = sortByDateDesc(await getFeatured("work", lang)).slice(0, 3);
-const latestJournal = sortByDateDesc(await getEntriesByLang("journal", lang)).slice(0, 3);
+/** Manual selection (by slug) wins when set; otherwise the featured-fallback flag decides the pool, sorted by date, capped to the configured count. */
+function selectBySlug<T extends { data: { slug: string; publishDate?: Date; startDate?: Date } }>(
+  all: T[],
+  featuredOnly: T[],
+  selectedSlugs: string[],
+  useFeaturedFallback: boolean,
+  count: number | undefined,
+  defaultCount: number,
+): T[] {
+  const limit = count ?? defaultCount;
+  if (selectedSlugs.length > 0) {
+    const bySlug = new Map(all.map((e) => [e.data.slug, e]));
+    return selectedSlugs.map((s) => bySlug.get(s)).filter((e): e is T => Boolean(e)).slice(0, limit);
+  }
+  return sortByDateDesc(useFeaturedFallback ? featuredOnly : all).slice(0, limit);
+}
+
+const latestJournal = selectBySlug<JournalEntry>(
+  allJournal,
+  featuredJournal,
+  homepage?.journalSection.selectedSlugs ?? [],
+  homepage?.journalSection.useFeaturedFallback ?? true,
+  homepage?.journalSection.articleCount,
+  3,
+);
+
+const displayedWork = selectBySlug<WorkEntry>(
+  allWork,
+  featuredWork,
+  homepage?.projectsSection.selectedSlugs ?? [],
+  homepage?.projectsSection.useFeaturedFallback ?? true,
+  homepage?.projectsSection.projectCount,
+  3,
+);
+
 /**
- * The Talent collection in Sanity currently only contains seed/demo entries
- * (stock portraits, no verified WEBLACK talent) — publishing them here would
- * violate the no-fabrication rule, so the section shows its honest empty-roster
- * state until real, verified profiles are published in the CMS.
+ * The Talent collection also holds 14 demo/seed entries (stock portraits,
+ * no verified WEBLACK talent) — they're marked status "archived" in Sanity
+ * precisely so this filter excludes them without a hardcoded override.
+ * Publishing a real profile in Studio with status "active" is what makes
+ * it appear here.
  */
-const talent: TalentEntry[] = [];
+const talent = allTalent.filter((t) => t.data.status === "active");
 
 const translations: TranslationMap = {
   fr: localizedPath("fr", "/"),
@@ -39,15 +97,21 @@ const translations: TranslationMap = {
 ---
 
 <BaseLayout lang={lang} translations={translations}>
-  <HeroHome lang={lang} heroImage={heroImage} />
+  <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
   <JournalPreview lang={lang} articles={latestJournal} />
-  <DivisionsGrid lang={lang} />
-  <SelectedWorkPreview lang={lang} work={featuredWork} />
+  <DivisionsGrid lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
+  <SelectedWorkPreview lang={lang} work={displayedWork} />
+  <PartnersPreview lang={lang} partners={partnerLogos} section={homepage?.partnersSection} />
   <TalentNetworkPreview lang={lang} talent={talent} />
-  <ManifestoQuote lang={lang} />
+  <ManifestoQuote lang={lang} text={homepage?.manifesto.text} />
   <Perspective lang={lang} />
-  <TeamPreview lang={lang} />
-  <CtaContact lang={lang} />
+  <TeamPreview lang={lang} members={teamMembers} section={homepage?.teamSection} />
+  <CtaContact
+    lang={lang}
+    title={homepage?.contactSection.title}
+    lead={homepage?.contactSection.text}
+    buttonLabel={homepage?.contactSection.ctaLabel}
+  />
 </BaseLayout>
 
 <script>

@@ -3,10 +3,13 @@ import { useTranslations, type Lang } from "../../i18n/utils";
 
 interface Props {
   lang: Lang;
+  /** From the "homepage" Sanity singleton — falls back to i18n copy when not set. */
+  text?: string;
 }
 
-const { lang } = Astro.props;
+const { lang, text } = Astro.props;
 const t = useTranslations(lang);
+const manifestoText = text ?? t("home.manifesto");
 
 /**
  * French and Norwegian typographic convention uses « » (with a non-breaking
@@ -26,7 +29,7 @@ const [openQuote, closeQuote] = QUOTES[lang] ?? ["“", "”"];
     <p
       class="font-display text-balance text-3xl leading-[1.25] text-(--color-ink) sm:text-4xl lg:text-5xl"
     >
-      {openQuote}{t("home.manifesto")}{closeQuote}
+      {openQuote}{manifestoText}{closeQuote}
     </p>
     <div class="mx-auto mt-8 h-px w-16 bg-(--color-gold)"></div>
   </div>

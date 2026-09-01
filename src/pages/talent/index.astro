@@ -3,17 +3,17 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import CardTalent from "../../components/cards/CardTalent.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
 import { useTranslations, localizedPath, type UiKey } from "../../i18n/utils";
-import type { TalentEntry } from "../../lib/content";
+import { getEntriesByLang } from "../../lib/content";
 
 const lang = "fr" as const;
 const t = useTranslations(lang);
 /**
- * The Talent collection in Sanity currently only contains seed/demo entries
- * (stock portraits, no verified WEBLACK talent) — publishing them here would
- * violate the no-fabrication rule, so the public grid is suppressed until
- * real, verified profiles are published in the CMS.
+ * The Talent collection also holds 14 demo/seed entries (stock portraits,
+ * no verified WEBLACK talent) — they're marked status "archived" in Sanity,
+ * so this filter excludes them without a hardcoded override. Publishing a
+ * real profile in Studio with status "active" is what makes it appear here.
  */
-const talent: TalentEntry[] = [];
+const talent = (await getEntriesByLang("talent", lang)).filter((entry) => entry.data.status === "active");
 const categories = [...new Set(talent.map((person) => person.data.category))];
 ---
 

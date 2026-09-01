@@ -1,0 +1,81 @@
+---
+import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import type { PartnerLogoData, HomepageTextSection } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  /** From the `partner` Sanity type (logo grid — distinct from the `partners` full-profile type). */
+  partners: PartnerLogoData[];
+  /** From the "homepage" Sanity singleton's partnersSection. */
+  section?: HomepageTextSection & { logoCount?: number };
+}
+
+const { lang, partners: allPartners, section } = Astro.props;
+const t = useTranslations(lang);
+
+const partners = section?.logoCount ? allPartners.slice(0, section.logoCount) : allPartners;
+const eyebrow = t("home.partners.eyebrow");
+const title = section?.title ?? t("home.partners.title");
+const lead = section?.intro ?? t("home.partners.lead");
+---
+
+{
+  partners.length > 0 && (
+    <section class="bg-(--color-ink) py-24 md:py-32">
+      <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+        <div class="max-w-2xl" data-reveal>
+          <p class="label-tracked label-tracked-dot text-(--color-gold)">{eyebrow}</p>
+          <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{title}</h2>
+          <p class="mt-4 max-w-lg text-(--color-paper)/70">{lead}</p>
+        </div>
+
+        <div class="mt-14 grid grid-cols-2 gap-x-8 gap-y-14 sm:grid-cols-3 md:grid-cols-4">
+          {partners.map((partner, i) => (
+            <div class="group flex flex-col" data-reveal data-reveal-delay={String(Math.min(i * 0.06, 0.3))}>
+              <div class="flex aspect-[4/3] items-center justify-center border-b border-(--color-line) pb-6">
+                {partner.website ? (
+                  <a
+                    href={partner.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex h-full w-full items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--color-gold)"
+                  >
+                    <img
+                      src={partner.logo.url}
+                      width={partner.logo.width}
+                      height={partner.logo.height}
+                      alt={partner.logo.alt}
+                      loading="lazy"
+                      decoding="async"
+                      class="max-h-full max-w-full object-contain grayscale opacity-70 transition-[filter,opacity] duration-500 ease-(--ease-signature) group-hover:grayscale-0 group-hover:opacity-100 group-focus-within:grayscale-0 group-focus-within:opacity-100"
+                    />
+                  </a>
+                ) : (
+                  <img
+                    src={partner.logo.url}
+                    width={partner.logo.width}
+                    height={partner.logo.height}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    class="max-h-full max-w-full object-contain grayscale opacity-70 transition-[filter,opacity] duration-500 ease-(--ease-signature) group-hover:grayscale-0 group-hover:opacity-100"
+                  />
+                )}
+              </div>
+              <div class="mt-5">
+                <p class="text-sm text-(--color-paper)/85">{partner.name}</p>
+                <p class="label-tracked mt-1.5 text-(--color-paper)/45">
+                  {t(`partners.category.${partner.category}` as UiKey)}
+                  {" · "}
+                  <span class:list={{ "text-(--color-gold)/80": partner.status === "current" }}>
+                    {t(`partners.status.${partner.status}` as UiKey)}
+                  </span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

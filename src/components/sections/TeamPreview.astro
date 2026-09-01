@@ -2,23 +2,44 @@
 import RemoteImage from "../media/RemoteImage.astro";
 import FounderBioModal from "./FounderBioModal.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { TeamMemberData, HomepageTextSection } from "../../lib/content";
 
 interface Props {
   lang: Lang;
+  /** From the `teamMember` Sanity type — falls back to the hardcoded founder bio below when empty. */
+  members?: TeamMemberData[];
+  /** From the "homepage" Sanity singleton's teamSection. */
+  section?: HomepageTextSection;
 }
 
-const { lang } = Astro.props;
+const { lang, members = [], section } = Astro.props;
 const t = useTranslations(lang);
 const teamAnchor = lang === "fr" ? "equipe" : "team";
+
+const eyebrow = t("home.team.eyebrow");
+const title = section?.title ?? t("home.team.title");
+
+// Only the first member currently opens the detailed bio modal — the modal
+// itself is still shaped around one profile (see FounderBioModal.astro);
+// generalizing it to N independent bios is future work, not needed while
+// there's exactly one real team member.
+const primary = members[0];
+const primaryName = primary?.name ?? t("about.founder.name");
+const primaryRole = primary?.role ?? t("about.founder.role");
+const primaryPhotoUrl = primary?.photo?.url ?? "/photos/founder-deo-gratias-kpodo.png";
+const primaryPhotoAlt = primary?.photo?.alt || primaryName;
+const primaryShortBio = primary?.bioHtml
+  ? undefined // full bio available in the modal; the short teaser below stays i18n-driven either way
+  : t("about.founder.bio.short");
 ---
 
 <section class="bg-(--color-ink) py-24 md:py-32">
   <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
     <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
       <div class="max-w-2xl">
-        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.team.eyebrow")}</p>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{eyebrow}</p>
         <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
-          {t("home.team.title")}
+          {title}
         </h2>
       </div>
       <a
@@ -35,11 +56,11 @@ const teamAnchor = lang === "fr" ? "equipe" : "team";
           type="button"
           class="group relative block aspect-[3/4] w-full overflow-hidden bg-(--color-ink-soft)"
           data-founder-bio-trigger
-          aria-label={`${t("about.founder.bio.cta")} — ${t("about.founder.name")}`}
+          aria-label={`${t("about.founder.bio.cta")} — ${primaryName}`}
         >
           <RemoteImage
-            src="/photos/founder-deo-gratias-kpodo.png"
-            alt={t("about.founder.name")}
+            src={primaryPhotoUrl}
+            alt={primaryPhotoAlt}
             width={950}
             height={1266}
             class="h-full w-full object-cover transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
@@ -49,12 +70,33 @@ const teamAnchor = lang === "fr" ? "equipe" : "team";
             <span class="label-tracked text-(--color-paper)">{t("about.founder.bio.cta")} &rarr;</span>
           </div>
         </button>
-        <h3 class="font-display mt-5 text-xl text-(--color-paper)">{t("about.founder.name")}</h3>
-        <p class="label-tracked mt-1 text-(--color-gold)/80">{t("about.founder.role")}</p>
-        <p class="mt-3 max-w-sm text-sm text-(--color-paper)/60">{t("about.founder.bio.short")}</p>
+        <h3 class="font-display mt-5 text-xl text-(--color-paper)">{primaryName}</h3>
+        <p class="label-tracked mt-1 text-(--color-gold)/80">{primaryRole}</p>
+        <p class="mt-3 max-w-sm text-sm text-(--color-paper)/60">{primaryShortBio ?? t("about.founder.bio.short")}</p>
       </div>
+
+      {
+        members.slice(1).map((member) => (
+          <div>
+            {member.photo && (
+              <div class="block aspect-[3/4] w-full overflow-hidden bg-(--color-ink-soft)">
+                <RemoteImage
+                  src={member.photo.url}
+                  alt={member.photo.alt || member.name}
+                  width={950}
+                  height={1266}
+                  class="h-full w-full object-cover"
+                  sizes="(min-width: 640px) 33vw, 100vw"
+                />
+              </div>
+            )}
+            <h3 class="font-display mt-5 text-xl text-(--color-paper)">{member.name}</h3>
+            {member.role && <p class="label-tracked mt-1 text-(--color-gold)/80">{member.role}</p>}
+          </div>
+        ))
+      }
     </div>
   </div>
 
-  <FounderBioModal lang={lang} />
+  <FounderBioModal lang={lang} member={primary} />
 </section>

@@ -88,6 +88,22 @@ const translations = {
       "De Paris à Bamako, chaque collaboration WEBLACK est pensée comme un projet à part entière — jamais comme une simple prestation.",
     "home.work.cta": "Voir tous les projets",
 
+    "home.partners.eyebrow": "Nos partenaires",
+    "home.partners.title": "Des collaborations qui accompagnent notre trajectoire.",
+    "home.partners.lead":
+      "WEBLACK collabore avec des marques, des maisons, des événements, des institutions et des acteurs de la création à travers des projets de mode, de communication, de production et de développement culturel.",
+    "partners.category.fashion": "Mode",
+    "partners.category.event": "Événement",
+    "partners.category.institution": "Institution",
+    "partners.category.brand": "Marque",
+    "partners.category.media": "Média",
+    "partners.category.culture": "Culture",
+    "partners.category.other": "Autre",
+    "partners.status.current": "En cours",
+    "partners.status.past": "Collaboration passée",
+    "partners.logoAlt.prefix": "Logo de",
+    "partners.logoAlt.suffix": "",
+
     "home.perspective.eyebrow": "WEBLACK Perspective",
     "home.perspective.title": "Du potentiel à l’impact durable.",
     "perspective.step1.name": "Potentiel",
@@ -481,6 +497,22 @@ const translations = {
     "home.work.lead":
       "From Paris to Bamako, every WEBLACK collaboration is treated as a project in its own right — never as a simple service.",
     "home.work.cta": "View all work",
+
+    "home.partners.eyebrow": "Our partners",
+    "home.partners.title": "Collaborations that shape our journey.",
+    "home.partners.lead":
+      "WEBLACK works with brands, fashion houses, events, institutions and creative organisations across fashion, communication, production and cultural development.",
+    "partners.category.fashion": "Fashion",
+    "partners.category.event": "Event",
+    "partners.category.institution": "Institution",
+    "partners.category.brand": "Brand",
+    "partners.category.media": "Media",
+    "partners.category.culture": "Culture",
+    "partners.category.other": "Other",
+    "partners.status.current": "Current",
+    "partners.status.past": "Past collaboration",
+    "partners.logoAlt.prefix": "",
+    "partners.logoAlt.suffix": "logo",
 
     "home.perspective.eyebrow": "WEBLACK Perspective",
     "home.perspective.title": "From potential to lasting impact.",

@@ -2,6 +2,7 @@
 import RemoteImage from "../media/RemoteImage.astro";
 import weblackSymbol from "../../assets/logo/weblack-symbol-clean.png";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { HomepageHero } from "../../lib/content";
 
 interface Props {
   lang: Lang;
@@ -12,10 +13,19 @@ interface Props {
     height: number;
     credit?: { photographer: string; photographerUrl?: string };
   };
+  /** From the "homepage" Sanity singleton — falls back to i18n copy below when a field isn't set. */
+  hero?: HomepageHero;
 }
 
-const { lang, heroImage } = Astro.props;
+const { lang, heroImage, hero } = Astro.props;
 const t = useTranslations(lang);
+
+const tagline = hero?.eyebrow ?? t("home.hero.tagline");
+const pillars = hero?.subtitle ?? t("home.hero.pillars");
+const ctaExploreLabel = hero?.ctaPrimaryLabel ?? t("home.hero.cta.explore");
+const ctaExploreHref = localizedPath(lang, hero?.ctaPrimaryUrl ?? "/about");
+const ctaWorkLabel = hero?.ctaSecondaryLabel ?? t("home.hero.cta.work");
+const ctaWorkHref = localizedPath(lang, hero?.ctaSecondaryUrl ?? "/contact");
 ---
 
 <section
@@ -62,22 +72,22 @@ const t = useTranslations(lang);
     >
       WEBLACK
     </h1>
-    <p class="label-tracked label-tracked-dot mt-6 text-(--color-gold)">{t("home.hero.tagline")}</p>
+    <p class="label-tracked label-tracked-dot mt-6 text-(--color-gold)">{tagline}</p>
     <p class="font-display mt-4 max-w-xl text-balance text-2xl text-(--color-paper)/85 sm:text-3xl">
-      {t("home.hero.pillars")}
+      {pillars}
     </p>
     <div class="mt-10 flex flex-wrap items-center gap-4">
       <a
-        href={localizedPath(lang, "/about")}
+        href={ctaExploreHref}
         class="inline-flex items-center justify-center bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
       >
-        {t("home.hero.cta.explore")}
+        {ctaExploreLabel}
       </a>
       <a
-        href={localizedPath(lang, "/contact")}
+        href={ctaWorkHref}
         class="inline-flex items-center justify-center border border-(--color-paper)/40 px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-paper) transition-[border-color,transform] duration-300 hover:-translate-y-0.5 hover:border-(--color-paper)"
       >
-        {t("home.hero.cta.work")}
+        {ctaWorkLabel}
       </a>
     </div>
   </div>
