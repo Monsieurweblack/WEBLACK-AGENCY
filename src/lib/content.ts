@@ -7,7 +7,10 @@ export const sanityClient: SanityClient = createClient({
   projectId: import.meta.env.SANITY_PROJECT_ID,
   dataset: import.meta.env.SANITY_DATASET,
   apiVersion: "2025-01-01",
-  useCdn: true,
+  // Content is read exactly once per build (SSG, no runtime requests), so there is
+  // no request volume to justify the CDN's ~30-60s propagation lag. Reading the
+  // live API instead guarantees a build always sees the latest published content.
+  useCdn: false,
 });
 
 export interface ImageCredit {

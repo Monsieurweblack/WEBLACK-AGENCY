@@ -54,6 +54,37 @@ npx wrangler pages deploy dist --project-name=weblack --branch=main
 
 Cette commande n'est **pas nécessaire** pour un déploiement normal (le push suffit) — à réserver à un cas de récupération (ex. redéployer un ancien commit sans repasser par `git push`, ou déployer depuis une machine où le dépôt n'a pas accès à GitHub).
 
+### Republier automatiquement après une modification dans Sanity Studio (à activer)
+
+Le site est un build statique (SSG) : tant qu'aucun commit n'est poussé sur `main`, une publication dans le Studio n'apparaît sur `weblack.fr` qu'après un redéploiement manuel (`wrangler pages deploy`, voir ci-dessus). Pour automatiser ce redéploiement, brancher un **webhook Sanity** directement sur un **Deploy Hook Cloudflare Pages** :
+
+```text
+Sanity Studio → Publish
+        ↓
+Webhook Sanity (dataset production)
+        ↓
+Deploy Hook Cloudflare Pages (URL secrète, POST simple)
+        ↓
+npm run build → nouveau déploiement en production (~1-2 min)
+```
+
+Aucune des deux étapes n'est pilotable par API/CLI avec les jetons actuels (les deploy hooks Cloudflare Pages n'existent que dans le dashboard — absents de `wrangler` et de l'API REST Cloudflare ; la création de webhooks Sanity exige le grant `sanity.project.webhooks/write`, réservé au rôle **administrator** du compte, pas aux tokens "developer"/"editor" utilisés jusqu'ici). Deux étapes manuelles, à faire une seule fois :
+
+1. **Cloudflare Pages** → projet `weblack` → *Settings* → *Builds & deployments* → *Deploy hooks* → *Add deploy hook*. Nom libre (ex. `sanity-publish`), branche `main`. Copier l'URL générée (`https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/...`) — c'est un secret, à ne jamais committer.
+2. **Sanity** → [sanity.io/manage](https://sanity.io/manage) → projet `pzpm4xjp` → *API* → *Webhooks* → *Create webhook* :
+   - **URL** : l'URL du deploy hook copiée à l'étape 1
+   - **Dataset** : `production`
+   - **Trigger on** : Create, Update, Delete
+   - **Filter** (GROQ, évite un rebuild sur chaque autosave de brouillon) :
+     ```groq
+     !(_id in path("drafts.**")) && _type in ["talent","work","journal","partners","homepage","siteSettings","expertise","teamMember","partner","live"]
+     ```
+   - **HTTP method** : `POST`
+   - **API version** : la plus récente proposée
+   - Secret : inutile — l'URL du deploy hook fait déjà office de jeton capability-based.
+
+Une fois les deux étapes faites, toute publication dans le Studio republie le site sans intervention. Le `wrangler pages deploy` manuel reste disponible en secours (dépannage, ou redéploiement d'un commit précis).
+
 ---
 
 ## Relancer le site en local
