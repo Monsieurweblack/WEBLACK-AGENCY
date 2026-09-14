@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { GeneratedArticle } from "../generation/types.ts";
 import { getSanityClient } from "./client.ts";
+import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
 
 /**
@@ -60,6 +61,13 @@ export async function uploadImageFromUrl(
  * directly.
  */
 export async function createArticle(article: GeneratedArticle, opts: { asDraft: boolean }): Promise<{ documentId: string }> {
+  const config = loadConfig();
+  if (!article.author || article.author !== config.defaultAuthor) {
+    // `author` in this schema is a plain string, never a reference — there is no author document to create or look up. This guard just confirms the value about to be written is exactly the configured signature, never empty and never silently substituted.
+    throw new Error(
+      `Auteur invalide sur le document à créer ("${article.author}") — attendu exactement EDITORIAL_DEFAULT_AUTHOR ("${config.defaultAuthor}"). Écriture refusée.`,
+    );
+  }
   const client = getSanityClient();
   const baseId = `journal-editorial-engine-${crypto.randomUUID()}`;
   const _id = opts.asDraft ? `drafts.${baseId}` : baseId;

@@ -5,6 +5,7 @@ import { fetchRssSource } from "./ingestion/rss.ts";
 import { processArticle } from "./scheduler/run.ts";
 import { runOneCycle, watchLoop } from "./scheduler/loop.ts";
 import { publishDraft } from "./sanity/articles.ts";
+import { testOpenAiConnection } from "./intelligence/testConnection.ts";
 import { recentRuns } from "./database/db.ts";
 import { loadConfig } from "./config/env.ts";
 import { getSanityClient } from "./sanity/client.ts";
@@ -13,7 +14,9 @@ import { log } from "./logs/logger.ts";
 const [, , command, ...rest] = process.argv;
 const dryRun = rest.includes("--dry-run");
 const watch = rest.includes("--watch");
-const positional = rest.filter((a) => !a.startsWith("--"));
+const labelFlagIndex = rest.indexOf("--label");
+const testLabel = labelFlagIndex >= 0 ? rest[labelFlagIndex + 1] : undefined;
+const positional = rest.filter((a, i) => !a.startsWith("--") && i !== labelFlagIndex + 1);
 
 async function main() {
   switch (command) {
@@ -33,16 +36,16 @@ async function main() {
       const candidates = await fetchRssSource(source);
       log("SOURCE FOUND", `${candidates.length} article(s) — ${source.name}`);
       for (const candidate of candidates) {
-        await processArticle(candidate, { dryRun });
+        await processArticle(candidate, { dryRun, testLabel });
       }
       break;
     }
 
     case "url": {
       const url = positional[0];
-      if (!url) throw new Error("Usage: npm run editorial:url -- <url>");
+      if (!url) throw new Error("Usage: npm run editorial:url -- <url> [--label TestA]");
       const article = await fetchManualUrl(url);
-      const outcome = await processArticle(article, { dryRun });
+      const outcome = await processArticle(article, { dryRun, testLabel });
       console.log(JSON.stringify(outcome, null, 2));
       break;
     }
@@ -79,10 +82,20 @@ async function main() {
       const runs = recentRuns(5);
       console.log(`   OK — ${runs.length} run(s) récents en base locale`);
 
+      console.log("4) Connexion OpenAI...");
       if (!config.openaiApiKey) {
-        console.log("\nOPENAI_API_KEY absent — les tests d'extraction/analyse/génération ne peuvent pas être exécutés. Voir editorial-engine/.env.example.");
+        console.log("   ABSENT — les tests d'extraction/analyse/génération ne peuvent pas être exécutés. Voir editorial-engine/.env.example.");
       } else {
-        console.log("\nOPENAI_API_KEY présent — utilisez `npm run editorial:url -- <url réelle>` pour un test bout-en-bout.");
+        const connection = await testOpenAiConnection();
+        console.log(`   ${connection.ok ? "OK" : "ÉCHEC"} — ${connection.message}`);
+        if (!connection.ok) process.exitCode = 1;
+      }
+
+      console.log("\n5) Auteur par défaut...");
+      if (!config.defaultAuthor) {
+        console.log("   ABSENT — la génération d'article sera refusée tant que EDITORIAL_DEFAULT_AUTHOR n'est pas renseigné.");
+      } else {
+        console.log(`   OK — signature configurée: "${config.defaultAuthor}"`);
       }
       break;
     }
@@ -94,7 +107,7 @@ async function main() {
       console.log("  npm run editorial:run -- --watch          — boucle continue (voir EDITORIAL_ENGINE.md)");
       console.log("  npm run editorial:dry-run                 — comme run, sans jamais écrire dans Sanity");
       console.log("  npm run editorial:source -- <nom>         — une seule source");
-      console.log("  npm run editorial:url -- <url>            — une URL fournie à la main");
+      console.log("  npm run editorial:url -- <url> [--label X] — une URL fournie à la main (label optionnel pour test-results/)");
       console.log("  npm run editorial:test                    — vérifie la config et les connexions");
       console.log("  npm run editorial:publish -- <documentId> — publie un brouillon déjà validé par un humain");
       process.exitCode = 1;
