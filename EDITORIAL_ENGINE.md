@@ -54,17 +54,21 @@ Variables requises dans `.env` (voir `.env.example` pour la liste complète et l
 
 ## Sources
 
-`editorial-engine/sources/sources.json` est livré **vide**. Aucune source n'a été présélectionnée : chaque flux RSS a ses propres conditions d'utilisation, et en ajouter un sans les avoir vérifiées irait contre la discipline de non-fabrication du projet (CLAUDE.md). Pour en ajouter une :
+`editorial-engine/sources/sources.json` porte la liste des flux, chacun avec une ligne `_verified` disant ce qui a réellement été vérifié et quand. **Trois tests conditionnent l'activation d'une source**, et une source qui en échoue un seul reste `enabled: false` avec le motif écrit noir sur blanc :
+
+1. **Le flux existe et vit** — il se parse réellement et porte des articles récents.
+2. **robots.txt autorise** — analysé groupe par groupe : le groupe `User-agent: *` doit autoriser le chemin du flux, **et** le site ne doit pas bloquer nommément les robots d'IA (`GPTBot`, `ClaudeBot`, `CCBot`). Un blocage nommé est un refus explicite, que ce moteur respecte même s'il n'est aucun de ces robots.
+3. **Le flux porte du texte** — un flux réduit aux titres ne peut rien fonder : chaque article y coûterait deux appels de modèle pour finir rejeté faute de fait vérifiable.
 
 ```json
-{
-  "sources": [
-    { "name": "nom-court", "type": "rss", "url": "https://...", "enabled": true, "priority": 1, "lang": "fr" }
-  ]
-}
+{ "name": "nom-court", "type": "rss", "url": "https://...", "enabled": true, "priority": 1, "lang": "en", "maxItemsPerCycle": 5 }
 ```
 
+`maxItemsPerCycle` (5 par défaut) borne ce qu'un cycle prend dans un flux : les flux vont de 10 à 50 articles, et chacun coûte des appels réels qu'il devienne un brouillon ou non. Les articles arrivant du plus récent au plus ancien, prendre la tête de liste revient à prendre les plus frais.
+
 Testez toujours une nouvelle source avec `npm run editorial:dry-run` avant de l'activer durablement.
+
+**African fashion — angle mort assumé.** C'est la priorité éditoriale n°2 de WEBLACK, mais aucun flux automatisable n'a été trouvé : refus serveur, flux inexistants, blogs arrêtés, ou flux réduits aux titres. Le détail de ce qui a été testé est dans `_african_fashion_gap` (sources.json). Ce territoire passe donc par la voie manuelle — `npm run editorial:url -- <url>` — qui est exactement la façon dont l'article Lagos Fashion Week a été produit.
 
 ## Commandes
 
@@ -75,6 +79,8 @@ npm run editorial:run                     # cycle complet, écrit les brouillons
 npm run editorial:run -- --watch          # boucle continue (intervalle: EDITORIAL_INTERVAL_MINUTES)
 npm run editorial:source -- <nom>         # une seule source de sources.json
 npm run editorial:url -- <url>            # une URL donnée à la main, hors flux RSS
+npm run editorial:review                  # file de revue: ce qui attend une décision humaine
+npm run editorial:ledger                  # registre de production: cycles, décisions, coûts
 npm run editorial:publish                 # sans argument: liste les brouillons en attente
 npm run editorial:publish -- <documentId> # publie un brouillon précis, après relecture humaine
 ```
@@ -84,15 +90,36 @@ npm run editorial:publish -- <documentId> # publie un brouillon précis, après 
 ```text
 Source (RSS ou URL manuelle)
   → ingestion (titre, texte, date, auteur, image — jamais devinés)
-  → dédoublonnage (hash local + similarité de titre contre le Journal WEBLACK existant)
-  → analyse éditoriale (OpenAI, note 0-100 sur la pertinence pour WEBLACK)
-  → extraction de faits (OpenAI, strictement limité à ce qui est dans la source)
-  → rédaction (OpenAI, réécriture originale dans la ligne WEBLACK — jamais une paraphrase mécanique)
-  → contrôle qualité (longueur, catégorie valide, chiffres non-sourcés détectés, répétitions)
-  → écriture Sanity (brouillon par défaut)
+  → dédoublonnage (hash local, empreinte de contenu, similarité de titre, puis classification)
+  → analyse éditoriale (note 0-100 sur la pertinence pour WEBLACK ; < 40 = abandon)
+  → extraction de faits (strictement limité à la source, chaque fait accompagné de sa citation verbatim)
+  → VERIFIED FACT SET (vérification programmatique de chaque citation contre le texte réel de la source ;
+      un fait invérifiable est écarté AVANT rédaction, le rédacteur ne le voit jamais)
+  → newsworthiness + stratégie SEO (mot-clé principal fixé avant rédaction, pas constaté après)
+  → rédaction WEBLACK (uniquement à partir des faits vérifiés ; les faits fragiles sont signalés
+      comme à attribuer explicitement)
+  → fact-check adverse (registre de claims : chaque affirmation publiée doit retrouver sa preuve,
+      y compris par récupération depuis le fact set ; relations causales non sourcées bloquées)
+  → anti-copie · SEO Quality Gate · Quality Gate éditorial
+  → écriture Sanity (brouillon uniquement)
 ```
 
-Chaque étape est journalisée dans `editorial-engine/logs/AAAA-MM-JJ.log` et dans l'historique local (`editorial-engine/database/history.sqlite3`, SQLite — ni l'un ni l'autre n'est envoyé dans git).
+Blocages absolus du Quality Gate, jamais assouplis pour augmenter la production : une affirmation critique non supportée, un chiffre non supporté, une citation non supportée ou une contradiction suffisent chacun, seuls, à rejeter l'article.
+
+## Traçabilité
+
+Trois journaux complémentaires, tous locaux et hors git :
+
+| Fichier | Contenu |
+| --- | --- |
+| `logs/AAAA-MM-JJ.log` | journal lisible, une ligne par étape |
+| `logs/AAAA-MM-JJ-traces.jsonl` | un enregistrement par appel de modèle : `run_id`, étape, latence, tokens |
+| `logs/production-ledger.jsonl` | **un enregistrement par article produit** : `run_id`, `cycle_id`, source, décision PASS/REVIEW/REJECT, motif, étape d'arrêt, claims et preuves, scores, identifiant du brouillon Sanity, coût, durée |
+| `database/history.sqlite3` | historique servant au dédoublonnage entre cycles |
+
+`npm run editorial:ledger` résume les cycles ; `npm run editorial:review` liste ce qui attend un humain. Aucun de ces fichiers ne contient de clé d'API : les traces ne portent que des métadonnées d'appel.
+
+**PASS** crée un brouillon Sanity. **REVIEW** n'en crée aucun et part dans la file de revue. **REJECT** est ignoré — mais enregistré, pour que le même article ne soit pas re-analysé et re-facturé au cycle suivant.
 
 ## Publication automatique — à activer en connaissance de cause
 

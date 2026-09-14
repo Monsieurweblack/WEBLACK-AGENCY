@@ -13,6 +13,7 @@ import { isSearchConsoleConnected } from "./intelligence/searchConsole.ts";
 import { loadConfig } from "./config/env.ts";
 import { getSanityClient } from "./sanity/client.ts";
 import { log } from "./logs/logger.ts";
+import { reviewQueue, readLedger } from "./logs/productionLedger.ts";
 import { parseArgs } from "./cliArgs.ts";
 
 const [, , command, ...rest] = process.argv;
@@ -64,6 +65,44 @@ async function main() {
       }
       const result = await publishDraft(documentId);
       console.log(`Publié: ${result.documentId}`);
+      break;
+    }
+
+    case "review": {
+      const queue = reviewQueue();
+      console.log(`== File de revue — ${queue.length} article(s) en attente d'un humain ==\n`);
+      for (const entry of queue) {
+        console.log(`[${entry.timestamp.slice(0, 16).replace("T", " ")}] ${entry.source.name} — arrêté à: ${entry.stoppedAt}`);
+        console.log(`  Source : ${entry.source.title}`);
+        console.log(`  URL    : ${entry.source.url}`);
+        console.log(`  Motif  : ${entry.reason ?? "(non précisé)"}`);
+        console.log(`  run_id : ${entry.runId}\n`);
+      }
+      if (queue.length === 0) console.log("Rien en attente.");
+      break;
+    }
+
+    case "ledger": {
+      const entries = readLedger();
+      const cycles = new Map<string, typeof entries>();
+      for (const e of entries) {
+        if (!cycles.has(e.cycleId)) cycles.set(e.cycleId, []);
+        cycles.get(e.cycleId)!.push(e);
+      }
+      console.log(`== Registre de production — ${entries.length} article(s) sur ${cycles.size} cycle(s) ==\n`);
+      for (const [cycleId, items] of cycles) {
+        const count = (d: string) => items.filter((i) => i.decision === d).length;
+        const usd = items.reduce((sum, i) => sum + i.cost.estimatedUsd, 0);
+        const tokens = items.reduce((sum, i) => sum + i.cost.totalTokens, 0);
+        const ms = items.reduce((sum, i) => sum + i.durationMs, 0);
+        console.log(`${cycleId}`);
+        console.log(
+          `  ${items.length} article(s) — PASS ${count("PASS")} | REVIEW ${count("REVIEW")} | REJECT ${count("REJECT")} — ${tokens} tokens, ~${usd.toFixed(4)} USD estimés, ${Math.round(ms / 1000)}s`,
+        );
+        for (const i of items.filter((x) => x.decision === "PASS")) {
+          console.log(`    PASS → ${i.sanityDraftId}  "${i.article?.title ?? ""}"`);
+        }
+      }
       break;
     }
 
@@ -127,6 +166,8 @@ async function main() {
       console.log("  npm run editorial:test                    — vérifie la config et les connexions");
       console.log("  npm run editorial:dashboard                — données locales agrégées (sujets, scores, erreurs)");
       console.log("  npm run editorial:freshness -- [jours]     — articles Journal jamais mis à jour depuis N jours (défaut 90)");
+      console.log("  npm run editorial:review                   — file de revue: ce qui attend une décision humaine");
+      console.log("  npm run editorial:ledger                   — registre de production: cycles, décisions, coûts");
       console.log("  npm run editorial:publish -- <documentId> — publie un brouillon déjà validé par un humain");
       process.exitCode = 1;
   }

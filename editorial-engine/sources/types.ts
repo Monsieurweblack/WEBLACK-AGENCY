@@ -8,6 +8,14 @@ export interface EditorialSource {
   priority: number;
   /** Optional: language this source's content is written in, if known ("fr" | "en"). */
   lang?: "fr" | "en";
+  /**
+   * How many of the feed's newest items one production cycle may take.
+   * Feeds differ wildly in size — Dezeen publishes 50 items where another
+   * publishes 12 — and every item costs real model calls whether or not it
+   * ever becomes a draft. Capping per source keeps a cycle's cost bounded
+   * and predictable instead of hostage to whoever published most today.
+   */
+  maxItemsPerCycle?: number;
 }
 
 /** Normalized shape of any piece of content entering the pipeline, whatever its origin (RSS item or a manually given URL). */

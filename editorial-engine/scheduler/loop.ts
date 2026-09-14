@@ -14,24 +14,33 @@ import { log, logError } from "../logs/logger.ts";
  * invoked on a schedule by an external cron (e.g. a scheduled GitHub
  * Action) instead of `--watch`. See EDITORIAL_ENGINE.md.
  */
+/** Feeds are ordered newest-first, so taking the head of the list is taking the freshest items — which is also what the editorial brief asks to prioritise. */
+const DEFAULT_MAX_ITEMS_PER_CYCLE = 5;
+
 export async function runOneCycle(dryRun: boolean): Promise<void> {
   const sources = enabledSources();
   if (sources.length === 0) {
     log("SOURCE FOUND", "Aucune source activée dans editorial-engine/sources/sources.json — rien à faire.");
     return;
   }
+  // One id for the whole cycle, so the production ledger can show what a
+  // single pass over every source produced, end to end.
+  const cycleId = `cycle-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  log("SOURCE FOUND", `Cycle ${cycleId} — ${sources.length} source(s) activée(s)`);
   for (const source of sources) {
     if (source.type !== "rss") continue; // "manual" sources are only reachable via `editorial:url`
     try {
-      const candidates = await fetchRssSource(source);
-      log("SOURCE FOUND", `${candidates.length} article(s) — ${source.name}`);
+      const fetched = await fetchRssSource(source);
+      const candidates = fetched.slice(0, source.maxItemsPerCycle ?? DEFAULT_MAX_ITEMS_PER_CYCLE);
+      log("SOURCE FOUND", `${candidates.length} article(s) retenus sur ${fetched.length} — ${source.name}`);
       for (const candidate of candidates) {
-        await processArticle(candidate, { dryRun });
+        await processArticle(candidate, { dryRun, cycleId });
       }
     } catch (error) {
       logError("FETCH", error, { source: source.name, recommendedAction: "Vérifier l'URL du flux et sa disponibilité" });
     }
   }
+  log("SOURCE FOUND", `Cycle ${cycleId} terminé.`);
 }
 
 export async function watchLoop(): Promise<void> {

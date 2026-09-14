@@ -35,7 +35,7 @@ db.exec(`
     generated_slug TEXT,
     editorial_score REAL,
     confidence_score REAL,
-    status TEXT NOT NULL, -- 'skipped-duplicate' | 'skipped-low-score' | 'draft' | 'published' | 'error'
+    status TEXT NOT NULL, -- 'skipped-duplicate' | 'skipped-low-score' | 'needs-review' | 'draft' | 'published' | 'error'
     sanity_document_id TEXT,
     error TEXT,
     created_at TEXT NOT NULL,
@@ -78,7 +78,7 @@ export interface RunRecord {
   generatedSlug?: string;
   editorialScore?: number;
   confidenceScore?: number;
-  status: "skipped-duplicate" | "skipped-low-score" | "draft" | "published" | "error";
+  status: "skipped-duplicate" | "skipped-low-score" | "needs-review" | "draft" | "published" | "error";
   sanityDocumentId?: string;
   error?: string;
   createdAt?: string;

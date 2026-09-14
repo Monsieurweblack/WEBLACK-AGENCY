@@ -14,6 +14,7 @@ import { createArticle, findArticleBySlug } from "../sanity/articles.ts";
 import { insertRun } from "../database/db.ts";
 import { recordTestResult } from "../database/testResults.ts";
 import { newRunId } from "../logs/runId.ts";
+import { appendLedgerEntry, costForRun, type ProductionDecision } from "../logs/productionLedger.ts";
 import { log, logError } from "../logs/logger.ts";
 import { computeSeoOpportunity, type SeoOpportunity } from "../seo/opportunityEngine.ts";
 import { classifyNewsworthiness, type NewsworthinessResult } from "../seo/newsworthiness.ts";
@@ -30,6 +31,8 @@ export interface PipelineOptions {
   dryRun: boolean;
   /** Optional label so a test run (Test A, Test B, ...) is traceable in editorial-engine/test-results/. */
   testLabel?: string;
+  /** Groups every article of one production cycle under a single id in the production ledger. */
+  cycleId?: string;
 }
 
 /** §9 — the full structured dry-run report: every stage's output, not just the final verdict, so a human reviewing a dry-run can see exactly why the engine landed on its decision. */
@@ -79,6 +82,9 @@ function isKnownCategory(category: string): boolean {
 export async function processArticle(source: SourceArticle, options: PipelineOptions): Promise<PipelineOutcome> {
   const config = loadConfig();
   const runId = newRunId();
+  const startedAt = Date.now();
+  const ledger = (decision: ProductionDecision, stoppedAt: string, reason?: string, sanityDraftId?: string) =>
+    recordLedger({ runId, options, startedAt, decision, stoppedAt, source, report, reason, sanityDraftId });
   const report: DryRunReport = { source, duplicate: { decision: "new_story", confidence: 0, reason: "", matchedArticleId: null, needsReview: false, signals: {} } };
 
   try {
@@ -88,12 +94,14 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     if (isBlockingDecision(duplicate.decision)) {
       log("FINAL STATUS", `IGNORÉ (${duplicate.decision}) — ${source.title} — ${duplicate.reason}`);
       persist(source, options, "skipped-duplicate", report, { reason: duplicate.reason });
+      ledger("REJECT", "deduplication", duplicate.reason);
       return { status: "skipped-duplicate", reason: duplicate.reason, report };
     }
     if (duplicate.needsReview && options.dryRun === false) {
       // In dry-run this still proceeds through the rest of the pipeline (§9: the report should show the full picture) — only a REAL run stops here to avoid spending on generation for a case a human should look at first.
       log("FINAL STATUS", `REVIEW (dédoublonnage: ${duplicate.decision}) — ${source.title} — ${duplicate.reason}`);
       persist(source, options, "needs-review", report, { reason: duplicate.reason });
+      ledger("REVIEW", "deduplication", duplicate.reason);
       return { status: "needs-review", reason: duplicate.reason, report };
     }
 
@@ -110,11 +118,13 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     if (analysis.score < 40) {
       log("FINAL STATUS", `IGNORÉ (score bas: ${analysis.score}) — ${source.title}`);
       persist(source, options, "skipped-low-score", report, { editorialScore: analysis.score });
+      ledger("REJECT", "editorial-analysis", `Score editorial ${analysis.score} sous le seuil de 40`);
       return { status: "skipped-low-score", score: analysis.score, threshold: 40, report };
     }
     if (!isKnownCategory(analysis.category)) {
       log("FINAL STATUS", `REVIEW (catégorie incertaine: "${analysis.category}") — ${source.title}`);
       persist(source, options, "needs-review", report, { reason: `Catégorie hors liste: ${analysis.category}` });
+      ledger("REVIEW", "editorial-analysis", `Categorie hors liste: ${analysis.category}`);
       return { status: "needs-review", reason: `Catégorie retournée par le modèle hors liste autorisée: "${analysis.category}"`, report };
     }
 
@@ -132,6 +142,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
       const reason = `Aucun fait vérifiable dans la source (${verifiedFacts.rejected.length} fait(s) écarté(s)) — rédiger reviendrait à inventer.`;
       log("FINAL STATUS", `REVIEW (aucun fait vérifié) — ${source.title}`);
       persist(source, options, "needs-review", report, { reason });
+      ledger("REJECT", "claim-verification", reason);
       return { status: "needs-review", reason, report };
     }
 
@@ -180,6 +191,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     if (gate.finalDecision === "reject") {
       log("FINAL STATUS", `NEEDS-REVIEW (Quality Gate: reject) — ${article.title} — ${gate.reasons.join("; ")}`);
       persist(source, options, "needs-review", report, { reason: gate.reasons.join("; ") });
+      ledger("REJECT", "quality-gate", gate.reasons.join("; "));
       return { status: "needs-review", reason: gate.reasons.join("; "), report };
     }
 
@@ -187,6 +199,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     if (existing) {
       log("FINAL STATUS", `IGNORÉ (slug déjà utilisé dans Sanity: ${article.slug})`);
       persist(source, options, "skipped-duplicate", report, { reason: `Slug déjà utilisé: ${article.slug}` });
+      ledger("REJECT", "slug-collision", `Slug deja utilise: ${article.slug}`);
       return { status: "skipped-duplicate", reason: `Slug "${article.slug}" déjà utilisé`, report };
     }
 
@@ -209,6 +222,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     });
     recordTestResult({ source, options, checks: reportToChecks(report), article, status: gate.finalDecision === "publish" ? "published" : "draft", sanityDocumentId: documentId });
 
+    ledger("PASS", "sanity-draft", undefined, documentId);
     log("FINAL STATUS", `${gate.finalDecision === "publish" ? "PUBLIÉ" : "BROUILLON"} — ${article.title} (${documentId})`);
     return gate.finalDecision === "publish" ? { status: "published", documentId, report } : { status: "draft", documentId, report };
   } catch (error) {
@@ -247,6 +261,72 @@ function reportToChecks(report: DryRunReport): Record<string, unknown> {
   };
 }
 
+/**
+ * Records one finished article in the production ledger: what it was, what
+ * the pipeline decided, what it cost and how long it took. Dry runs are
+ * deliberately excluded — the ledger is the production record, and a
+ * rehearsal is not production.
+ */
+function recordLedger(args: {
+  runId: string;
+  options: PipelineOptions;
+  startedAt: number;
+  decision: ProductionDecision;
+  stoppedAt: string;
+  source: SourceArticle;
+  report: DryRunReport;
+  reason?: string;
+  sanityDraftId?: string;
+}): void {
+  if (args.options.dryRun) return;
+  const { report } = args;
+  const claims = report.claimRegistry?.claims;
+  appendLedgerEntry({
+    runId: args.runId,
+    cycleId: args.options.cycleId ?? "manuel",
+    timestamp: new Date().toISOString(),
+    durationMs: Date.now() - args.startedAt,
+    decision: args.decision,
+    reason: args.reason,
+    stoppedAt: args.stoppedAt,
+    source: {
+      name: args.source.sourceName,
+      url: args.source.url,
+      canonicalUrl: args.source.canonicalUrl,
+      title: args.source.title,
+    },
+    article: report.article ? { title: report.article.title, slug: report.article.slug, category: report.article.category } : undefined,
+    sanityDraftId: args.sanityDraftId,
+    scores: {
+      editorial: report.article?.editorialScore,
+      confidence: report.article?.confidenceScore,
+      copyRisk: report.antiCopy?.copyRiskScore,
+      seo: report.seoQualityGate?.seoScore,
+      newsworthiness: report.newsworthiness?.newsworthinessScore,
+      seoOpportunity: report.seoOpportunity?.seoOpportunityScore,
+    },
+    claims: claims
+      ? {
+          total: claims.length,
+          verified: claims.filter((c) => c.verificationStatus === "VERIFIED").length,
+          partiallyVerified: claims.filter((c) => c.verificationStatus === "PARTIALLY_VERIFIED").length,
+          unverified: claims.filter((c) => c.verificationStatus === "UNVERIFIED").length,
+          contradicted: claims.filter((c) => c.verificationStatus === "CONTRADICTED").length,
+          blocking: report.claimRegistry?.blockingClaims.length ?? 0,
+          recoveredFromPack: claims.filter((c) => c.recoveredFromEvidencePack).length,
+        }
+      : undefined,
+    evidence: report.verifiedFacts
+      ? {
+          verified: report.verifiedFacts.verified.length,
+          partiallyVerified: report.verifiedFacts.partiallyVerified.length,
+          droppedBeforeWriting: report.verifiedFacts.rejected.length,
+        }
+      : undefined,
+    cost: costForRun(args.runId),
+  });
+}
+
 function persist(
   source: SourceArticle,
   options: PipelineOptions,
@@ -263,8 +343,13 @@ function persist(
       canonicalUrl: source.canonicalUrl,
       contentHash: source.contentHash,
       editorialScore: extra.editorialScore,
-      status: status === "needs-review" ? "error" : status, // DB enum has no needs-review column; test-results/ carries the real status
-      error: status === "needs-review" ? `NEEDS-REVIEW: ${extra.reason}` : extra.reason,
+      // Recorded under its own status, never as an error. Storing it as one
+      // used to hide it from the canonical-URL dedup lookup (which skips
+      // 'error' rows so a crashed run can be retried), so every held or
+      // rejected article was fetched, analysed and re-billed on each
+      // production cycle.
+      status,
+      error: extra.reason,
     });
   }
   recordTestResult({ source, options, checks: reportToChecks(report), status, article: report.article, reason: extra.reason });

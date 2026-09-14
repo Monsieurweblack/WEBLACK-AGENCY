@@ -1,14 +1,113 @@
 {
-  "_comment": "Do NOT add a source here without first checking its terms of use permit automated fetching (many news sites' ToS forbid it even via a public RSS feed) and that WEBLACK has the right relationship to reuse/reference its content. WWD's own RSS feeds were checked and rejected for this project (https://wwd.com/rss-feeds/ redirects to tollbit.wwd.com, which returns 402 Payment Required — a paid-licensing gate specifically for automated/AI access). New entries should start with \"enabled\": false until a human has reviewed a dry-run of them.",
+  "_comment": "Do NOT add a source here without first checking its terms of use permit automated fetching (many news sites' ToS forbid it even via a public RSS feed) and that WEBLACK has the right relationship to reuse/reference its content. Each entry carries a _verified line recording what was actually checked and when. Three tests are applied before enabling: (1) the feed really parses and carries recent items; (2) robots.txt is parsed per user-agent group — the 'User-agent: *' group must allow the feed path, AND the site must not name-block AI crawlers (GPTBot / ClaudeBot / CCBot), which is an explicit refusal this engine respects even though it is not those crawlers; (3) the feed must carry enough body text to ground facts — a headline-only feed cannot produce a verifiable article and would burn model calls for nothing. Entries that failed any of the three are kept below with enabled:false and the reason, so the same ground is not re-explored on every review.",
   "sources": [
     {
       "name": "startup-fashion-blog",
       "type": "rss",
       "url": "https://startupfashion.com/blog/feed/",
       "enabled": true,
+      "priority": 5,
+      "lang": "en",
+      "maxItemsPerCycle": 4,
+      "_territory": "fashion business — independent designers, brand building",
+      "_verified": "2026-09-14: real feed fetched successfully (10 items via rss-parser), robots.txt checked (no Disallow on the feed path, no AI-crawler-specific block), no paywall/licensing redirect encountered — matches WEBLACK's 'business créatif' editorial territory."
+    },
+    {
+      "name": "dezeen",
+      "type": "rss",
+      "url": "https://www.dezeen.com/feed/",
+      "enabled": true,
+      "priority": 4,
+      "lang": "en",
+      "maxItemsPerCycle": 5,
+      "_territory": "industrie créative — design, architecture, collaborations mode/design",
+      "_verified": "2026-09-15: 50 items, newest same-day; robots.txt parsed per group — 'User-agent: *' allows the feed, no GPTBot/ClaudeBot/CCBot block; median item body 4820 characters (full text in feed), enough to ground facts."
+    },
+    {
+      "name": "creative-boom",
+      "type": "rss",
+      "url": "https://www.creativeboom.com/feed/",
+      "enabled": true,
+      "priority": 4,
+      "lang": "en",
+      "maxItemsPerCycle": 4,
+      "_territory": "industrie créative — agences, direction artistique, métiers de la création",
+      "_verified": "2026-09-15: 20 items, newest 1 day old; robots.txt 'User-agent: *' allows the feed, no AI-crawler block; median item body 5319 characters. Already used successfully as a manual source in the A-J validation campaigns."
+    },
+    {
+      "name": "theindustry-fashion",
+      "type": "rss",
+      "url": "https://theindustry.fashion/feed/",
+      "enabled": true,
       "priority": 1,
       "lang": "en",
-      "_verified": "2026-09-14: real feed fetched successfully (10 items via rss-parser), robots.txt checked (no Disallow on the feed path, no AI-crawler-specific block), no paywall/licensing redirect encountered — matches WEBLACK's 'business créatif' editorial territory."
+      "maxItemsPerCycle": 5,
+      "_territory": "actualité mode + fashion business — retail, nominations, résultats de maisons",
+      "_verified": "2026-09-15: 20 items, newest 1 day old; robots.txt 'User-agent: *' allows the feed, no AI-crawler block; median item body 3419 characters."
+    },
+    {
+      "name": "hypebeast-fashion",
+      "type": "rss",
+      "url": "https://hypebeast.com/fashion/feed",
+      "enabled": true,
+      "priority": 2,
+      "lang": "en",
+      "maxItemsPerCycle": 5,
+      "_territory": "actualité mode/luxe, maisons et créateurs, culture contemporaine",
+      "_verified": "2026-09-15: 19 items, newest same-day; robots.txt parsed per group — 'User-agent: *' allows the feed, no GPTBot/ClaudeBot/CCBot block; median item body 2570 characters."
+    },
+    {
+      "name": "lampoon-magazine",
+      "type": "rss",
+      "url": "https://www.lampoonmagazine.com/feed/",
+      "enabled": true,
+      "priority": 3,
+      "lang": "en",
+      "maxItemsPerCycle": 4,
+      "_territory": "mode, luxe et culture — traitement magazine, angles créateurs et savoir-faire",
+      "_verified": "2026-09-15: 10 items, newest same-day; robots.txt 'User-agent: *' blocks only /wp-admin, /wp-json and cart URLs — the feed is allowed — and names no AI crawler; Crawl-delay: 10 respected (the feed is read once per cycle); median item body 10094 characters."
+    },
+    {
+      "name": "highsnobiety",
+      "type": "rss",
+      "url": "https://www.highsnobiety.com/feed/",
+      "enabled": true,
+      "priority": 3,
+      "lang": "en",
+      "maxItemsPerCycle": 4,
+      "_territory": "mode et culture contemporaine, maisons et collaborations",
+      "_verified": "2026-09-15: 16 items, newest same-day; robots.txt 'User-agent: *' allows the feed, no AI-crawler block; median item body 1608 characters — the thinnest of the enabled set, kept at a low cap."
+    },
+    {
+      "name": "design-week",
+      "type": "rss",
+      "url": "https://www.designweek.co.uk/feed/",
+      "enabled": false,
+      "priority": 4,
+      "lang": "en",
+      "_territory": "industrie créative",
+      "_verified": "2026-09-15: feed works (20 items, rich content) and 'User-agent: *' allows it, BUT robots.txt name-blocks GPTBot, ClaudeBot and CCBot with Disallow: /. That is an explicit refusal of AI-agent access; not enabled."
+    },
+    {
+      "name": "business-of-fashion",
+      "type": "rss",
+      "url": "https://www.businessoffashion.com/feed/",
+      "enabled": false,
+      "priority": 1,
+      "lang": "en",
+      "_territory": "fashion business",
+      "_verified": "2026-09-15: rejected on two independent grounds — robots.txt name-blocks GPTBot/ClaudeBot/CCBot with Disallow: /, and the feed carries only paywall teasers (median 135 characters), which cannot ground a single verifiable fact."
+    },
+    {
+      "name": "fashion-ghana",
+      "type": "rss",
+      "url": "https://fashionghana.com/feed/",
+      "enabled": false,
+      "priority": 2,
+      "lang": "en",
+      "_territory": "African fashion",
+      "_verified": "2026-09-15: feed works (12 items, same-day) and robots.txt allows it, but items carry headline-only bodies (median 93 characters). Nothing can be verified from that, so every article would cost two model calls and be rejected. Re-enable only if the feed starts carrying full text."
     }
-  ]
+  ],
+  "_african_fashion_gap": "2026-09-15: African fashion is editorial priority #2 for WEBLACK but no usable automated feed was found. Checked and failed: guzangs.com (HTTP 403 — a refusal, not worked around), nataal.com (404), okayafrica.com (404), fashionunited.africa (DNS does not resolve), africafashionguide.wordpress.com (last post ~2011), thisisafrica.me and designindaba.com (fresh but 462/627-character bodies, too thin to ground facts), fashionghana.com (headline-only, see above). This territory therefore stays on the manual path — npm run editorial:url -- <url> — which is how the Lagos Fashion Week article was produced."
 }
