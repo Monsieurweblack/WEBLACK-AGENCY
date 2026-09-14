@@ -9,9 +9,23 @@ export interface QualityCheckResult {
   warnings: string[];
 }
 
-/** Every number/date/proper-noun-looking token in the generated body should trace back to something the fact-extraction step actually found — a cheap guard against the model quietly adding a figure that "sounds right". Not a proof of correctness, just a red flag for review. */
+/**
+ * Every number/date/proper-noun-looking token in the generated body should
+ * trace back to something the fact-extraction step actually found — a
+ * cheap guard against the model quietly adding a figure that "sounds
+ * right". Not a proof of correctness, just a red flag for review.
+ *
+ * Bug found during the real validation campaign (Test D): the model
+ * legitimately extracted "2026" into `facts.dates` rather than
+ * `facts.numbers` (a defensible categorization the fact-extraction prompt
+ * never forbids), but this check only looked at `facts.numbers` — a
+ * genuinely grounded year was flagged as a possible invention. Fixed by
+ * pooling digits from both arrays: a date string like "Sept. 22" or
+ * "2026" contributes its digits exactly like a number would.
+ */
 function findUngroundedNumbers(article: GeneratedArticle, facts: ExtractedFacts): string[] {
-  const groundedNumbers = new Set(facts.numbers.map((n) => n.replace(/[^\d]/g, "")).filter(Boolean));
+  const groundedSources = [...facts.numbers, ...facts.dates];
+  const groundedNumbers = new Set(groundedSources.map((n) => n.replace(/[^\d]/g, "")).filter(Boolean));
   const flagged: string[] = [];
   for (const block of article.body) {
     if (block._type !== "block") continue;
