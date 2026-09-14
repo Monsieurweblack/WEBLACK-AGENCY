@@ -156,7 +156,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     // validation/claimRegistry.ts). The live pipeline processes one source
     // per run today; the registry itself supports more (see its tests).
     const registeredSources: RegisteredSource[] = [{ source }];
-    const claimRegistry = await buildClaimRegistry(article, registeredSources, runId);
+    const claimRegistry = await buildClaimRegistry(article, registeredSources, runId, verifiedFacts);
     report.claimRegistry = claimRegistry;
     if (shouldIncludeReferences(registeredSources, claimRegistry.claims)) {
       article.body = [...article.body, ...buildReferencesBlock(registeredSources)];

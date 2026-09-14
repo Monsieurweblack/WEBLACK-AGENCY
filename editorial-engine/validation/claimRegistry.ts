@@ -1,12 +1,13 @@
-import type { GeneratedArticle } from "../generation/types.ts";
+import type { GeneratedArticle, VerificationStatus, VerifiedFactSet } from "../generation/types.ts";
 import type { SourceArticle } from "../sources/types.ts";
+import { recoverEvidence, assertsUnsupportedRelation } from "./evidenceRecovery.ts";
 import { structuredCompletion } from "../intelligence/openaiClient.ts";
 import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
 
 export type ClaimType = "quote" | "statistic" | "date" | "name" | "role" | "event" | "general";
 export type ClaimImportance = "critical" | "significant" | "minor";
-export type VerificationStatus = "VERIFIED" | "PARTIALLY_VERIFIED" | "UNVERIFIED" | "CONTRADICTED";
+export type { VerificationStatus };
 
 /**
  * The five evidence strategies (PHASE 3 brief). Ordered from strongest/
@@ -23,8 +24,8 @@ export type VerificationStatus = "VERIFIED" | "PARTIALLY_VERIFIED" | "UNVERIFIED
  *  5. independentEvidence — a critical claim corroborated by a primary source, or by 2+
  *                          independent secondary sources (existing §8 rule).
  */
-export type EvidenceType = "exactEvidence" | "normalizedEvidence" | "translatedEvidence" | "semanticEvidence" | "independentEvidence" | "none";
-export type VerificationMethod = "EXACT" | "NORMALIZED" | "CROSS_LANGUAGE" | "SEMANTIC" | "INDEPENDENT_SOURCE" | "NONE";
+export type EvidenceType = "exactEvidence" | "normalizedEvidence" | "translatedEvidence" | "semanticEvidence" | "independentEvidence" | "recoveredEvidence" | "none";
+export type VerificationMethod = "EXACT" | "NORMALIZED" | "CROSS_LANGUAGE" | "SEMANTIC" | "INDEPENDENT_SOURCE" | "EVIDENCE_PACK" | "NONE";
 
 export interface RegisteredSource {
   source: SourceArticle;
@@ -74,6 +75,8 @@ export interface FactMismatch {
 
 export interface RegisteredClaim {
   claim: string;
+  /** Set when the claim's proof came back from the Evidence Pack rather than from the fact-checker's own citation — the claim restates a fact already confirmed verbatim before writing. */
+  recoveredFromEvidencePack?: boolean;
   /** Alias of `claim` — the claim exactly as published, in the article's language. Kept as its own field per the brief so the record is self-describing without reaching into the article. */
   publishedClaim: string;
   claimLanguage: string;
@@ -500,7 +503,12 @@ function reasonFor(rawClaim: RawClaimForTesting, verified: ClaimSourceEvidence[]
  * merge multiple URLs into one article is a separate, larger feature not
  * built in this phase.
  */
-export async function buildClaimRegistry(article: GeneratedArticle, registeredSources: RegisteredSource[], runId: string): Promise<ClaimRegistryResult> {
+export async function buildClaimRegistry(
+  article: GeneratedArticle,
+  registeredSources: RegisteredSource[],
+  runId: string,
+  evidencePack?: VerifiedFactSet,
+): Promise<ClaimRegistryResult> {
   log("FACT CHECK", `Registre de claims (fact-check final, multilingue) — ${article.title}`);
   const config = loadConfig();
 
@@ -525,10 +533,49 @@ export async function buildClaimRegistry(article: GeneratedArticle, registeredSo
 
   const claims: RegisteredClaim[] = raw.claims.map((rawClaim) => {
     const verification = verifyEvidenceAgainstSources(rawClaim, registeredSources);
-    const verificationStatus = determineStatus(rawClaim, verification, registeredSources);
-    const primaryMethod = verification.verified[0]?.verificationMethod ?? "NONE";
+    let verificationStatus = determineStatus(rawClaim, verification, registeredSources);
+    let sources = verification.verified;
+    let recoveredFromEvidencePack = false;
+    let reasoning = reasonFor(rawClaim, verification.verified, verification.mismatches);
+
+    // The fact-checker found nothing, but the claim may simply be restating
+    // a fact already confirmed verbatim before writing — hand it back its
+    // original proof rather than rejecting a sentence we ourselves sourced.
+    if (sources.length === 0 && verificationStatus === "UNVERIFIED") {
+      const recovered = recoverEvidence(rawClaim.claim, rawClaim.type, evidencePack);
+      if (recovered) {
+        recoveredFromEvidencePack = true;
+        verificationStatus = recovered.fact.status;
+        sources = [
+          {
+            sourceUrl: registeredSources[0]?.source.url ?? "",
+            sourceName: registeredSources[0]?.source.sourceName ?? "",
+            sourceLanguage: evidencePack?.sourceLanguage ?? "",
+            evidenceQuote: recovered.fact.evidenceQuote,
+            evidenceTranslation: recovered.fact.evidenceTranslation,
+            evidenceType: "recoveredEvidence",
+            verificationMethod: "EVIDENCE_PACK",
+            matchedFactFields: recovered.matchedTokens,
+          },
+        ];
+        reasoning = `Preuve récupérée du fait déjà vérifié avant rédaction : « ${recovered.fact.fact} » (statut d'origine ${recovered.fact.status}, données communes : ${recovered.matchedTokens.join(", ") || "aucune donnée chiffrée"}).`;
+      }
+    }
+
+    // A genuine excerpt does not license a relation it never states.
+    if (verificationStatus !== "UNVERIFIED" && verificationStatus !== "CONTRADICTED") {
+      const evidenceTexts = sources.flatMap((s) => [s.evidenceQuote, s.evidenceTranslation]);
+      if (assertsUnsupportedRelation(rawClaim.claim, evidenceTexts)) {
+        verificationStatus = "UNVERIFIED";
+        reasoning = "L'affirmation introduit une relation (causalité, motivation, conséquence ou comparaison) que la preuve source n'énonce pas.";
+        sources = [];
+      }
+    }
+
+    const primaryMethod = sources[0]?.verificationMethod ?? "NONE";
     return {
       claim: rawClaim.claim,
+      recoveredFromEvidencePack,
       publishedClaim: rawClaim.claim,
       claimLanguage: rawClaim.claimLanguage,
       type: rawClaim.type,
@@ -536,13 +583,22 @@ export async function buildClaimRegistry(article: GeneratedArticle, registeredSo
       verificationStatus,
       verificationMethod: verificationStatus === "VERIFIED" || verificationStatus === "PARTIALLY_VERIFIED" ? primaryMethod : "NONE",
       confidence: rawClaim.confidence,
-      sources: verification.verified,
+      sources,
       mismatches: verification.mismatches,
-      reasoning: reasonFor(rawClaim, verification.verified, verification.mismatches),
+      reasoning,
     };
   });
 
-  const blockingClaims = claims.filter((c) => c.importance === "critical" && (c.verificationStatus === "UNVERIFIED" || c.verificationStatus === "CONTRADICTED"));
+  // Absolute blocking rules. Beyond critical claims, an unsupported figure
+  // or an unsupported quote blocks on its own whatever its importance, and
+  // any contradiction blocks outright — a wrong number or an invented
+  // quotation misleads a reader regardless of how incidental it looked to
+  // the model that classified it.
+  const blockingClaims = claims.filter((c) => {
+    const unsupported = c.verificationStatus === "UNVERIFIED" || c.verificationStatus === "CONTRADICTED";
+    if (!unsupported) return false;
+    return c.importance === "critical" || c.type === "statistic" || c.type === "quote" || c.verificationStatus === "CONTRADICTED";
+  });
 
   const pass = blockingClaims.length === 0;
   log("FACT CHECK", `${pass ? "FACT-CHECK PASS" : "FACT-CHECK FAIL"} — ${claims.length} claim(s), ${blockingClaims.length} bloquant(s)`);

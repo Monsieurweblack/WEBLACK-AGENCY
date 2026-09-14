@@ -1,6 +1,6 @@
 import type { GeneratedArticle, ExtractedFacts } from "../generation/types.ts";
 import { JOURNAL_CATEGORIES } from "../generation/types.ts";
-import { normalizeNumber } from "./claimRegistry.ts";
+import { extractComparableTokens } from "./equivalences.ts";
 import { checkSeoTitle, checkSeoDescription } from "../seo/seo.ts";
 import { log } from "../logs/logger.ts";
 
@@ -36,25 +36,58 @@ export interface QualityCheckResult {
  */
 function findUngroundedNumbers(article: GeneratedArticle, facts: ExtractedFacts): string[] {
   const evidenceText = (facts.factEvidence ?? []).flatMap((e) => [e.fact, e.evidenceQuote, e.evidenceTranslation]);
-  const groundedSources = [...facts.numbers, ...facts.dates, ...evidenceText];
-  const groundedNumbers = new Set(groundedSources.flatMap((n) => extractNumberTokens(n)).map(normalizeNumber).filter(Boolean));
+  const grounded = new Set([...facts.numbers, ...facts.dates, ...evidenceText].flatMap((text) => extractComparableTokens(text)));
 
   const flagged: string[] = [];
   for (const block of article.body) {
     if (block._type !== "block") continue;
     const text = block.children.map((c) => c.text).join("");
-    for (const token of extractNumberTokens(text)) {
-      const normalized = normalizeNumber(token);
-      if (!normalized || normalized.replace(/[^\d]/g, "").length < 2) continue;
-      if (!groundedNumbers.has(normalized)) flagged.push(token);
+    for (const token of extractComparableTokens(text)) {
+      // Single digits carry too little signal to be worth flagging, but a
+      // time or a season always does, whatever its numeric length.
+      const isTyped = token.includes(":");
+      if (!isTyped && token.replace(/[^\d]/g, "").length < 2) continue;
+      if (!grounded.has(token)) flagged.push(token);
     }
   }
   return flagged;
 }
 
-/** Pulls number-looking tokens out of free text, keeping thousands-grouped figures ("141 000", "141,000") whole instead of splitting them on their separator. */
-function extractNumberTokens(text: string): string[] {
-  return text.match(/\d{1,3}(?:[.,\u00a0\u202f ]\d{3})+|\d+(?:[.,]\d+)?/g) ?? [];
+/**
+ * Filler openings and empty intensifiers that read as generated text rather
+ * than as an editorial voice. Matched on an accent- and case-insensitive
+ * form so "À l'heure où" and "a l'heure ou" are the same thing.
+ */
+const BANNED_PHRASES = [
+  "dans un monde ou",
+  "plus que jamais",
+  "a l heure ou",
+  "force est de constater",
+  "il est indeniable",
+  "il va sans dire",
+  "on ne presente plus",
+  "veritable revolution",
+  "revolutionne le monde",
+  "incontournable de la mode",
+  "en cette ere",
+  "a l aube d une nouvelle ere",
+  "ne cesse de croitre",
+  "en constante evolution",
+  "un tournant decisif",
+  "la question se pose",
+  "une chose est sure",
+  "in a world where",
+  "now more than ever",
+];
+
+function findBannedPhrases(text: string): string[] {
+  const normalized = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/['\u2019]/g, " ")
+    .replace(/\s+/g, " ");
+  return BANNED_PHRASES.filter((phrase) => normalized.includes(phrase));
 }
 
 export function runQualityCheck(article: GeneratedArticle, facts: ExtractedFacts): QualityCheckResult {
@@ -84,6 +117,11 @@ export function runQualityCheck(article: GeneratedArticle, facts: ExtractedFacts
   const ungroundedNumbers = findUngroundedNumbers(article, facts);
   if (ungroundedNumbers.length > 0) {
     errors.push(`Chiffres présents dans l'article mais absents des faits extraits (possible invention): ${ungroundedNumbers.join(", ")}`);
+  }
+
+  const banned = findBannedPhrases(bodyText + " " + article.title + " " + article.excerpt);
+  if (banned.length > 0) {
+    errors.push(`Formulations génériques interdites par la ligne éditoriale WEBLACK: ${banned.join(", ")}`);
   }
 
   // Repetition guard: same non-trivial sentence appearing more than once.

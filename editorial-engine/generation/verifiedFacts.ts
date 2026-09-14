@@ -1,25 +1,9 @@
-import type { ExtractedFacts, FactEvidence } from "./types.ts";
+import type { ExtractedFacts, FactEvidence, VerificationStatus, VerifiedFact, VerifiedFactSet } from "./types.ts";
 import type { SourceArticle } from "../sources/types.ts";
-import { verifyEvidenceAgainstSources, determineStatus, type ClaimType, type RawClaimForTesting, type RegisteredSource, type VerificationStatus } from "../validation/claimRegistry.ts";
+import { verifyEvidenceAgainstSources, determineStatus, type ClaimType, type RawClaimForTesting, type RegisteredSource } from "../validation/claimRegistry.ts";
 import { log } from "../logs/logger.ts";
 
-export interface VerifiedFact {
-  fact: string;
-  category: FactEvidence["category"];
-  status: VerificationStatus;
-  evidenceQuote: string;
-  evidenceTranslation: string;
-}
-
-export interface VerifiedFactSet {
-  sourceLanguage: string;
-  /** Confirmed verbatim in the real source text — the writer may state these plainly. */
-  verified: VerifiedFact[];
-  /** Confirmed too, but load-bearing enough (figures, dates, quotes, roles, causality) that a single secondary source does not justify asserting them flatly — the writer must attribute and hedge them. */
-  partiallyVerified: VerifiedFact[];
-  /** Never shown to the writer, in any form. Kept only so a dry-run report can show what was dropped and why. */
-  rejected: { fact: string; status: VerificationStatus }[];
-}
+export type { VerifiedFact, VerifiedFactSet };
 
 const CLAIM_TYPE_BY_CATEGORY: Record<FactEvidence["category"], ClaimType> = {
   person: "name",

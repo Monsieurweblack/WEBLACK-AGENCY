@@ -63,6 +63,28 @@ export interface ExtractedFacts {
   factEvidence: FactEvidence[];
 }
 
+/** Verification outcome for one fact or claim. Declared here rather than in validation/claimRegistry.ts so both the pre-writing fact set and the post-writing fact check can share it without importing each other at runtime. */
+export type VerificationStatus = "VERIFIED" | "PARTIALLY_VERIFIED" | "UNVERIFIED" | "CONTRADICTED";
+
+export interface VerifiedFact {
+  fact: string;
+  category: FactEvidence["category"];
+  status: VerificationStatus;
+  evidenceQuote: string;
+  evidenceTranslation: string;
+}
+
+/** The Evidence Pack: what survived pre-writing verification, and what was dropped before the writer saw it. */
+export interface VerifiedFactSet {
+  sourceLanguage: string;
+  /** Confirmed verbatim in the real source text — the writer may state these plainly. */
+  verified: VerifiedFact[];
+  /** Confirmed too, but load-bearing enough (figures, dates, quotes, roles, causality) that a single secondary source does not justify asserting them flatly — the writer must attribute and hedge them. */
+  partiallyVerified: VerifiedFact[];
+  /** Never shown to the writer, in any form. Kept only so a dry-run report can show what was dropped and why. */
+  rejected: { fact: string; status: VerificationStatus }[];
+}
+
 /** Phase 6 editorial analysis output. */
 export interface EditorialAnalysis {
   relevance: number; // 0-100
