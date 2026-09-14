@@ -49,8 +49,8 @@ test("references — omits date gracefully when not available, never fabricates 
 test("shouldIncludeReferences — true for 2+ sources, true for a critical/quote/statistic claim, false otherwise", () => {
   const oneSource: RegisteredSource[] = [{ source: makeSource() }];
   const twoSources: RegisteredSource[] = [{ source: makeSource() }, { source: makeSource({ url: "https://other.example.com" }) }];
-  const minorClaim: RegisteredClaim[] = [{ claim: "x", type: "general", importance: "minor", verificationStatus: "VERIFIED", confidence: 80, sources: [], reasoning: "" }];
-  const criticalClaim: RegisteredClaim[] = [{ claim: "x", type: "general", importance: "critical", verificationStatus: "VERIFIED", confidence: 80, sources: [], reasoning: "" }];
+  const minorClaim: RegisteredClaim[] = [{ claim: "x", publishedClaim: "x", claimLanguage: "fr", type: "general", importance: "minor", verificationStatus: "VERIFIED", verificationMethod: "EXACT", confidence: 80, sources: [], mismatches: [], reasoning: "" }];
+  const criticalClaim: RegisteredClaim[] = [{ claim: "x", publishedClaim: "x", claimLanguage: "fr", type: "general", importance: "critical", verificationStatus: "VERIFIED", verificationMethod: "EXACT", confidence: 80, sources: [], mismatches: [], reasoning: "" }];
 
   assert.equal(shouldIncludeReferences(oneSource, minorClaim), false);
   assert.equal(shouldIncludeReferences(twoSources, minorClaim), true);
