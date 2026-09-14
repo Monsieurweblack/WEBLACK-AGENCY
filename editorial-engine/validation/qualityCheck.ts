@@ -1,5 +1,6 @@
 import type { GeneratedArticle, ExtractedFacts } from "../generation/types.ts";
 import { JOURNAL_CATEGORIES } from "../generation/types.ts";
+import { normalizeNumber } from "./claimRegistry.ts";
 import { checkSeoTitle, checkSeoDescription } from "../seo/seo.ts";
 import { log } from "../logs/logger.ts";
 
@@ -22,23 +23,38 @@ export interface QualityCheckResult {
  * genuinely grounded year was flagged as a possible invention. Fixed by
  * pooling digits from both arrays: a date string like "Sept. 22" or
  * "2026" contributes its digits exactly like a number would.
+ *
+ * Two further false-positive sources found once the writer started working
+ * from verified facts: an English source states "141,000" while the French
+ * article correctly writes "141 000", and the old token regex split that on
+ * the space into "141" and "000", neither of which matched anything. Both
+ * sides now go through the same locale-aware normalization the fact-check
+ * uses. And `factEvidence` — the per-fact verbatim excerpts, the only part
+ * of the extraction actually confirmed against the source — is pooled in
+ * too, since a figure the writer was legitimately handed must never be
+ * reported as a possible invention.
  */
 function findUngroundedNumbers(article: GeneratedArticle, facts: ExtractedFacts): string[] {
-  const groundedSources = [...facts.numbers, ...facts.dates];
-  const groundedNumbers = new Set(groundedSources.map((n) => n.replace(/[^\d]/g, "")).filter(Boolean));
+  const evidenceText = (facts.factEvidence ?? []).flatMap((e) => [e.fact, e.evidenceQuote, e.evidenceTranslation]);
+  const groundedSources = [...facts.numbers, ...facts.dates, ...evidenceText];
+  const groundedNumbers = new Set(groundedSources.flatMap((n) => extractNumberTokens(n)).map(normalizeNumber).filter(Boolean));
+
   const flagged: string[] = [];
   for (const block of article.body) {
     if (block._type !== "block") continue;
     const text = block.children.map((c) => c.text).join("");
-    const numbersInText = text.match(/\b\d[\d.,]*\b/g) ?? [];
-    for (const n of numbersInText) {
-      const digitsOnly = n.replace(/[^\d]/g, "");
-      if (digitsOnly.length >= 2 && !groundedNumbers.has(digitsOnly)) {
-        flagged.push(n);
-      }
+    for (const token of extractNumberTokens(text)) {
+      const normalized = normalizeNumber(token);
+      if (!normalized || normalized.replace(/[^\d]/g, "").length < 2) continue;
+      if (!groundedNumbers.has(normalized)) flagged.push(token);
     }
   }
   return flagged;
+}
+
+/** Pulls number-looking tokens out of free text, keeping thousands-grouped figures ("141 000", "141,000") whole instead of splitting them on their separator. */
+function extractNumberTokens(text: string): string[] {
+  return text.match(/\d{1,3}(?:[.,\u00a0\u202f ]\d{3})+|\d+(?:[.,]\d+)?/g) ?? [];
 }
 
 export function runQualityCheck(article: GeneratedArticle, facts: ExtractedFacts): QualityCheckResult {

@@ -26,8 +26,28 @@ const SCHEMA = {
         required: ["text", "attributedTo"],
       },
     },
+    sourceLanguage: { type: "string" },
+    // Folded into this existing call on purpose: the model is already
+    // reading the source text here, so attaching each fact's verbatim
+    // excerpt costs no additional request — and it is what makes the
+    // pre-writing verification possible without any new model call.
+    factEvidence: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          fact: { type: "string" },
+          category: { type: "string", enum: ["person", "brand", "organization", "location", "date", "number", "event", "quote", "general"] },
+          importance: { type: "string", enum: ["critical", "significant", "minor"] },
+          evidenceQuote: { type: "string" },
+          evidenceTranslation: { type: "string" },
+        },
+        required: ["fact", "category", "importance", "evidenceQuote", "evidenceTranslation"],
+      },
+    },
   },
-  required: ["people", "brands", "organizations", "locations", "dates", "numbers", "events", "claims", "keyFacts", "quotes"],
+  required: ["people", "brands", "organizations", "locations", "dates", "numbers", "events", "claims", "keyFacts", "quotes", "sourceLanguage", "factEvidence"],
 };
 
 /**
@@ -50,7 +70,18 @@ Interdictions absolues, sans exception :
 Règle de préférence : si une information est incertaine ou absente, ton comportement par défaut est l'OMISSION — ne remplis jamais un champ par une complétion imaginative simplement parce qu'il semble incomplet vide. Un tableau vide est un résultat parfaitement normal et attendu pour une catégorie absente du texte.
 
 - Si une catégorie (personnes, marques, dates, chiffres...) n'a aucune valeur explicite dans le texte, retourne un tableau vide pour cette catégorie.
-- Les citations ("quotes") doivent être copiées mot pour mot depuis le texte source, jamais reformulées.`;
+- Les citations ("quotes") doivent être copiées mot pour mot depuis le texte source, jamais reformulées.
+
+"sourceLanguage" : la langue réelle du texte source ("en", "fr", ...).
+
+"factEvidence" : c'est le champ le plus important. Pour CHAQUE fait atomique réellement exploitable (un chiffre, une date, un nom, une fonction, un lieu, un événement, une citation, une relation de cause à effet), produis une entrée :
+- "fact" : le fait, énoncé DANS LA LANGUE DU TEXTE SOURCE (ne traduis pas ici — la traduction viendra plus tard).
+- "category" : person, brand, organization, location, date, number, event, quote, ou general.
+- "importance" : "critical" si une erreur sur ce fait tromperait le lecteur (chiffres, dates, citations, fonctions, causalité) ; "significant" pour les autres faits vérifiables ; "minor" pour les détails d'ambiance.
+- "evidenceQuote" : l'extrait EXACT, mot pour mot, copié du texte source, qui prouve ce fait. Copie-colle, ne reformule pas, ne corrige pas la ponctuation.
+- "evidenceTranslation" : une traduction française fidèle de cet extrait si la source n'est pas en français ; chaîne vide si la source est déjà en français.
+
+Règle décisive : si tu ne peux pas copier un extrait exact du texte source pour prouver un fait, alors N'INCLUS PAS ce fait dans "factEvidence". Un fait sans extrait vérifiable sera écarté automatiquement et n'atteindra jamais la rédaction — mieux vaut une liste courte et solide qu'une liste longue et invérifiable.`;
 
 export async function extractFacts(article: SourceArticle, runId: string): Promise<ExtractedFacts> {
   log("FACT CHECK", `Extraction des faits — ${article.title}`);

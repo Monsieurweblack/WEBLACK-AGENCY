@@ -25,6 +25,25 @@ export type JournalFormat = (typeof JOURNAL_FORMATS)[number];
 
 export type JournalLang = "fr" | "en";
 
+/**
+ * Provenance for one atomic extracted fact: the verbatim source excerpt that
+ * grounds it, in the SOURCE's own language, plus a working French
+ * translation when the source is not French. This is what lets a fact be
+ * confirmed against the real source text — in code, with zero extra model
+ * calls — BEFORE it is ever handed to the writer (see generation/verifiedFacts.ts).
+ */
+export interface FactEvidence {
+  /** The fact itself, stated in the SOURCE's language so it can be checked against the source without a translation step. */
+  fact: string;
+  category: "person" | "brand" | "organization" | "location" | "date" | "number" | "event" | "quote" | "general";
+  /** "critical" for anything that would mislead a reader if wrong (figures, dates, quotes, roles, causal links) — those may only ever be written up with cautious, attributed phrasing from a single source. */
+  importance: "critical" | "significant" | "minor";
+  /** Verbatim excerpt from the source, in the source's own language. The only thing ever treated as proof. */
+  evidenceQuote: string;
+  /** Working French translation of evidenceQuote, for the writer's convenience only — never proof. Empty when the source is already French. */
+  evidenceTranslation: string;
+}
+
 /** Structured facts pulled from the source material — Phase 7. Every field defaults to empty; the model is instructed to never fill a field it cannot ground in the source text. */
 export interface ExtractedFacts {
   people: string[];
@@ -38,6 +57,10 @@ export interface ExtractedFacts {
   keyFacts: string[];
   /** Direct quotes found verbatim in the source, with enough context to verify against it. Empty if none were present. */
   quotes: { text: string; attributedTo?: string }[];
+  /** Real language of the source text ("en", "fr", ...) — reported by the extraction step, which is already reading the text. */
+  sourceLanguage: string;
+  /** One entry per atomic fact, each carrying the verbatim excerpt that proves it. A fact with no verbatim excerpt is omitted here, and therefore never reaches the writer. */
+  factEvidence: FactEvidence[];
 }
 
 /** Phase 6 editorial analysis output. */

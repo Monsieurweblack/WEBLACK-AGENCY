@@ -23,6 +23,7 @@ import { suggestInternalLinks, type InternalLinkSuggestion } from "../seo/intern
 import { evaluateSeoQualityGate, type SeoQualityGateResult } from "../seo/seoQualityGate.ts";
 import { combinePriority, type CombinedPriority } from "../seo/priority.ts";
 import { buildClaimRegistry, type ClaimRegistryResult, type RegisteredSource } from "../validation/claimRegistry.ts";
+import { buildVerifiedFactSet, isEmpty, type VerifiedFactSet } from "../generation/verifiedFacts.ts";
 import { shouldIncludeReferences, buildReferencesBlock } from "../generation/references.ts";
 
 export interface PipelineOptions {
@@ -37,6 +38,8 @@ export interface DryRunReport {
   duplicate: DuplicateDecision;
   analysis?: EditorialAnalysis;
   facts?: ExtractedFacts;
+  /** What survived pre-writing verification, and what was dropped before the writer saw it. */
+  verifiedFacts?: VerifiedFactSet;
   article?: GeneratedArticle;
   quality?: QualityCheckResult;
   antiCopy?: AntiCopyResult;
@@ -117,7 +120,28 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
 
     const facts = await extractFacts(source, runId);
     report.facts = facts;
-    const article = await generateArticle(source, facts, analysis, runId);
+
+    // Hallucination is cut off at the source rather than caught afterwards:
+    // every extracted fact is confirmed verbatim against the real source
+    // text here — in code, no extra model call — and anything unverifiable
+    // is dropped before the writer ever sees it. The final fact-check pass
+    // after writing stays exactly as it was, as the last barrier.
+    const verifiedFacts = buildVerifiedFactSet(facts, source);
+    report.verifiedFacts = verifiedFacts;
+    if (isEmpty(verifiedFacts)) {
+      const reason = `Aucun fait vérifiable dans la source (${verifiedFacts.rejected.length} fait(s) écarté(s)) — rédiger reviendrait à inventer.`;
+      log("FINAL STATUS", `REVIEW (aucun fait vérifié) — ${source.title}`);
+      persist(source, options, "needs-review", report, { reason });
+      return { status: "needs-review", reason, report };
+    }
+
+    // Moved ahead of writing so the writer can place the real target keyword
+    // naturally instead of the SEO gate flagging it afterwards. Same call,
+    // same cost — it never needed the generated article (see its own doc).
+    const keywordStrategy = await buildKeywordStrategy(source, facts, analysis, runId);
+    report.keywordStrategy = keywordStrategy;
+
+    const article = await generateArticle(source, verifiedFacts, analysis, keywordStrategy, runId);
     report.article = article;
 
     const quality = runQualityCheck(article, facts);
@@ -138,8 +162,6 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
       article.body = [...article.body, ...buildReferencesBlock(registeredSources)];
     }
 
-    const keywordStrategy = await buildKeywordStrategy(source, facts, analysis, runId);
-    report.keywordStrategy = keywordStrategy;
     const internalLinks = await suggestInternalLinks(article, keywordStrategy);
     report.internalLinks = internalLinks;
     report.seoQualityGate = evaluateSeoQualityGate(article, keywordStrategy, internalLinks);

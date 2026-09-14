@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
 import type { SourceArticle } from "../sources/types.ts";
-import type { EditorialAnalysis, ExtractedFacts, GeneratedArticle, PortableBlock } from "./types.ts";
+import type { EditorialAnalysis, GeneratedArticle, PortableBlock } from "./types.ts";
 import { JOURNAL_CATEGORIES } from "./types.ts";
+import { formatForWriter, type VerifiedFactSet } from "./verifiedFacts.ts";
+import type { KeywordStrategy } from "../intelligence/keywordStrategy.ts";
 import { structuredCompletion } from "../intelligence/openaiClient.ts";
 import { slugify } from "../seo/seo.ts";
 import { loadConfig } from "../config/env.ts";
@@ -45,7 +47,33 @@ const WRITING_RULES = `Tu es rédacteur pour le Journal de WEBLACK, agence créa
 Ton : premium, éditorial, précis, contemporain, intelligent, international, élégant.
 À éviter absolument : clickbait, phrases génériques creuses, répétitions, superlatifs vides, sensationnalisme, toute affirmation qui n'est pas dans les faits fournis.
 
-Règle absolue anti-fabrication : tu ne dois utiliser QUE les faits fournis ci-dessous (déjà extraits et vérifiés depuis la source). N'invente aucun nom, chiffre, date, citation ou événement qui n'y figure pas. Si une information utile manque, formule la phrase sans elle plutôt que de la deviner.
+Tu dois rédiger exclusivement à partir des faits fournis.
+
+N'ajoute aucun :
+- chiffre ;
+- date ;
+- nom ;
+- citation ;
+- statistique ;
+- classement ;
+- lieu ;
+- fonction ;
+- résultat ;
+- causalité factuelle
+
+qui ne figure pas dans les faits vérifiés.
+
+Si une information n'est pas disponible : OMETS-LA.
+
+Tu peux produire une analyse éditoriale originale et du contexte, mais ne présente jamais une interprétation comme un fait.
+
+Ne crée aucune citation.
+
+Ne complète jamais une donnée manquante par estimation.
+
+Les faits te sont donnés en deux groupes. Les FAITS VÉRIFIÉS peuvent être énoncés directement. Les FAITS PARTIELLEMENT VÉRIFIÉS reposent sur une seule source secondaire : tu dois les attribuer explicitement à la source et les formuler avec prudence, jamais les asserter comme des faits établis. Tout ce qui n'apparaît dans aucun des deux groupes n'existe pas pour toi.
+
+Chaque fait est accompagné de sa preuve source d'origine (et de sa traduction de travail si la source n'est pas francophone). Ces preuves sont là pour t'ancrer : ne les recopie pas telles quelles dans l'article, et n'en tire aucune citation directe.
 
 Tu ne dois JAMAIS copier ou paraphraser mécaniquement le texte source phrase par phrase : comprends les faits, identifie l'angle éditorial WEBLACK, et restructure entièrement la rédaction dans une forme originale.
 
@@ -53,8 +81,9 @@ Structure attendue : un titre, un excerpt (1-2 phrases), un titre SEO (50-60 car
 
 export async function generateArticle(
   sourceArticle: SourceArticle,
-  facts: ExtractedFacts,
+  verifiedFacts: VerifiedFactSet,
   analysis: EditorialAnalysis,
+  keywords: KeywordStrategy,
   runId: string,
 ): Promise<GeneratedArticle> {
   log("GENERATION", `Rédaction — ${sourceArticle.title}`);
@@ -68,10 +97,20 @@ export async function generateArticle(
   const bible = loadEditorialBible();
   const systemPrompt = bible ? `${WRITING_RULES}\n\n${bibleToPromptRules(bible)}` : WRITING_RULES;
 
-  const factsBlock = JSON.stringify(facts, null, 2);
   const result = await structuredCompletion<GenerationResult>({
     system: systemPrompt,
-    user: `Angle éditorial retenu: ${analysis.angle}\nCatégorie: ${analysis.category}\n\nFaits vérifiés à utiliser (et uniquement ceux-ci):\n${factsBlock}\n\nTitre de la source originale (pour contexte, ne pas copier): ${sourceArticle.title}`,
+    user: [
+      `Angle éditorial retenu: ${analysis.angle}`,
+      `Catégorie: ${analysis.category}`,
+      ``,
+      `Stratégie SEO — mot-clé principal: ${keywords.primaryKeyword}`,
+      `Mots-clés secondaires: ${keywords.secondaryKeywords.join(", ")}`,
+      `Le mot-clé principal doit apparaître naturellement dans le titre et l'excerpt — jamais au prix d'une formulation forcée ou d'un fait inventé.`,
+      ``,
+      formatForWriter(verifiedFacts),
+      ``,
+      `Titre de la source originale (pour contexte, ne pas copier): ${sourceArticle.title}`,
+    ].join("\n"),
     schemaName: "generated_article",
     schema: SCHEMA,
     model: config.modelWriting,
