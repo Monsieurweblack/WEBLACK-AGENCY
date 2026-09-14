@@ -8,6 +8,7 @@ import type { QualityCheckResult } from "../validation/qualityCheck.ts";
 import type { AntiCopyResult } from "../validation/antiCopy.ts";
 import type { AntiFabricationResult } from "../validation/antiFabrication.ts";
 import type { DuplicateDecision } from "../validation/dedupe.ts";
+import type { ClaimRegistryResult } from "../validation/claimRegistry.ts";
 
 function baseArticle(overrides: Partial<GeneratedArticle> = {}): GeneratedArticle {
   return {
@@ -37,6 +38,7 @@ function baseArticle(overrides: Partial<GeneratedArticle> = {}): GeneratedArticl
 const passingQuality: QualityCheckResult = { pass: true, errors: [], warnings: [] };
 const passingCopy: AntiCopyResult = { copyRiskScore: 5, pass: true, lexicalOverlapRatio: 0, longestSharedRunWords: 0, components: { lexical: 0, structural: 0 } };
 const passingFabrication: AntiFabricationResult = { pass: true, claims: [], unsupportedClaims: [] };
+const passingClaimRegistry: ClaimRegistryResult = { claims: [], pass: true, blockingClaims: [] };
 const distinctDuplicate: DuplicateDecision = { decision: "new_story", confidence: 80, reason: "", matchedArticleId: null, needsReview: false, signals: {} };
 
 test("quality gate — all checks pass, not eligible for auto-publish => draft", () => {
@@ -45,6 +47,7 @@ test("quality gate — all checks pass, not eligible for auto-publish => draft",
     quality: passingQuality,
     antiCopy: passingCopy,
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
     eligibleForAutoPublish: false,
   });
@@ -60,6 +63,7 @@ test("quality gate — all checks pass AND eligible for auto-publish => publish"
     quality: passingQuality,
     antiCopy: passingCopy,
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
     eligibleForAutoPublish: true,
   });
@@ -76,6 +80,7 @@ test("quality gate — unsupported claim (fact-check fail) always rejects, even 
       claims: [{ claim: "500 designers attended", supported: false, sourceEvidence: "", confidence: 90 }],
       unsupportedClaims: [{ claim: "500 designers attended", supported: false, sourceEvidence: "", confidence: 90 }],
     },
+    claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
     eligibleForAutoPublish: true,
   });
@@ -89,6 +94,7 @@ test("quality gate — copyRiskScore above threshold (copy check fail) rejects",
     quality: passingQuality,
     antiCopy: { copyRiskScore: 75, pass: false, lexicalOverlapRatio: 0.3, longestSharedRunWords: 25, components: { lexical: 100, structural: 100 } },
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
     eligibleForAutoPublish: false,
   });
@@ -102,6 +108,7 @@ test("quality gate — blocking duplicate decision rejects regardless of other c
     quality: passingQuality,
     antiCopy: passingCopy,
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: { decision: "duplicate_semantic", confidence: 90, reason: "same story", matchedArticleId: "abc", needsReview: false, signals: {} },
     eligibleForAutoPublish: false,
   });
@@ -115,6 +122,7 @@ test("quality gate — a non-blocking duplicate decision (same_entity_different_
     quality: passingQuality,
     antiCopy: passingCopy,
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: { decision: "same_entity_different_event", confidence: 60, reason: "shares a designer, different event", matchedArticleId: "abc", needsReview: false, signals: {} },
     eligibleForAutoPublish: false,
   });
@@ -128,6 +136,7 @@ test("quality gate — schema check fails on missing required field (empty autho
     quality: passingQuality,
     antiCopy: passingCopy,
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
     eligibleForAutoPublish: false,
   });
@@ -141,11 +150,45 @@ test("quality gate — SEO issues never block publication (warnings only)", () =
     quality: passingQuality,
     antiCopy: passingCopy,
     antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
     eligibleForAutoPublish: false,
   });
   assert.equal(gate.seoCheck, "pass");
   assert.ok(gate.reasons.some((r) => r.includes("SEO")));
+});
+
+test("quality gate — a FACT-CHECK FAIL (claim registry) rejects even when antiFabrication and editorial both pass", () => {
+  const gate = evaluateQualityGate({
+    article: baseArticle(),
+    quality: passingQuality,
+    antiCopy: passingCopy,
+    antiFabrication: passingFabrication,
+    claimRegistry: {
+      claims: [{ claim: "500 designers attended", type: "statistic", importance: "critical", verificationStatus: "UNVERIFIED", confidence: 95, sources: [], reasoning: "no evidence found" }],
+      pass: false,
+      blockingClaims: [{ claim: "500 designers attended", type: "statistic", importance: "critical", verificationStatus: "UNVERIFIED", confidence: 95, sources: [], reasoning: "no evidence found" }],
+    },
+    duplicate: distinctDuplicate,
+    eligibleForAutoPublish: false,
+  });
+  assert.equal(gate.factCheck, "fail");
+  assert.equal(gate.finalDecision, "reject");
+});
+
+test("quality gate — a fully passing FACT-CHECK does not by itself make the article publishable (editorial failure still rejects)", () => {
+  const gate = evaluateQualityGate({
+    article: baseArticle(),
+    quality: { pass: false, errors: ["Article trop court (10 mots, minimum 80)"], warnings: [] },
+    antiCopy: passingCopy,
+    antiFabrication: passingFabrication,
+    claimRegistry: passingClaimRegistry, // every fact checks out...
+    duplicate: distinctDuplicate,
+    eligibleForAutoPublish: false,
+  });
+  assert.equal(gate.factCheck, "pass", "facts are genuinely fine");
+  assert.equal(gate.editorialCheck, "fail");
+  assert.equal(gate.finalDecision, "reject", "...but that alone never means 'ready to publish' — editorial quality is a separate gate");
 });
 
 test("category validation — every declared journal category is a plain string in the allowed list", () => {

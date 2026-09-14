@@ -22,6 +22,8 @@ import type { KeywordStrategy } from "../intelligence/keywordStrategy.ts";
 import { suggestInternalLinks, type InternalLinkSuggestion } from "../seo/internalLinking.ts";
 import { evaluateSeoQualityGate, type SeoQualityGateResult } from "../seo/seoQualityGate.ts";
 import { combinePriority, type CombinedPriority } from "../seo/priority.ts";
+import { buildClaimRegistry, type ClaimRegistryResult, type RegisteredSource } from "../validation/claimRegistry.ts";
+import { shouldIncludeReferences, buildReferencesBlock } from "../generation/references.ts";
 
 export interface PipelineOptions {
   dryRun: boolean;
@@ -39,6 +41,7 @@ export interface DryRunReport {
   quality?: QualityCheckResult;
   antiCopy?: AntiCopyResult;
   antiFabrication?: AntiFabricationResult;
+  claimRegistry?: ClaimRegistryResult;
   qualityGate?: QualityGate;
   seoOpportunity?: SeoOpportunity;
   newsworthiness?: NewsworthinessResult;
@@ -124,6 +127,17 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     const antiFabrication = await checkAntiFabrication(article, facts, runId);
     report.antiFabrication = antiFabrication;
 
+    // FINAL FACT-CHECK PASS (source-traceable claim registry, evidence
+    // verified in code against the real source text — see
+    // validation/claimRegistry.ts). The live pipeline processes one source
+    // per run today; the registry itself supports more (see its tests).
+    const registeredSources: RegisteredSource[] = [{ source }];
+    const claimRegistry = await buildClaimRegistry(article, registeredSources, runId);
+    report.claimRegistry = claimRegistry;
+    if (shouldIncludeReferences(registeredSources, claimRegistry.claims)) {
+      article.body = [...article.body, ...buildReferencesBlock(registeredSources)];
+    }
+
     const keywordStrategy = await buildKeywordStrategy(source, facts, analysis, runId);
     report.keywordStrategy = keywordStrategy;
     const internalLinks = await suggestInternalLinks(article, keywordStrategy);
@@ -132,7 +146,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
 
     const eligibleForAutoPublish =
       config.mode === "publish" && article.editorialScore >= config.autoPublishScore && article.confidenceScore >= config.autoPublishConfidence;
-    const gate = evaluateQualityGate({ article, quality, antiCopy, antiFabrication, duplicate, eligibleForAutoPublish });
+    const gate = evaluateQualityGate({ article, quality, antiCopy, antiFabrication, claimRegistry, duplicate, eligibleForAutoPublish });
     report.qualityGate = gate;
 
     if (options.dryRun) {
@@ -200,6 +214,7 @@ function reportToChecks(report: DryRunReport): Record<string, unknown> {
     quality: report.quality,
     antiCopy: report.antiCopy,
     antiFabrication: report.antiFabrication,
+    claimRegistry: report.claimRegistry,
     qualityGate: report.qualityGate,
     seoOpportunity: report.seoOpportunity,
     newsworthiness: report.newsworthiness,

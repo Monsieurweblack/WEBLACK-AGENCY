@@ -1,6 +1,7 @@
 import type { QualityCheckResult } from "./qualityCheck.ts";
 import type { AntiCopyResult } from "./antiCopy.ts";
 import type { AntiFabricationResult } from "./antiFabrication.ts";
+import type { ClaimRegistryResult } from "./claimRegistry.ts";
 import type { DuplicateDecision } from "./dedupe.ts";
 import { isBlockingDecision } from "./dedupe.ts";
 import { checkSeoTitle, checkSeoDescription } from "../seo/seo.ts";
@@ -27,6 +28,8 @@ export interface QualityGateInputs {
   quality: QualityCheckResult;
   antiCopy: AntiCopyResult;
   antiFabrication: AntiFabricationResult;
+  /** The FINAL FACT-CHECK PASS (§ hardening phase) — source-traceable claim registry with programmatically-verified evidence. This is now the primary fact-check signal; antiFabrication stays as a second, independent, cheaper check run earlier in the pipeline (defense in depth — see the real Test A finding where antiFabrication alone missed a fabrication that a different check caught). */
+  claimRegistry: ClaimRegistryResult;
   duplicate: DuplicateDecision;
   /** Whether every threshold for auto-publish is otherwise met (score/confidence) — the gate still needs every check to pass regardless. */
   eligibleForAutoPublish: boolean;
@@ -35,8 +38,13 @@ export interface QualityGateInputs {
 export function evaluateQualityGate(inputs: QualityGateInputs): QualityGate {
   const reasons: string[] = [];
 
-  const factCheck: GateResult = inputs.antiFabrication.pass ? "pass" : "fail";
-  if (factCheck === "fail") reasons.push(`Fact-check: ${inputs.antiFabrication.unsupportedClaims.length} affirmation(s) non supportée(s)`);
+  const factCheck: GateResult = inputs.antiFabrication.pass && inputs.claimRegistry.pass ? "pass" : "fail";
+  if (!inputs.antiFabrication.pass) reasons.push(`Fact-check (antiFabrication): ${inputs.antiFabrication.unsupportedClaims.length} affirmation(s) non supportée(s)`);
+  if (!inputs.claimRegistry.pass) {
+    reasons.push(
+      `FACT-CHECK FAIL: ${inputs.claimRegistry.blockingClaims.length} claim(s) critique(s) non vérifiable(s) ou contredit(s): ${inputs.claimRegistry.blockingClaims.map((c) => `"${c.claim}" (${c.verificationStatus})`).join("; ")}`,
+    );
+  }
 
   const copyCheck: GateResult = inputs.antiCopy.pass ? "pass" : "fail";
   if (copyCheck === "fail") reasons.push(`Anti-copie: copyRiskScore=${inputs.antiCopy.copyRiskScore}`);
