@@ -11,6 +11,15 @@ export const sanityClient: SanityClient = createClient({
   // no request volume to justify the CDN's ~30-60s propagation lag. Reading the
   // live API instead guarantees a build always sees the latest published content.
   useCdn: false,
+  // Without this, a wildcard query like `*[_type == "journal"]` returns BOTH the
+  // published document and any `drafts.<id>` version — confirmed empirically by
+  // creating a real draft and querying it with the exact shape used below. This
+  // means an editorial-engine draft (deliberately unpublished, pending human
+  // review) would otherwise render on the live site at the next build. Forcing
+  // the "published" perspective excludes every `drafts.*` document from every
+  // query this client makes, site-wide, in one place instead of patching each
+  // GROQ string individually.
+  perspective: "published",
 });
 
 export interface ImageCredit {

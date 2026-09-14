@@ -18,6 +18,8 @@
     "editorial:test": "node --experimental-strip-types editorial-engine/cli.ts test",
     "editorial:publish": "node --experimental-strip-types editorial-engine/cli.ts publish",
     "editorial:bible": "node --experimental-strip-types editorial-engine/config/generateEditorialBible.ts",
+    "editorial:dashboard": "node --experimental-strip-types editorial-engine/cli.ts dashboard",
+    "editorial:freshness": "node --experimental-strip-types editorial-engine/cli.ts freshness",
     "editorial:test-unit": "node --experimental-strip-types --test \"editorial-engine/tests/*.test.ts\""
   },
   "dependencies": {

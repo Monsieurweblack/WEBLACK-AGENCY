@@ -8,7 +8,7 @@ export interface TraceEvent {
   runId: string;
   sourceUrl?: string;
   model: string;
-  step: "analysis" | "fact-extraction" | "generation" | "quality-control" | "dedup-classification";
+  step: "analysis" | "fact-extraction" | "generation" | "quality-control" | "dedup-classification" | "seo-strategy";
   timestamp: string;
   latencyMs: number;
   success: boolean;

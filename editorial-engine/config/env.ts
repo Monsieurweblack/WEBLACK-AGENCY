@@ -50,6 +50,9 @@ export interface EditorialConfig {
   modelFactcheck: string;
   /** §4 anti-copy threshold, 0-100. Above it, the pipeline blocks the article. */
   copyRiskBlockThreshold: number;
+  /** §12 Search Console readiness — both undefined until a real connection is configured; see intelligence/searchConsole.ts. */
+  googleSearchConsoleCredentialsJson: string | undefined;
+  googleSearchConsoleSiteUrl: string | undefined;
 }
 
 function requireVar(name: string): string {
@@ -84,5 +87,7 @@ export function loadConfig(): EditorialConfig {
     modelWriting: raw.OPENAI_MODEL_WRITING || DEFAULT_MODEL,
     modelFactcheck: raw.OPENAI_MODEL_FACTCHECK || DEFAULT_MODEL,
     copyRiskBlockThreshold: Number(raw.COPY_RISK_BLOCK_THRESHOLD ?? 40),
+    googleSearchConsoleCredentialsJson: raw.GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON || undefined,
+    googleSearchConsoleSiteUrl: raw.GOOGLE_SEARCH_CONSOLE_SITE_URL || undefined,
   };
 }

@@ -7,16 +7,16 @@ import { runOneCycle, watchLoop } from "./scheduler/loop.ts";
 import { publishDraft } from "./sanity/articles.ts";
 import { testOpenAiConnection } from "./intelligence/testConnection.ts";
 import { recentRuns } from "./database/db.ts";
+import { buildDashboardData } from "./database/dashboard.ts";
+import { detectStaleArticles } from "./seo/contentFreshness.ts";
+import { isSearchConsoleConnected } from "./intelligence/searchConsole.ts";
 import { loadConfig } from "./config/env.ts";
 import { getSanityClient } from "./sanity/client.ts";
 import { log } from "./logs/logger.ts";
+import { parseArgs } from "./cliArgs.ts";
 
 const [, , command, ...rest] = process.argv;
-const dryRun = rest.includes("--dry-run");
-const watch = rest.includes("--watch");
-const labelFlagIndex = rest.indexOf("--label");
-const testLabel = labelFlagIndex >= 0 ? rest[labelFlagIndex + 1] : undefined;
-const positional = rest.filter((a, i) => !a.startsWith("--") && i !== labelFlagIndex + 1);
+const { dryRun, watch, testLabel, positional } = parseArgs(rest);
 
 async function main() {
   switch (command) {
@@ -97,6 +97,22 @@ async function main() {
       } else {
         console.log(`   OK — signature configurée: "${config.defaultAuthor}"`);
       }
+
+      console.log("\n6) Google Search Console...");
+      console.log(`   ${isSearchConsoleConnected() ? "Configuré (non testé)" : "Non connecté — voir editorial-engine/intelligence/searchConsole.ts"}`);
+      break;
+    }
+
+    case "dashboard": {
+      console.log(JSON.stringify(buildDashboardData(), null, 2));
+      break;
+    }
+
+    case "freshness": {
+      const days = Number(positional[0] ?? 90);
+      const flags = await detectStaleArticles(days);
+      console.log(`${flags.length} article(s) signalé(s) (seuil ${days} jours) :`);
+      console.log(JSON.stringify(flags, null, 2));
       break;
     }
 
@@ -109,6 +125,8 @@ async function main() {
       console.log("  npm run editorial:source -- <nom>         — une seule source");
       console.log("  npm run editorial:url -- <url> [--label X] — une URL fournie à la main (label optionnel pour test-results/)");
       console.log("  npm run editorial:test                    — vérifie la config et les connexions");
+      console.log("  npm run editorial:dashboard                — données locales agrégées (sujets, scores, erreurs)");
+      console.log("  npm run editorial:freshness -- [jours]     — articles Journal jamais mis à jour depuis N jours (défaut 90)");
       console.log("  npm run editorial:publish -- <documentId> — publie un brouillon déjà validé par un humain");
       process.exitCode = 1;
   }

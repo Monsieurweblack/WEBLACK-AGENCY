@@ -81,6 +81,7 @@ export interface RunRecord {
   status: "skipped-duplicate" | "skipped-low-score" | "draft" | "published" | "error";
   sanityDocumentId?: string;
   error?: string;
+  createdAt?: string;
 }
 
 export function insertRun(record: RunRecord): number {
@@ -156,5 +157,6 @@ function mapRow(row: Record<string, unknown>): RunRecord {
     status: row.status as RunRecord["status"],
     sanityDocumentId: (row.sanity_document_id as string) ?? undefined,
     error: (row.error as string) ?? undefined,
+    createdAt: (row.created_at as string) ?? undefined,
   };
 }

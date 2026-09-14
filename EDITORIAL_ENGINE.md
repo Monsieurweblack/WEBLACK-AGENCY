@@ -14,7 +14,24 @@ Outil en ligne de commande (Node, local — **ne fait pas partie du site déploy
 - **Observabilité** (`logs/observability.ts`) : chaque appel OpenAI trace `run_id`, modèle, étape, latence, tokens, succès/échec — jamais la clé elle-même.
 - **Retry/backoff** (`intelligence/openaiClient.ts`) : 3 tentatives, backoff exponentiel, 429/5xx retryables, 4xx non retryables (échec rapide). Un retry ne peut jamais produire deux articles différents pour la même source (même requête rejouée, jamais une nouvelle génération).
 - **Modèles configurables par tâche** : `OPENAI_MODEL_ANALYSIS`, `OPENAI_MODEL_WRITING`, `OPENAI_MODEL_FACTCHECK`.
-- **Tests unitaires** (`editorial-engine/tests/`, `npm run editorial:test-unit`) : 32 tests sur base SQLite isolée + lectures Sanity réelles en lecture seule (dédoublonnage, anti-copie, Quality Gate, retry, validation de catégorie).
+- **Tests unitaires** (`editorial-engine/tests/`, `npm run editorial:test-unit`) : 53 tests sur base SQLite isolée + lectures Sanity réelles en lecture seule.
+
+## Couche SEO & News Intelligence
+
+- **SEO Opportunity Engine** (`seo/opportunityEngine.ts`) : `searchDemand` et `competition` sont **toujours** `"unknown"` — ce moteur n'a accès à aucune donnée réelle de volume de recherche, jamais de chiffre inventé. `seoOpportunityScore` ne moyenne que les signaux réellement disponibles (fraîcheur, newsworthiness, pertinence WEBLACK, potentiel evergreen, potentiel SEO éditorial).
+- **Newsworthiness** (`seo/newsworthiness.ts`) : classification BREAKING/NEWS/TREND/ANALYSIS/REPORT/EVERGREEN — `BREAKING` exige à la fois une date de publication réelle de moins de 6h ET une importance/nouveauté très élevées, jamais utilisé par défaut.
+- **Stratégie de mots-clés** (`intelligence/keywordStrategy.ts`) : mot-clé principal, secondaires, entités et intention de recherche déduits des faits déjà vérifiés — jamais de bourrage, jamais d'entité inventée.
+- **Maillage interne** (`seo/internalLinking.ts`) : chaque suggestion pointe vers un slug Sanity interrogé en direct au moment de la suggestion — aucun lien vers une page qui n'existe pas.
+- **SEO Quality Gate** (`seo/seoQualityGate.ts`) : `seoScore /100`, jamais bloquant à lui seul (`blocksPublication: false` toujours).
+- **Priorité combinée** (`seo/priority.ts`) : `CRITICAL/HIGH/NORMAL/LOW/REJECT` à partir des 3 scores — un sujet sous la barre éditoriale WEBLACK (score < 40) est toujours `REJECT`, quels que soient ses scores SEO/news.
+- **Structured data** (`src/components/pages/JournalDetail.astro`) : `Article`/`NewsArticle` déjà présent et amélioré (image en tableau, `publisher.logo` en `ImageObject`, `mainEntityOfPage` en objet `WebPage`) — jamais dupliqué avec les blocs `Organization`/`WebSite` de `Seo.astro`.
+- **Sitemap `lastmod`** (`astro.config.mjs`) : dates réelles (`_updatedAt` Sanity) pour les pages Journal, absent partout ailleurs plutôt que deviné.
+- **Fraîcheur de contenu** (`seo/contentFreshness.ts`, `npm run editorial:freshness`) : détecte les articles jamais mis à jour depuis leur publication — ne modifie jamais `publishDate`.
+- **Search Console** (`intelligence/searchConsole.ts`) : non connecté dans cet environnement — échoue explicitement plutôt que de simuler des impressions/clics/position. Google Analytics (GA4), lui, est déjà en production (`src/layouts/BaseLayout.astro`).
+- **Boucle de feedback SEO** (`seo/feedbackLoop.ts`) : logique de recommandation (IMPROVE_TITLE/IMPROVE_META/EXPAND_CONTENT/UPDATE_CONTENT/INTERNAL_LINKING/NO_ACTION) testée avec des données synthétiques — l'exécution réelle attend la connexion Search Console.
+- **Tableau de bord** (`database/dashboard.ts`, `npm run editorial:dashboard`) : sujets détectés/rejetés, articles brouillon/publiés, erreurs — agrégé depuis l'historique local réel.
+
+**Correctif critique découvert pendant cette phase** : les requêtes Sanity du site (`src/lib/content.ts`) n'excluaient pas les brouillons — un article créé en `drafts.` par ce moteur aurait pu apparaître sur le site public au prochain build. Corrigé via `perspective: "published"` sur le client Sanity (une seule ligne, protège les 8 points de requête à la fois), vérifié empiriquement en créant puis supprimant un vrai brouillon de test.
 
 ## Ce que ce n'est pas
 

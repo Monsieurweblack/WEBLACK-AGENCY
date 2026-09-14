@@ -15,6 +15,13 @@ import { insertRun } from "../database/db.ts";
 import { recordTestResult } from "../database/testResults.ts";
 import { newRunId } from "../logs/runId.ts";
 import { log, logError } from "../logs/logger.ts";
+import { computeSeoOpportunity, type SeoOpportunity } from "../seo/opportunityEngine.ts";
+import { classifyNewsworthiness, type NewsworthinessResult } from "../seo/newsworthiness.ts";
+import { buildKeywordStrategy } from "../intelligence/keywordStrategy.ts";
+import type { KeywordStrategy } from "../intelligence/keywordStrategy.ts";
+import { suggestInternalLinks, type InternalLinkSuggestion } from "../seo/internalLinking.ts";
+import { evaluateSeoQualityGate, type SeoQualityGateResult } from "../seo/seoQualityGate.ts";
+import { combinePriority, type CombinedPriority } from "../seo/priority.ts";
 
 export interface PipelineOptions {
   dryRun: boolean;
@@ -33,6 +40,12 @@ export interface DryRunReport {
   antiCopy?: AntiCopyResult;
   antiFabrication?: AntiFabricationResult;
   qualityGate?: QualityGate;
+  seoOpportunity?: SeoOpportunity;
+  newsworthiness?: NewsworthinessResult;
+  keywordStrategy?: KeywordStrategy;
+  internalLinks?: InternalLinkSuggestion[];
+  seoQualityGate?: SeoQualityGateResult;
+  priority?: CombinedPriority;
 }
 
 export type PipelineOutcome =
@@ -80,6 +93,14 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
 
     const analysis = await analyzeArticle(source, runId);
     report.analysis = analysis;
+
+    // Pure, local — no OpenAI cost — computed as soon as the analysis exists, independently of whether the article ends up generated.
+    const seoOpportunity = computeSeoOpportunity(source, analysis);
+    report.seoOpportunity = seoOpportunity;
+    const newsworthiness = classifyNewsworthiness(source, analysis);
+    report.newsworthiness = newsworthiness;
+    report.priority = combinePriority(analysis.score, seoOpportunity.seoOpportunityScore, newsworthiness.newsworthinessScore);
+
     if (analysis.score < 40) {
       log("FINAL STATUS", `IGNORÉ (score bas: ${analysis.score}) — ${source.title}`);
       persist(source, options, "skipped-low-score", report, { editorialScore: analysis.score });
@@ -102,6 +123,12 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     report.antiCopy = antiCopy;
     const antiFabrication = await checkAntiFabrication(article, facts, runId);
     report.antiFabrication = antiFabrication;
+
+    const keywordStrategy = await buildKeywordStrategy(source, facts, analysis, runId);
+    report.keywordStrategy = keywordStrategy;
+    const internalLinks = await suggestInternalLinks(article, keywordStrategy);
+    report.internalLinks = internalLinks;
+    report.seoQualityGate = evaluateSeoQualityGate(article, keywordStrategy, internalLinks);
 
     const eligibleForAutoPublish =
       config.mode === "publish" && article.editorialScore >= config.autoPublishScore && article.confidenceScore >= config.autoPublishConfidence;
@@ -166,7 +193,21 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
 }
 
 function reportToChecks(report: DryRunReport): Record<string, unknown> {
-  return { duplicate: report.duplicate, analysis: report.analysis, facts: report.facts, quality: report.quality, antiCopy: report.antiCopy, antiFabrication: report.antiFabrication, qualityGate: report.qualityGate };
+  return {
+    duplicate: report.duplicate,
+    analysis: report.analysis,
+    facts: report.facts,
+    quality: report.quality,
+    antiCopy: report.antiCopy,
+    antiFabrication: report.antiFabrication,
+    qualityGate: report.qualityGate,
+    seoOpportunity: report.seoOpportunity,
+    newsworthiness: report.newsworthiness,
+    keywordStrategy: report.keywordStrategy,
+    internalLinks: report.internalLinks,
+    seoQualityGate: report.seoQualityGate,
+    priority: report.priority,
+  };
 }
 
 function persist(

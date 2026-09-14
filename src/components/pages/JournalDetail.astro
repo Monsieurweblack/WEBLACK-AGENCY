@@ -34,20 +34,28 @@ const relatedProject = getProjectForArticle(article, await getEntriesByLang("wor
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
 const imageUrl = new URL(article.data.coverImage.url, Astro.site).toString();
+// NewsArticle only for content actually tagged "news" (article.data.format,
+// set by an editor in Studio — never inferred/guessed here); every other
+// editorial piece stays plain Article, matching the SEO brief's explicit
+// instruction not to claim news status artificially.
 const structuredData = {
   "@context": "https://schema.org",
-  "@type": "Article",
+  "@type": article.data.format === "news" ? "NewsArticle" : "Article",
   headline: article.data.title,
   description: article.data.excerpt,
-  image: imageUrl,
+  image: [imageUrl],
   datePublished: article.data.publishDate.toISOString(),
   dateModified: article.data.updatedAt.toISOString(),
   inLanguage: LOCALES[lang].hreflang,
-  mainEntityOfPage: canonicalUrl,
+  mainEntityOfPage: { "@type": "WebPage", "@id": canonicalUrl },
   author: article.data.author
     ? { "@type": "Person", name: article.data.author }
     : { "@type": "Organization", name: "WEBLACK" },
-  publisher: { "@type": "Organization", name: "WEBLACK", logo: new URL("/apple-touch-icon.png", Astro.site).toString() },
+  publisher: {
+    "@type": "Organization",
+    name: "WEBLACK",
+    logo: { "@type": "ImageObject", url: new URL("/apple-touch-icon.png", Astro.site).toString() },
+  },
 };
 ---
 
