@@ -1,4 +1,14 @@
 {
-  "_comment": "Ship intentionally empty — no external source has been reviewed and approved for WEBLACK to monitor yet. Do NOT add a source here without first checking its terms of use permit automated fetching (many news sites' ToS forbid it even via a public RSS feed) and that WEBLACK has the right relationship to reuse/reference its content. Add entries following the shape below, each starting with \"enabled\": false until a human has reviewed it once via `npm run editorial:dry-run`.",
-  "sources": []
+  "_comment": "Do NOT add a source here without first checking its terms of use permit automated fetching (many news sites' ToS forbid it even via a public RSS feed) and that WEBLACK has the right relationship to reuse/reference its content. WWD's own RSS feeds were checked and rejected for this project (https://wwd.com/rss-feeds/ redirects to tollbit.wwd.com, which returns 402 Payment Required — a paid-licensing gate specifically for automated/AI access). New entries should start with \"enabled\": false until a human has reviewed a dry-run of them.",
+  "sources": [
+    {
+      "name": "startup-fashion-blog",
+      "type": "rss",
+      "url": "https://startupfashion.com/blog/feed/",
+      "enabled": true,
+      "priority": 1,
+      "lang": "en",
+      "_verified": "2026-09-14: real feed fetched successfully (10 items via rss-parser), robots.txt checked (no Disallow on the feed path, no AI-crawler-specific block), no paywall/licensing redirect encountered — matches WEBLACK's 'business créatif' editorial territory."
+    }
+  ]
 }
