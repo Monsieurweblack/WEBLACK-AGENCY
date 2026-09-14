@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-09-14T14:28:19.195Z",
+  "source": "9 documents journal réels, dataset Sanity \"production\", interrogés le 2026-09-14",
+  "sampleSize": 9,
+  "positioning": "WEBLACK est une agence créative indépendante et internationale reliant talents, vision créative et pertinence culturelle — jamais un registre géographique, communautaire ou ethnique. (Source: CLAUDE.md)",
+  "territories": [
+    "mode",
+    "luxe",
+    "création",
+    "culture",
+    "industries créatives",
+    "talents",
+    "design",
+    "beauté",
+    "business créatif",
+    "mode africaine et diasporique",
+    "influence culturelle"
+  ],
+  "tone": [
+    "institutionnel",
+    "haut de gamme",
+    "assertif",
+    "premium",
+    "éditorial",
+    "précis",
+    "contemporain",
+    "international",
+    "élégant"
+  ],
+  "categoriesInUse": {
+    "insights": 5,
+    "industry-perspectives": 1,
+    "projects": 1,
+    "reports": 2
+  },
+  "categoriesDeclaredButUnused": [
+    "news",
+    "fashion",
+    "designers",
+    "culture",
+    "interviews"
+  ],
+  "titleLength": {
+    "minChars": 54,
+    "maxChars": 82,
+    "avgChars": 72
+  },
+  "excerptLength": {
+    "minChars": 100,
+    "maxChars": 279,
+    "avgChars": 163
+  },
+  "bodyLength": {
+    "minWords": 53,
+    "maxWords": 1525,
+    "avgWords": 692,
+    "note": "distribution bimodale observée : 3 article(s) très court(s) (< 100 mots, teaser/annonce) et 6 article(s) long format (100-1525 mots) — pas de longueur \"typique\" unique, préférer le format long (100+ mots, plusieurs paragraphes) pour un article éditorial généré, les teasers courts existants étant des annonces ponctuelles, pas un modèle éditorial à reproduire."
+  },
+  "authorObservations": {
+    "distinctValues": [
+      "La Rédaction",
+      null
+    ],
+    "nullCount": 3,
+    "note": "6/9 documents ont un auteur renseigné, et parmi eux la valeur observée est exclusivement \"La Rédaction\"."
+  },
+  "authorPolicy": "Ne jamais utiliser \"La Rédaction\" comme auteur par défaut pour un article généré par ce moteur, malgré sa présence sur 6/9 articles existants — règle explicite du schéma journal.ts (\"Ne jamais utiliser 'La Rédaction' par défaut pour masquer une absence d'auteur\"). Utiliser exclusivement EDITORIAL_DEFAULT_AUTHOR.",
+  "expressionsToAvoid": [
+    "dans un monde en constante évolution",
+    "une nouvelle ère",
+    "repousse les limites",
+    "plus que jamais"
+  ],
+  "seoRules": {
+    "titleMinChars": 20,
+    "titleMaxChars": 70,
+    "descriptionMinChars": 70,
+    "descriptionMaxChars": 160
+  }
+}

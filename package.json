@@ -16,7 +16,9 @@
     "editorial:source": "node --experimental-strip-types editorial-engine/cli.ts source",
     "editorial:url": "node --experimental-strip-types editorial-engine/cli.ts url",
     "editorial:test": "node --experimental-strip-types editorial-engine/cli.ts test",
-    "editorial:publish": "node --experimental-strip-types editorial-engine/cli.ts publish"
+    "editorial:publish": "node --experimental-strip-types editorial-engine/cli.ts publish",
+    "editorial:bible": "node --experimental-strip-types editorial-engine/config/generateEditorialBible.ts",
+    "editorial:test-unit": "node --experimental-strip-types --test \"editorial-engine/tests/*.test.ts\""
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",

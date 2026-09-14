@@ -23,6 +23,13 @@ export function hashArticle(canonicalUrl: string, title: string): string {
     .digest("hex");
 }
 
+/** §1 Level 2 — hash of the body text alone (normalized whitespace/case), independent of URL or title, so the same content republished elsewhere under a different headline still hashes identically. Undefined when no body text was extracted (excerpt-only feeds) — an excerpt is too short to hash meaningfully for this purpose. */
+export function hashContent(text: string | undefined): string | undefined {
+  if (!text || text.trim().length < 50) return undefined;
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim();
+  return crypto.createHash("sha256").update(normalized).digest("hex");
+}
+
 export function buildSourceArticle(input: {
   sourceName: string;
   sourceUrl: string;
@@ -47,5 +54,6 @@ export function buildSourceArticle(input: {
     text: input.text,
     imageUrl: input.imageUrl,
     hash: hashArticle(canonicalUrl, input.title),
+    contentHash: hashContent(input.text),
   };
 }

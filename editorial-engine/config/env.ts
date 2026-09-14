@@ -44,6 +44,12 @@ export interface EditorialConfig {
   autoPublishConfidence: number;
   intervalMinutes: number;
   defaultAuthor: string | undefined;
+  /** Per-task model selection (§11 cost control) — analysis and fact-check are classification-shaped tasks that don't need the same model as long-form writing. Each falls back to a shared default if unset, never hardcoded. */
+  modelAnalysis: string;
+  modelWriting: string;
+  modelFactcheck: string;
+  /** §4 anti-copy threshold, 0-100. Above it, the pipeline blocks the article. */
+  copyRiskBlockThreshold: number;
 }
 
 function requireVar(name: string): string {
@@ -61,6 +67,8 @@ function parseMode(value: string | undefined): EditorialMode {
   return "draft"; // safe default — never auto-escalate publishing behavior
 }
 
+const DEFAULT_MODEL = raw.OPENAI_MODEL || "gpt-4o-mini";
+
 export function loadConfig(): EditorialConfig {
   return {
     sanityProjectId: requireVar("SANITY_PROJECT_ID"),
@@ -72,5 +80,9 @@ export function loadConfig(): EditorialConfig {
     autoPublishConfidence: Number(raw.AUTO_PUBLISH_CONFIDENCE ?? 90),
     intervalMinutes: Number(raw.EDITORIAL_INTERVAL_MINUTES ?? 60),
     defaultAuthor: raw.EDITORIAL_DEFAULT_AUTHOR || undefined,
+    modelAnalysis: raw.OPENAI_MODEL_ANALYSIS || DEFAULT_MODEL,
+    modelWriting: raw.OPENAI_MODEL_WRITING || DEFAULT_MODEL,
+    modelFactcheck: raw.OPENAI_MODEL_FACTCHECK || DEFAULT_MODEL,
+    copyRiskBlockThreshold: Number(raw.COPY_RISK_BLOCK_THRESHOLD ?? 40),
   };
 }

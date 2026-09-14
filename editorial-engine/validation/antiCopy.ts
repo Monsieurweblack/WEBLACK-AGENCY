@@ -1,19 +1,22 @@
 import type { GeneratedArticle } from "../generation/types.ts";
 import type { SourceArticle } from "../sources/types.ts";
+import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
 
-/** Word-shingles (overlapping n-word sequences) — the standard cheap technique for detecting near-copies without an embeddings call: a rewrite that just swaps synonyms still shares almost no 8-word shingles with the original, while an actual paraphrase-in-place does. */
-function shingles(text: string, n = 8): Set<string> {
-  const words = text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .match(/[a-z0-9]+/g);
-  if (!words || words.length < n) return new Set();
+function words(text: string): string[] {
+  return (
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .match(/[a-z0-9]+/g) ?? []
+  );
+}
+
+function shingles(tokens: string[], n: number): Set<string> {
+  if (tokens.length < n) return new Set();
   const result = new Set<string>();
-  for (let i = 0; i <= words.length - n; i++) {
-    result.add(words.slice(i, i + n).join(" "));
-  }
+  for (let i = 0; i <= tokens.length - n; i++) result.add(tokens.slice(i, i + n).join(" "));
   return result;
 }
 
@@ -24,36 +27,80 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return intersection / (a.size + b.size - intersection);
 }
 
-export interface AntiCopyResult {
-  pass: boolean;
-  overlapRatio: number;
-  matchedShingles: string[];
+/** Longest run of consecutive words shared between the two token sequences — catches a single long copied passage even when it's a small fraction of a long generated article (a pure Jaccard-over-shingles score can hide one big lifted paragraph inside an otherwise original piece). */
+function longestCommonRun(a: string[], b: string[]): number {
+  const bIndex = new Map<string, number[]>();
+  b.forEach((tok, i) => {
+    if (!bIndex.has(tok)) bIndex.set(tok, []);
+    bIndex.get(tok)!.push(i);
+  });
+  let best = 0;
+  const prevRun = new Map<number, number>();
+  for (let i = 0; i < a.length; i++) {
+    const currRun = new Map<number, number>();
+    for (const j of bIndex.get(a[i]!) ?? []) {
+      const run = (prevRun.get(j - 1) ?? 0) + 1;
+      currRun.set(j, run);
+      if (run > best) best = run;
+    }
+    prevRun.clear();
+    for (const [k, v] of currRun) prevRun.set(k, v);
+  }
+  return best;
 }
 
-/**
- * Phase 7 of the QA brief: refuse content that is structurally too close to
- * the source, not just reworded. Threshold set on 8-word shingles — a
- * genuinely restructured article (different sentence order, different
- * paragraph grouping, different framing) naturally lands well under this
- * even when it covers the same facts; a rewrite that keeps the source's
- * sentence structure and swaps a few words does not.
- */
-const OVERLAP_THRESHOLD = 0.15;
-
-export function checkAntiCopy(article: GeneratedArticle, source: SourceArticle): AntiCopyResult {
-  const sourceText = source.text ?? source.excerpt ?? "";
-  const generatedText = article.body
+function extractBodyText(article: GeneratedArticle): string {
+  return article.body
     .filter((b) => b._type === "block")
     .map((b) => (b._type === "block" ? b.children.map((c) => c.text).join(" ") : ""))
     .join(" ");
+}
 
-  const sourceShingles = shingles(sourceText);
-  const generatedShingles = shingles(generatedText);
-  const overlapRatio = jaccard(sourceShingles, generatedShingles);
+export interface AntiCopyResult {
+  copyRiskScore: number; // 0 (no risk) - 100 (very high risk)
+  pass: boolean;
+  lexicalOverlapRatio: number; // 8-word shingle Jaccard
+  longestSharedRunWords: number;
+  components: { lexical: number; structural: number };
+}
 
-  const matchedShingles = [...generatedShingles].filter((s) => sourceShingles.has(s)).slice(0, 5);
-  const pass = overlapRatio <= OVERLAP_THRESHOLD;
+/**
+ * §4 — a single 0-100 copyRiskScore combining two signals rather than one
+ * pass/fail threshold: lexical overlap (8-word shingle Jaccard, catches
+ * scattered close paraphrasing) and a structural signal (longest run of
+ * consecutive shared words, catches one long lifted passage that a
+ * shingle-Jaccard average can dilute into looking safe). Configurable
+ * block threshold via COPY_RISK_BLOCK_THRESHOLD (§4's "seuil configurable").
+ */
+export function checkAntiCopy(article: GeneratedArticle, source: SourceArticle): AntiCopyResult {
+  const config = loadConfig();
+  const sourceText = source.text ?? source.excerpt ?? "";
+  const generatedText = extractBodyText(article);
 
-  log("QUALITY CHECK", `Anti-copie: overlap ${(overlapRatio * 100).toFixed(1)}% (seuil ${(OVERLAP_THRESHOLD * 100).toFixed(0)}%) — ${pass ? "OK" : "ÉCHEC"}`);
-  return { pass, overlapRatio, matchedShingles };
+  const sourceWords = words(sourceText);
+  const generatedWords = words(generatedText);
+
+  const lexicalOverlapRatio = jaccard(shingles(sourceWords, 8), shingles(generatedWords, 8));
+  const longestSharedRunWords = longestCommonRun(generatedWords, sourceWords);
+
+  // Lexical component: 15% shingle overlap already maps to 100 risk (a genuinely restructured article should be well under that — matches the previously-validated 15% pass/fail line, now expressed as a continuous score instead of a hard cutoff).
+  const lexicalComponent = Math.min(100, (lexicalOverlapRatio / 0.15) * 100);
+  // Structural component: a run of 20+ consecutive shared words (a full sentence lifted verbatim) maps to 100 risk regardless of how short the rest of the article's overlap is.
+  const structuralComponent = Math.min(100, (longestSharedRunWords / 20) * 100);
+
+  const copyRiskScore = Math.round(Math.max(lexicalComponent, structuralComponent));
+  const pass = copyRiskScore <= config.copyRiskBlockThreshold;
+
+  log(
+    "QUALITY CHECK",
+    `Anti-copie: copyRiskScore=${copyRiskScore} (lexical ${lexicalComponent.toFixed(0)}, structurel ${structuralComponent.toFixed(0)}, plus longue suite partagée: ${longestSharedRunWords} mots) — seuil ${config.copyRiskBlockThreshold} — ${pass ? "OK" : "BLOCK"}`,
+  );
+
+  return {
+    copyRiskScore,
+    pass,
+    lexicalOverlapRatio,
+    longestSharedRunWords,
+    components: { lexical: Math.round(lexicalComponent), structural: Math.round(structuralComponent) },
+  };
 }

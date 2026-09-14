@@ -23,6 +23,8 @@ export interface SourceArticle {
   /** Full extracted text when available — never fabricated; undefined if extraction failed or the source withheld it (paywall, excerpt-only feed). */
   text: string | undefined;
   imageUrl: string | undefined;
-  /** SHA-256 of (canonicalUrl + title) — the stable key used for deduplication. */
+  /** SHA-256 of (canonicalUrl + title) — the stable key used for deduplication Level 1/exact-hash matching. */
   hash: string;
+  /** SHA-256 of the body text alone (§1 Level 2) — undefined when no substantial body text was extracted. */
+  contentHash?: string;
 }

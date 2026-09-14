@@ -6,6 +6,7 @@ import { structuredCompletion } from "../intelligence/openaiClient.ts";
 import { slugify } from "../seo/seo.ts";
 import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
+import { loadEditorialBible, bibleToPromptRules } from "../config/editorialBible.ts";
 
 const SCHEMA = {
   type: "object",
@@ -54,6 +55,7 @@ export async function generateArticle(
   sourceArticle: SourceArticle,
   facts: ExtractedFacts,
   analysis: EditorialAnalysis,
+  runId: string,
 ): Promise<GeneratedArticle> {
   log("GENERATION", `Rédaction — ${sourceArticle.title}`);
   const config = loadConfig();
@@ -63,12 +65,19 @@ export async function generateArticle(
     );
   }
 
+  const bible = loadEditorialBible();
+  const systemPrompt = bible ? `${WRITING_RULES}\n\n${bibleToPromptRules(bible)}` : WRITING_RULES;
+
   const factsBlock = JSON.stringify(facts, null, 2);
   const result = await structuredCompletion<GenerationResult>({
-    system: WRITING_RULES,
+    system: systemPrompt,
     user: `Angle éditorial retenu: ${analysis.angle}\nCatégorie: ${analysis.category}\n\nFaits vérifiés à utiliser (et uniquement ceux-ci):\n${factsBlock}\n\nTitre de la source originale (pour contexte, ne pas copier): ${sourceArticle.title}`,
     schemaName: "generated_article",
     schema: SCHEMA,
+    model: config.modelWriting,
+    step: "generation",
+    runId,
+    sourceUrl: sourceArticle.url,
   });
 
   const body: PortableBlock[] = result.paragraphs.map((p) => ({

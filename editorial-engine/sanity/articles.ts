@@ -88,6 +88,12 @@ export async function createArticle(article: GeneratedArticle, opts: { asDraft: 
   if (article.format) doc.format = article.format;
   if (article.coverImage) doc.coverImage = { _type: "externalImage", ...article.coverImage };
   if (article.seo) doc.seo = { _type: "seo", ...article.seo };
+  // §8 re-verification: every field above is real (journal.ts schema).
+  // `relatedWork` (reference to `work`) is deliberately never set here —
+  // determining which existing Project a generated article relates to
+  // would mean guessing a relationship, which is exactly the kind of
+  // inference this project's non-fabrication discipline forbids. A human
+  // adds it in Studio if relevant. No field is invented; none is added.
 
   log("SANITY", `Création document ${_id} (${opts.asDraft ? "draft" : "publié"})`);
   const created = await client.create(doc);

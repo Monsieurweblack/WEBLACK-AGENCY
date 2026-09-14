@@ -2,6 +2,20 @@
 
 Outil en ligne de commande (Node, local — **ne fait pas partie du site déployé**) qui surveille des sources externes autorisées, en tire un article original dans la ligne éditoriale WEBLACK, et le crée comme **brouillon** dans le même Sanity que le site (`journal`), pour relecture avant publication.
 
+**Statut : NO-GO production.** Aucun test de génération réelle n'a encore été exécuté (pas de `OPENAI_API_KEY` dans cet environnement) — voir `editorial-engine/test-results/` pour le détail des campagnes de validation menées jusqu'ici.
+
+## Architecture de robustesse (hardening)
+
+- **Dédoublonnage à 5 niveaux** (`validation/dedupe.ts`) : URL canonique exacte → hash de contenu exact → similarité de titre → comparaison d'entités locale → classification LLM (uniquement en zone ambiguë, pour limiter le coût). Décision structurée `{decision, confidence, reason, matchedArticleId, needsReview}` — ne bloque jamais un article pour le seul partage d'une personne/marque (`same_entity_different_event` n'est jamais bloquant).
+- **Fact-check structuré** (`validation/antiFabrication.ts`) : chaque affirmation de l'article est représentée individuellement (`{claim, supported, sourceEvidence, confidence}`), pas juste une liste de fautes.
+- **Anti-copie scoré** (`validation/antiCopy.ts`) : `copyRiskScore` 0-100 combinant chevauchement lexical et plus longue séquence de mots identiques à la source, seuil configurable (`COPY_RISK_BLOCK_THRESHOLD`).
+- **Quality Gate final** (`validation/qualityGate.ts`) : agrège tous les contrôles en une décision unique `publish|draft|reject` — une seule erreur critique (fact-check, anti-copie, éditorial, schéma, dédoublonnage bloquant) suffit à rejeter ; le SEO n'est jamais bloquant.
+- **WEBLACK Editorial Bible** (`config/weblack-editorial-bible.json`, généré par `npm run editorial:bible`) : déduite par analyse réelle des articles Journal existants dans Sanity (longueurs, catégories utilisées, observations sur le champ auteur) + règles explicites du projet — jamais inventée.
+- **Observabilité** (`logs/observability.ts`) : chaque appel OpenAI trace `run_id`, modèle, étape, latence, tokens, succès/échec — jamais la clé elle-même.
+- **Retry/backoff** (`intelligence/openaiClient.ts`) : 3 tentatives, backoff exponentiel, 429/5xx retryables, 4xx non retryables (échec rapide). Un retry ne peut jamais produire deux articles différents pour la même source (même requête rejouée, jamais une nouvelle génération).
+- **Modèles configurables par tâche** : `OPENAI_MODEL_ANALYSIS`, `OPENAI_MODEL_WRITING`, `OPENAI_MODEL_FACTCHECK`.
+- **Tests unitaires** (`editorial-engine/tests/`, `npm run editorial:test-unit`) : 32 tests sur base SQLite isolée + lectures Sanity réelles en lecture seule (dédoublonnage, anti-copie, Quality Gate, retry, validation de catégorie).
+
 ## Ce que ce n'est pas
 
 - Ce n'est pas une fonction serverless ni une route Next.js : le site est un build Astro 100% statique, sans backend. Ce moteur tourne en dehors du site, sur votre machine ou un petit serveur que vous contrôlez.

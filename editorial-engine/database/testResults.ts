@@ -33,9 +33,16 @@ export function recordTestResult(params: RecordTestResultParams): string {
 
   const analysis = params.checks.analysis as { score?: number; category?: string; angle?: string; reasoning?: string } | undefined;
   const quality = params.checks.quality as { pass?: boolean; errors?: string[]; warnings?: string[] } | undefined;
-  const antiCopy = params.checks.antiCopy as { pass?: boolean; overlapRatio?: number } | undefined;
-  const antiFabrication = params.checks.antiFabrication as { pass?: boolean; unsupportedClaims?: { claim: string; reason: string }[] } | undefined;
-  const duplicate = params.checks.duplicate as { verdict?: string; reason?: string; titleSimilarity?: number } | undefined;
+  const antiCopy = params.checks.antiCopy as { pass?: boolean; copyRiskScore?: number } | undefined;
+  const antiFabrication = params.checks.antiFabrication as
+    | { pass?: boolean; unsupportedClaims?: { claim: string; sourceEvidence: string; confidence: number }[] }
+    | undefined;
+  const duplicate = params.checks.duplicate as
+    | { decision?: string; reason?: string; confidence?: number; signals?: { titleSimilarity?: number } }
+    | undefined;
+  const qualityGate = params.checks.qualityGate as
+    | { factCheck?: string; copyCheck?: string; editorialCheck?: string; seoCheck?: string; schemaCheck?: string; duplicateCheck?: string; finalDecision?: string }
+    | undefined;
 
   const bodyText = params.article
     ? params.article.body
@@ -47,8 +54,8 @@ export function recordTestResult(params: RecordTestResultParams): string {
   const problems: string[] = [
     ...(quality?.errors ?? []),
     ...(quality?.warnings ?? []).map((w) => `(avertissement) ${w}`),
-    ...(antiCopy?.pass === false ? [`Anti-copie: recouvrement ${((antiCopy.overlapRatio ?? 0) * 100).toFixed(1)}%`] : []),
-    ...((antiFabrication?.unsupportedClaims ?? []).map((c) => `Anti-fabrication: "${c.claim}" — ${c.reason}`)),
+    ...(antiCopy?.pass === false ? [`Anti-copie: copyRiskScore=${antiCopy.copyRiskScore}`] : []),
+    ...((antiFabrication?.unsupportedClaims ?? []).map((c) => `Anti-fabrication: "${c.claim}" — non supportée (confiance ${c.confidence})`)),
     ...(params.errors ?? []),
     ...(params.error ? [params.error] : []),
   ];
@@ -69,9 +76,13 @@ export function recordTestResult(params: RecordTestResultParams): string {
 - Catégorie retenue : ${analysis?.category ?? "N/A"}
 - Angle : ${analysis?.angle ?? "N/A"}
 - Contrôle qualité : ${quality?.pass === undefined ? "N/A" : quality.pass ? "PASS" : "FAIL"}
-- Anti-copie (recouvrement avec la source) : ${antiCopy?.overlapRatio !== undefined ? `${(antiCopy.overlapRatio * 100).toFixed(1)}%` : "N/A"}
+- Anti-copie (copyRiskScore, 0-100) : ${antiCopy?.copyRiskScore ?? "N/A"}
 - Anti-fabrication : ${antiFabrication?.pass === undefined ? "N/A" : antiFabrication.pass ? "PASS" : "FAIL"}
-- Dédoublonnage : ${duplicate?.verdict ?? "N/A"}${duplicate?.titleSimilarity !== undefined ? ` (similarité titre ${(duplicate.titleSimilarity * 100).toFixed(0)}%)` : ""}
+- Dédoublonnage : ${duplicate?.decision ?? "N/A"} (confiance ${duplicate?.confidence ?? "N/A"})${duplicate?.signals?.titleSimilarity !== undefined ? ` — similarité titre ${(duplicate.signals.titleSimilarity * 100).toFixed(0)}%` : ""}
+
+## Quality Gate
+
+${qualityGate ? `\`\`\`json\n${JSON.stringify(qualityGate, null, 2)}\n\`\`\`` : "(non atteint à cette étape)"}
 
 ## Problèmes détectés
 
