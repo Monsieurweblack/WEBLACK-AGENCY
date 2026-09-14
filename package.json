@@ -10,10 +10,17 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "integrity": "node --experimental-strip-types scripts/content-integrity.mjs"
+    "integrity": "node --experimental-strip-types scripts/content-integrity.mjs",
+    "editorial:run": "node --experimental-strip-types editorial-engine/cli.ts run",
+    "editorial:dry-run": "node --experimental-strip-types editorial-engine/cli.ts run --dry-run",
+    "editorial:source": "node --experimental-strip-types editorial-engine/cli.ts source",
+    "editorial:url": "node --experimental-strip-types editorial-engine/cli.ts url",
+    "editorial:test": "node --experimental-strip-types editorial-engine/cli.ts test",
+    "editorial:publish": "node --experimental-strip-types editorial-engine/cli.ts publish"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
+    "@extractus/article-extractor": "^8.0.17",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/manrope": "^5.3.0",
     "@portabletext/to-html": "^5.0.3",
@@ -21,6 +28,8 @@
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.2.0",
     "gsap": "^3.15.0",
+    "openai": "^5.11.0",
+    "rss-parser": "^3.13.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

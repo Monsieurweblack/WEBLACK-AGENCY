@@ -1,0 +1,4 @@
+{
+  "_comment": "Ship intentionally empty — no external source has been reviewed and approved for WEBLACK to monitor yet. Do NOT add a source here without first checking its terms of use permit automated fetching (many news sites' ToS forbid it even via a public RSS feed) and that WEBLACK has the right relationship to reuse/reference its content. Add entries following the shape below, each starting with \"enabled\": false until a human has reviewed it once via `npm run editorial:dry-run`.",
+  "sources": []
+}

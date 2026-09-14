@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 _export/
 .env
+
+# editorial-engine local artifacts — history db and run logs, never committed
+editorial-engine/database/*.sqlite3
+editorial-engine/logs/*.log
