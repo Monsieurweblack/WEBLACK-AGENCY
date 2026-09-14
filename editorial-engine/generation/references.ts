@@ -16,6 +16,21 @@ export function shouldIncludeReferences(registeredSources: RegisteredSource[], c
   return claims.some((c) => c.importance === "critical" || c.type === "quote" || c.type === "statistic");
 }
 
+function formatDate(publishedAt: string | undefined): string | undefined {
+  if (!publishedAt) return undefined;
+  const d = new Date(publishedAt);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString().slice(0, 10);
+}
+
+/** One line per source: name, article title, date when known, URL — every field resolved from real ingestion metadata (ingestion/url.ts, ingestion/rss.ts), never a placeholder. */
+function formatReference(registered: RegisteredSource): string {
+  const { source } = registered;
+  const date = formatDate(source.publishedAt);
+  const parts = [source.sourceName, `« ${source.title} »`, date, source.url].filter(Boolean);
+  return `— ${parts.join(" — ")}`;
+}
+
 export function buildReferencesBlock(registeredSources: RegisteredSource[]): PortableBlock[] {
   const heading: PortableBlock = {
     _type: "block",
@@ -24,19 +39,19 @@ export function buildReferencesBlock(registeredSources: RegisteredSource[]): Por
     children: [{ _type: "span", _key: crypto.randomUUID(), text: "Références", marks: [] }],
     markDefs: [],
   };
-  const list: PortableBlock = {
+  const intro: PortableBlock = {
     _type: "block",
     _key: crypto.randomUUID(),
     style: "normal",
-    children: [
-      {
-        _type: "span",
-        _key: crypto.randomUUID(),
-        text: `Sources consultées : ${registeredSources.map((s) => `${s.source.sourceName} (${s.source.url})`).join(" · ")}`,
-        marks: [],
-      },
-    ],
+    children: [{ _type: "span", _key: crypto.randomUUID(), text: "Sources consultées :", marks: [] }],
     markDefs: [],
   };
-  return [heading, list];
+  const sourceLines: PortableBlock[] = registeredSources.map((s) => ({
+    _type: "block",
+    _key: crypto.randomUUID(),
+    style: "normal",
+    children: [{ _type: "span", _key: crypto.randomUUID(), text: formatReference(s), marks: [] }],
+    markDefs: [],
+  }));
+  return [heading, intro, ...sourceLines];
 }

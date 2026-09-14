@@ -16,11 +16,17 @@ export async function fetchRssSource(source: EditorialSource): Promise<SourceArt
   log("FETCH", `RSS ${source.name} (${source.url})`);
   const feed = await parser.parseURL(source.url);
   const items = feed.items ?? [];
+  // The feed itself usually declares its own real publication name
+  // (<title> at the channel level, e.g. "Blog – StartUp FASHION") — prefer
+  // that over our internal config slug (e.g. "startup-fashion-blog") for
+  // anything user-facing (references/citations), falling back to the slug
+  // only when the feed genuinely doesn't provide one.
+  const sourceName = feed.title || source.name;
   return items
     .filter((item) => item.link && item.title)
     .map((item) =>
       buildSourceArticle({
-        sourceName: source.name,
+        sourceName,
         sourceUrl: source.url,
         url: item.link!,
         title: item.title!,

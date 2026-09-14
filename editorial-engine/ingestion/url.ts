@@ -17,7 +17,12 @@ export async function fetchManualUrl(url: string): Promise<SourceArticle> {
     throw new Error(`Impossible d'extraire un article depuis ${url} (page inaccessible, protégée, ou sans contenu détectable).`);
   }
   return buildSourceArticle({
-    sourceName: "manual",
+    // article-extractor already resolves the real publication domain into
+    // `source` (e.g. "startupfashion.com") — using it instead of the old
+    // literal "manual" fixes references/citations actually naming the
+    // outlet. Never fabricated: `source` is either the extractor's own
+    // resolved value or the URL's own hostname, both real.
+    sourceName: article.source || new URL(url).hostname,
     sourceUrl: url,
     url,
     title: article.title,
