@@ -5,6 +5,7 @@ import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
 import { eventIdentity } from "./store.ts";
 import { computeStatus, ESSENTIAL_FIELDS, type AgendaEvent, type EventVerification, type SourceRank } from "./types.ts";
+import { WEBLACK_TERRITORIES, type WeblackTerritory } from "../generation/types.ts";
 
 const SCHEMA = {
   type: "object",
@@ -24,11 +25,14 @@ const SCHEMA = {
     country: { type: "string" },
     organizer: { type: "string" },
     cancelled: { type: "boolean" },
+    territory: { type: "string", enum: [...WEBLACK_TERRITORIES] },
+    editorialValue: { type: "string" },
     editorialRelevance: { type: "integer", minimum: 0, maximum: 100 },
   },
   required: [
     "isEvent", "eventName", "eventType", "discipline", "artistOrCreator", "institution",
-    "startDate", "endDate", "time", "venue", "city", "country", "organizer", "cancelled", "editorialRelevance",
+    "startDate", "endDate", "time", "venue", "city", "country", "organizer", "cancelled",
+    "territory", "editorialValue", "editorialRelevance",
   ],
 };
 
@@ -39,7 +43,21 @@ Interdiction absolue : ne rien écrire qui ne soit pas dans le texte fourni. Auc
 - "isEvent" : false si la page n'annonce pas un événement précis (page d'accueil, liste, article d'actualité sans événement identifiable).
 - "startDate"/"endDate" : au format AAAA-MM-JJ si la page permet de les écrire ainsi, sinon la date telle qu'écrite. Vide si absente.
 - "cancelled" : true seulement si la page dit explicitement que l'événement est annulé ou reporté.
-- "editorialRelevance" (0-100) : intérêt pour un média de mode, luxe, art, culture, design et industries créatives. Un événement local peut être élevé s'il a une vraie valeur artistique ou une portée professionnelle ; un événement commercial sans dimension créative est bas.`;
+
+Le Journal WEBLACK est un média international de mode, luxe, art, culture, design et industries créatives. Ce n'est pas un guide des sorties.
+
+- "territory" : lequel de ces territoires l'événement occupe réellement — FASHION_LUXURY, ART_CULTURE, DESIGN_ARCHITECTURE, CREATIVE_INDUSTRIES, TALENTS, CULTURAL_CREATIVE_BUSINESS, CULTURAL_SCENES_EVENTS, CULTURAL_AGENDA. S'il n'entre franchement dans aucun, réponds OUT_OF_TERRITORY.
+
+Cela ne se juge pas aux mots-clés mais à ce que l'événement est :
+- Une exposition dans un musée ou une galerie → ART_CULTURE, recevable.
+- Un défilé, une présentation de créateur, une semaine de la mode → FASHION_LUXURY, recevable.
+- Une biennale, une foire d'art, un festival de design → CULTURAL_SCENES_EVENTS, recevable.
+- Un cours de danse, un atelier de percussions pour débutants, une initiation au DJing, une visite guidée de loisir → OUT_OF_TERRITORY. L'activité de loisir n'est pas un rendez-vous de création, même dans un lieu culturel.
+- Un salon professionnel sans dimension créative (ascenseurs, bâtiment, agroalimentaire) → OUT_OF_TERRITORY.
+- Un marché, une brocante, une fête de quartier → OUT_OF_TERRITORY.
+
+- "editorialValue" : en une phrase, ce qui justifie que WEBLACK annonce cet événement — l'artiste, l'institution, la manifestation, ce qui s'y joue. Chaîne vide si rien ne le justifie, ce qui est une réponse acceptable.
+- "editorialRelevance" (0-100) : intérêt pour ce média. Un événement local peut être élevé s'il a une vraie valeur artistique ou une portée professionnelle ; une activité de loisir ou un événement commercial sans dimension créative est bas.`;
 
 interface ExtractedEvent {
   isEvent: boolean;
@@ -56,6 +74,8 @@ interface ExtractedEvent {
   country: string;
   organizer: string;
   cancelled: boolean;
+  territory: WeblackTerritory;
+  editorialValue: string;
   editorialRelevance: number;
 }
 
@@ -111,6 +131,13 @@ export async function verifyEventPage(url: string, runId: string): Promise<Agend
   if (extracted.cancelled) {
     verificationStatus = "CANCELLED";
     note = "La page indique explicitement une annulation ou un report.";
+  } else if (isSiteRoot(url)) {
+    // Une page d'accueil peut annoncer un événement aujourd'hui et tout
+    // autre chose demain. Elle ne peut donc pas servir de page de
+    // référence : la re-vérification n'y retrouverait plus rien, et le
+    // lecteur à qui on la donne ne verrait pas l'événement annoncé.
+    verificationStatus = "REVIEW";
+    note = "L'événement n'a été lu que sur une page d'accueil, qui ne peut pas faire foi : page de l'événement à retrouver.";
   } else if (missingFields.length > 0) {
     // Aucune donnée essentielle absente n'est comblée par inférence.
     verificationStatus = "REVIEW";
@@ -149,10 +176,22 @@ export async function verifyEventPage(url: string, runId: string): Promise<Agend
     note,
     lastVerifiedAt: new Date().toISOString(),
     status: computeStatus(startDate, endDate),
+    territory: extracted.territory,
+    editorialValue: extracted.editorialValue.trim(),
     editorialRelevance: extracted.editorialRelevance,
   };
 
   return event;
+}
+
+/** Racine d'un site : "/", "/fr", "/en/"… Rien d'assez spécifique pour rester vrai demain. */
+function isSiteRoot(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.replace(/\/+$/, "");
+    return path === "" || /^\/[a-z]{2}(-[a-z]{2})?$/i.test(path);
+  } catch {
+    return false;
+  }
 }
 
 /** Re-lit une page déjà connue : c'est ainsi qu'une annulation, un report ou une disparition sont rattrapés. */
@@ -193,24 +232,73 @@ function confirmAgainstPage(extracted: ExtractedEvent, pageText: string, startDa
 }
 
 /**
- * Une date est confirmée si la page porte ses composants — le jour et
- * l'année — sous une forme ou une autre. La page écrit « 10 septembre
- * 2026 » quand l'extraction a produit « 2026-09-10 » : comparer les
- * chaînes telles quelles ne prouverait rien.
+ * Les libellés de mois, dans les langues où les pages d'agenda sont
+ * écrites. Accents retirés : la comparaison se fait sur du texte
+ * normalisé. Les abréviations qui sont aussi des mots courants (set, out,
+ * ago) sont volontairement absentes — elles confirmeraient des dates que
+ * la page ne porte pas.
  */
-function dateAppears(iso: string, pageText: string): boolean {
+const MONTH_FORMS: string[][] = [
+  ["janvier", "january", "januar", "januari", "enero", "gennaio", "janeiro", "jan"],
+  ["fevrier", "february", "februar", "februari", "febrero", "febbraio", "fevereiro", "feb", "fev"],
+  ["mars", "march", "marz", "maart", "marzo", "marco", "mar"],
+  ["avril", "april", "abril", "aprile", "apr", "avr"],
+  ["mai", "may", "mei", "mayo", "maggio", "maio"],
+  ["juin", "june", "juni", "junio", "giugno", "junho", "jun"],
+  ["juillet", "july", "juli", "julio", "luglio", "julho", "jul"],
+  ["aout", "august", "augustus", "agosto", "aug"],
+  ["septembre", "september", "septiembre", "settembre", "setembro", "sept", "sep"],
+  ["octobre", "october", "oktober", "octubre", "ottobre", "outubro", "oct", "okt"],
+  ["novembre", "november", "noviembre", "novembro", "nov"],
+  ["decembre", "december", "dezember", "diciembre", "dicembre", "dezembro", "dec", "dez", "dic"],
+];
+
+/**
+ * Une date est confirmée si la page porte ses composants — le jour, le
+ * mois et l'année — sous une forme ou une autre.
+ *
+ * Les pages d'agenda ne sont pas écrites en français : Berlin annonce
+ * « 13. September 2026 », Londres « 13 September 2026 », Anvers
+ * « 13 september », et beaucoup de sites s'en tiennent à 13/09/2026. Ne
+ * reconnaître que les mois français faisait échouer la confirmation sur
+ * des dates pourtant correctement lues : l'événement partait en UNVERIFIED
+ * alors que sa page officielle le portait noir sur blanc.
+ *
+ * L'exigence ne bouge pas pour autant : le jour et l'année doivent se
+ * retrouver dans le texte, et le mois sous un libellé qui désigne bien ce
+ * mois-là. On élargit les formes acceptées, pas le niveau de preuve.
+ */
+export function dateAppears(iso: string, pageText: string): boolean {
   if (!iso) return false;
   const haystack = normalize(pageText);
   if (haystack.includes(normalize(iso))) return true;
-  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return haystack.includes(normalize(iso));
-  const [, year, month, day] = match;
-  const dayNoPad = String(Number(day));
-  const months = ["janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"];
-  const monthName = months[Number(month) - 1] ?? "";
-  return haystack.includes(`${dayNoPad} ${monthName}`) && haystack.includes(year!);
-}
 
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  // L'année reste exigible dans tous les cas : « 13 septembre » seul ne dit
+  // pas de quelle année il s'agit.
+  if (!haystack.includes(year!)) return false;
+
+  const d = String(Number(day));
+  const m = String(Number(month));
+
+  // 13/09/2026, 13.9.2026, 09-13-2026 (usage américain), 2026-09-13.
+  const numeric = new RegExp(
+    `(?:^|[^0-9])(?:0?${d}[./-]0?${m}|0?${m}[./-]0?${d})[./-]${year}(?:[^0-9]|$)` +
+      `|(?:^|[^0-9])${year}[./-]0?${m}[./-]0?${d}(?:[^0-9]|$)`,
+  );
+  if (numeric.test(haystack)) return true;
+
+  // 13 septembre, 13. September, 13 de septiembre, September 13.
+  const forms = (MONTH_FORMS[Number(month) - 1] ?? []).join("|");
+  if (!forms) return false;
+  const literal = new RegExp(
+    `(?:^|[^0-9])0?${d}(?:er|st|nd|rd|th)?\\.?\\s*(?:de\\s+|of\\s+)?(?:${forms})\\b` +
+      `|(?:${forms})\\b\\.?\\s*0?${d}(?:er|st|nd|rd|th)?(?:[^0-9]|$)`,
+  );
+  return literal.test(haystack);
+}
 function normalize(value: string): string {
   return value
     .normalize("NFD")

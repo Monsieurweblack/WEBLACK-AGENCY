@@ -3,9 +3,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeStatus, isAgendaEligible, ESSENTIAL_FIELDS, type AgendaEvent } from "../agenda/types.ts";
 import { eventIdentity, mergeEvent } from "../agenda/store.ts";
-import { rankSource } from "../agenda/verify.ts";
+import { rankSource, dateAppears } from "../agenda/verify.ts";
 import { planSearches } from "../agenda/discover.ts";
 import { refersToSameEvent } from "../agenda/resolve.ts";
+import { eventSlug, toEventDocument } from "../sanity/events.ts";
 
 function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
   const base: AgendaEvent = {
@@ -32,6 +33,8 @@ function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     lastVerifiedAt: "2026-09-15T00:00:00.000Z",
     status: "UPCOMING",
     editorialRelevance: 80,
+    territory: "ART_CULTURE",
+    editorialValue: "Une exposition personnelle dans une galerie de référence.",
     fieldSources: {},
     ...overrides,
   };
@@ -120,8 +123,8 @@ test("une donnée essentielle absente interdit l'éligibilité — elle n'est ja
 // --- Éligibilité Agenda, distincte du seuil 90 des articles ----------------
 
 test("l'Agenda a son propre seuil : un événement vérifié n'a pas à valoir 90", () => {
-  const correct = event({ editorialRelevance: 65 });
-  assert.equal(isAgendaEligible(correct), true, "65 suffit pour une entrée d'agenda vérifiée");
+  const correct = event({ editorialRelevance: 75 });
+  assert.equal(isAgendaEligible(correct), true, "75 suffit pour une entrée d'agenda vérifiée : l'Agenda n'exige pas les 90 d'un article");
 
   const faible = event({ editorialRelevance: 40 });
   assert.equal(isAgendaEligible(faible), false, "l'Agenda n'est pas un annuaire");
@@ -180,6 +183,91 @@ test("chaque donnée essentielle porte l'URL de la page qui l'établit", () => {
   });
   assert.equal(compléte.fieldSources.startDate, "https://www.galerie-lelong.com/fr/billetterie");
   assert.equal(compléte.fieldSources.venue, officialUrl, "les autres champs gardent leur propre provenance");
+});
+
+// --- Barre éditoriale de l'Agenda -----------------------------------------
+
+test("un événement vérifié mais hors territoire n'entre pas à l'Agenda", () => {
+  // Factuellement irréprochable, éditorialement hors sujet : c'est le cas
+  // réel qui a motivé cette barre — un atelier pour débutants, daté et
+  // confirmé sur la page officielle.
+  const atelier = event({
+    eventName: "Trommel-Workshop für Anfänger:innen",
+    territory: "OUT_OF_TERRITORY",
+    editorialValue: "",
+    editorialRelevance: 70,
+  });
+  assert.equal(atelier.verificationStatus, "VERIFIED", "la vérification factuelle, elle, a bien réussi");
+  assert.equal(isAgendaEligible(atelier), false);
+});
+
+test("sans raison d'être annoncé, un événement en territoire reste non éligible", () => {
+  assert.equal(isAgendaEligible(event({ editorialValue: "   " })), false);
+});
+
+test("la barre de pertinence de l'Agenda est de 70", () => {
+  assert.equal(isAgendaEligible(event({ editorialRelevance: 70 })), true);
+  assert.equal(isAgendaEligible(event({ editorialRelevance: 69 })), false);
+});
+
+// --- Confirmation de date, dans la langue de la page ----------------------
+
+test("une date est confirmée quelle que soit la langue de la page", () => {
+  const iso = "2026-09-13";
+  for (const page of [
+    "Ausstellung vom 13. September 2026 bis 20. September 2026",
+    "Opening 13 September 2026 at the gallery",
+    "September 13, 2026 - private view",
+    "van 13 september 2026 tot 5 oktober",
+    "del 13 de septiembre de 2026",
+    "13 septembre 2026",
+    "13/09/2026 au Grand Palais",
+    "13.9.2026 Vernissage",
+    "09/13/2026 opening night",
+  ]) {
+    assert.equal(dateAppears(iso, page), true, `non confirmée : ${page}`);
+  }
+});
+
+test("élargir les formes acceptées ne confirme pas une date que la page ne porte pas", () => {
+  assert.equal(dateAppears("2026-10-13", "13 September 2026"), false, "mois différent");
+  assert.equal(dateAppears("2026-09-13", "14 September 2026"), false, "jour différent");
+  assert.equal(dateAppears("2026-09-13", "13 September 2025"), false, "année différente");
+  assert.equal(dateAppears("2026-09-13", "13 September"), false, "sans année, on ne sait pas de quelle année il s'agit");
+  assert.equal(dateAppears("2026-09-13", "exhibition running through autumn 2026"), false, "aucune date");
+  assert.equal(dateAppears("2026-05-13", "13 maisons ouvertes en 2026"), false, "un mot n'est pas un mois");
+  assert.equal(dateAppears("2026-09-13", "130 September 2026"), false, "le jour ne doit pas être un fragment de nombre");
+});
+
+// --- Document Sanity -------------------------------------------------------
+
+test("le document Sanity ne porte que des données réellement lues", () => {
+  const doc = toEventDocument(event({ endDate: "", time: "", organizer: "" }));
+  assert.equal(doc._type, "event");
+  assert.equal("endDate" in doc, false, "une date de fin absente ne s'écrit pas");
+  assert.equal("time" in doc, false, "un horaire absent ne s'écrit pas");
+  assert.equal("organizer" in doc, false);
+  assert.equal(doc.venue, "Galerie Lelong");
+});
+
+test("la provenance de chaque donnée voyage avec le document", () => {
+  const billetterie = "https://www.galerie-lelong.com/fr/billetterie";
+  const base = event();
+  const doc = toEventDocument(event({ fieldSources: { ...base.fieldSources, startDate: billetterie } }));
+  const sources = doc.sources as { field: string; url: string }[];
+  assert.equal(sources.find((s) => s.field === "startDate")?.url, billetterie);
+  assert.equal(sources.find((s) => s.field === "venue")?.url, base.officialUrl);
+});
+
+test("l'identité moteur ancre le document : deux cycles ne créent pas deux événements", () => {
+  const premier = toEventDocument(event());
+  const relu = toEventDocument(event({ lastVerifiedAt: "2026-09-20T00:00:00.000Z" }));
+  assert.equal(premier.engineId, relu.engineId);
+  assert.equal(premier.slug && (premier.slug as { current: string }).current, (relu.slug as { current: string }).current);
+});
+
+test("le slug reste lisible et daté", () => {
+  assert.equal(eventSlug(event()), "barthelemy-toguo-the-nomadic-studio-2026-09-10");
 });
 
 // --- Couverture géographique ----------------------------------------------

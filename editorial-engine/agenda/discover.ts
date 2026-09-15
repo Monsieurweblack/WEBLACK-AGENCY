@@ -27,14 +27,24 @@ const CITIES = [
   "Dubaï", "Doha", "Riyad", "Tokyo", "Séoul", "Shanghai",
 ];
 
+/**
+ * Les angles de recherche sont ancrés sur les institutions, pas sur le
+ * type d'activité.
+ *
+ * Formulés largement — « workshops de création à Berlin » — les moteurs
+ * remontent les listings municipaux de loisirs, et l'Agenda s'est rempli
+ * d'ateliers de percussions pour débutants : vérifiés, datés, réels, et
+ * totalement hors de la ligne du Journal. Nommer l'institution dans la
+ * requête ramène ce que WEBLACK couvre effectivement.
+ */
 const EVENT_TYPES = [
-  "expositions et vernissages",
-  "festivals et biennales",
-  "foires d'art et salons",
-  "fashion weeks et défilés",
-  "conférences, masterclasses et workshops de création",
-  "performances et événements design",
-  "architecture, photographie et patrimoine",
+  "expositions dans les musées, fondations et galeries",
+  "biennales, triennales et grandes manifestations artistiques",
+  "foires d'art contemporain et salons de design",
+  "semaines de la mode, défilés et présentations de créateurs",
+  "prix, distinctions et remises de récompenses en création",
+  "festivals de design, d'architecture et de photographie",
+  "performances, scénographies et créations dans les institutions culturelles",
 ];
 
 export interface DiscoveredPage {
@@ -73,7 +83,13 @@ export async function discoverPages(query: string, runId: string): Promise<Disco
     const response = await client.responses.create({
       model: config.modelAnalysis,
       tools: [{ type: "web_search" }],
-      input: `Recherche des ${query} qui se tiennent actuellement ou commencent entre le ${horizon.toISOString().slice(0, 10)} et le ${until}. Consulte en priorité les pages officielles des institutions, musées, galeries, fondations et organisateurs. Cite les pages que tu as consultées.`,
+      input: `Recherche des ${query} qui se tiennent actuellement ou commencent entre le ${horizon.toISOString().slice(0, 10)} et le ${until}.
+
+Consulte les pages officielles des institutions elles-mêmes : musées, fondations, galeries, centres d'art, maisons de mode, organisateurs de foires et de biennales.
+
+N'ouvre pas les listings municipaux de loisirs, les plateformes de billetterie généralistes, ni les pages de cours et d'ateliers pour amateurs : ce ne sont pas des rendez-vous de création.
+
+Cite les pages que tu as consultées.`,
     });
 
     const urls = new Set<string>();

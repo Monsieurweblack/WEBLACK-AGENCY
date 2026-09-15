@@ -1,3 +1,5 @@
+import type { WeblackTerritory } from "../generation/types.ts";
+
 /**
  * Structure interne de l'Agenda culturel. Rien de tout ceci n'est écrit
  * dans Sanity à ce stade : le sous-système doit d'abord démontrer qu'il
@@ -59,6 +61,10 @@ export interface AgendaEvent {
   note: string;
   lastVerifiedAt: string;
   status: EventStatus;
+  /** Le territoire WEBLACK que l'événement occupe réellement, jugé sur la page lue. */
+  territory: WeblackTerritory;
+  /** Ce qui justifie que WEBLACK annonce cet événement. Vide = rien ne le justifie. */
+  editorialValue: string;
   editorialRelevance: number;
 }
 
@@ -69,11 +75,23 @@ export const ESSENTIAL_FIELDS = ["eventName", "startDate", "venue", "city"] as c
  * Éligible à l'Agenda — délibérément distinct du seuil 90/90 des articles,
  * qui reste inchangé. Un événement vérifié et pertinent n'a pas à être un
  * sujet d'article pour mériter une ligne d'agenda.
+ *
+ * Être vérifié ne suffit pas à être publiable. Les premiers cycles réels
+ * ont produit des entrées irréprochables sur le plan factuel — datées,
+ * situées, confirmées sur la page officielle — et pourtant hors sujet :
+ * un atelier de percussions pour débutants, une initiation au DJing. Un
+ * événement doit donc aussi occuper un territoire du Journal et porter une
+ * raison d'être annoncé ; sinon l'Agenda devient un guide des sorties.
  */
-export function isAgendaEligible(event: AgendaEvent, minRelevance = 60): boolean {
+export function isAgendaEligible(event: AgendaEvent, minRelevance = 70): boolean {
   if (event.verificationStatus !== "VERIFIED") return false;
   if (event.status === "EXPIRED") return false;
   if (event.missingFields.length > 0) return false;
+  // Le stock est append-only et contient des entrées antérieures à ces deux
+  // champs : une entrée qui ne porte pas encore de jugement éditorial n'est
+  // pas publiable, elle attend d'être relue.
+  if (!event.territory || event.territory === "OUT_OF_TERRITORY") return false;
+  if (!(event.editorialValue ?? "").trim()) return false;
   return event.editorialRelevance >= minRelevance;
 }
 
