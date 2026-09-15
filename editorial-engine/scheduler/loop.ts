@@ -4,6 +4,7 @@ import { processArticle } from "./run.ts";
 import { loadConfig } from "../config/env.ts";
 import { acquireCycleLock, releaseCycleLock } from "./cycleLock.ts";
 import { readLedger } from "../logs/productionLedger.ts";
+import { runAgendaCycle } from "../agenda/runAgendaCycle.ts";
 import { currentQueue } from "../newsletter/queue.ts";
 import { log, logError } from "../logs/logger.ts";
 
@@ -45,6 +46,15 @@ export async function runOneCycle(dryRun: boolean): Promise<void> {
       } catch (error) {
         logError("FETCH", error, { source: source.name, recommendedAction: "Vérifier l'URL du flux et sa disponibilité" });
       }
+    }
+
+    // Agenda culturel : à l'intérieur du même cycle, sous le verrou déjà
+    // détenu — pas de second planificateur, pas de boucle concurrente. Un
+    // échec de recherche web ne doit jamais faire tomber le cycle éditorial.
+    try {
+      await runAgendaCycle(dryRun);
+    } catch (error) {
+      logError("FETCH", error, { source: "agenda", recommendedAction: "Vérifier la disponibilité de la recherche web" });
     }
   } finally {
     releaseCycleLock();

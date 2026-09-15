@@ -1,8 +1,8 @@
 # Moteur éditorial — `editorial-engine/`
 
-Outil en ligne de commande (Node, local — **ne fait pas partie du site déployé**) qui surveille des sources externes autorisées, en tire un article original dans la ligne éditoriale WEBLACK, et le crée comme **brouillon** dans le même Sanity que le site (`journal`), pour relecture avant publication.
+Outil en ligne de commande (Node, local — **ne fait pas partie du site déployé**) qui surveille des sources externes autorisées et en tire un article original dans la ligne éditoriale WEBLACK. Chaque article passe ensuite l'ensemble des contrôles — pertinence éditoriale, vérification factuelle, anti-fabrication, anti-copie et SEO — puis le Quality Gate. Seuls les articles qui satisfont tous les critères de publication partent automatiquement en ligne dans le même Sanity que le site (`journal`) ; les autres restent en brouillon pour relecture humaine, ou sont rejetés.
 
-**Statut : NO-GO production.** Aucun test de génération réelle n'a encore été exécuté (pas de `OPENAI_API_KEY` dans cet environnement) — voir `editorial-engine/test-results/` pour le détail des campagnes de validation menées jusqu'ici.
+**Statut : PRODUCTION ACTIVE** — publication automatique protégée par le Quality Gate. Avec `EDITORIAL_MODE=publish` et les seuils 90/90, un article ne part en ligne que s'il franchit les huit portes, atteint ces scores **et** ne porte aucune affirmation non établie ; tout le reste devient un brouillon ou est rejeté. L'exécution persistante est assurée par une tâche du Planificateur de tâches Windows (`WEBLACK Editorial Engine`) qui lance un cycle `editorial:run` toutes les 60 minutes — voir « Programmer l'exécution » plus bas. Le détail des campagnes de validation est dans `editorial-engine/test-results/`.
 
 ## Architecture de robustesse (hardening)
 
@@ -177,6 +177,21 @@ Recommandation : pour un site avec la discipline de non-fabrication de WEBLACK (
 Cloudflare Pages ne peut pas héberger ce moteur (le site est statique, sans runtime serveur). Options réelles :
 - Laisser `npm run editorial:run -- --watch` tourner sur une machine que vous contrôlez (VPS, mini-PC, ou votre poste avec le Planificateur de tâches Windows).
 - Déclencher `npm run editorial:run` sur un calendrier externe (ex. une GitHub Action planifiée, un cron sur un petit serveur) plutôt que `--watch`.
+
+### Installé sur ce poste
+
+Une tâche **Planificateur de tâches Windows** nommée `WEBLACK Editorial Engine` exécute un cycle unique (`editorial:run`, sans `--watch`) toutes les 60 minutes, avec un second déclencheur à l'ouverture de session pour reprendre après un redémarrage. Elle lance `node.exe` directement, répertoire de travail à la racine du projet ; aucune clé n'y figure — le moteur lit `.env` depuis le disque comme en ligne de commande.
+
+```powershell
+Get-ScheduledTask -TaskName "WEBLACK Editorial Engine"      # état
+Get-ScheduledTaskInfo -TaskName "WEBLACK Editorial Engine"  # dernière exécution, prochaine
+Start-ScheduledTask -TaskName "WEBLACK Editorial Engine"    # forcer un cycle
+Disable-ScheduledTask -TaskName "WEBLACK Editorial Engine"  # tout arrêter
+```
+
+Deux garde-fous se superposent contre les cycles simultanés : `MultipleInstances=IgnoreNew` côté Windows, et le verrou à pid du moteur, qui refuse un second cycle et reprend un verrou laissé par un processus mort.
+
+**Limite assumée** : la tâche s'exécute sous la session de l'utilisateur (`InteractiveToken`), donc uniquement lorsqu'il est connecté — elle reprend d'elle-même à l'ouverture de session après un redémarrage. La faire tourner session fermée exigerait d'enregistrer le mot de passe du compte Windows dans le Planificateur, ce qui n'a pas été fait.
 
 ## Sécurité
 

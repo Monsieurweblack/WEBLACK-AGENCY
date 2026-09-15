@@ -1,7 +1,7 @@
 import type { SourceArticle } from "../sources/types.ts";
 import type { EditorialAnalysis } from "../generation/types.ts";
 
-export type NewsworthinessClass = "BREAKING" | "NEWS" | "TREND" | "ANALYSIS" | "REPORT" | "EVERGREEN";
+export type NewsworthinessClass = "BREAKING" | "NEWS" | "TREND" | "ANALYSIS" | "REPORT" | "EVERGREEN" | "AGENDA";
 
 export interface NewsworthinessResult {
   newsworthinessScore: number; // 0-100
@@ -33,7 +33,12 @@ export function classifyNewsworthiness(source: SourceArticle, analysis: Editoria
   const format = analysis.format;
 
   let classification: NewsworthinessClass;
-  if (ageHours !== undefined && ageHours <= 6 && analysis.importance >= 85 && analysis.novelty >= 85) {
+  // L'agenda se reconnaît à l'intention du sujet, pas à sa fraîcheur : un
+  // événement à venir reste un événement à venir, qu'il ait été annoncé ce
+  // matin ou le mois dernier. Il passe donc avant les tests d'ancienneté.
+  if (analysis.territory === "CULTURAL_AGENDA") {
+    classification = "AGENDA";
+  } else if (ageHours !== undefined && ageHours <= 6 && analysis.importance >= 85 && analysis.novelty >= 85) {
     classification = "BREAKING";
   } else if (format === "report") {
     classification = "REPORT";

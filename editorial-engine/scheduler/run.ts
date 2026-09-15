@@ -122,6 +122,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
 
     const analysis = await analyzeArticle(source, runId);
     report.analysis = analysis;
+    log("EDITORIAL SCORE", `Territoire: ${analysis.territory} — ${analysis.editorialValue || "aucune valeur éditoriale identifiée"} (pertinence ${analysis.relevance})`);
 
     // Pure, local — no OpenAI cost — computed as soon as the analysis exists, independently of whether the article ends up generated.
     const seoOpportunity = computeSeoOpportunity(source, analysis);
@@ -129,6 +130,22 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     const newsworthiness = classifyNewsworthiness(source, analysis);
     report.newsworthiness = newsworthiness;
     report.priority = combinePriority(analysis.score, seoOpportunity.seoOpportunityScore, newsworthiness.newsworthinessScore);
+
+    // Le territoire et la valeur éditoriale ne sont pas des indications : ce
+    // sont des conditions. Un sujet que l'analyse place elle-même hors des
+    // huit territoires, ou pour lequel elle ne trouve aucune question de
+    // valeur à laquelle il réponde, est écarté quel que soit son score — un
+    // score complaisant ne doit jamais pouvoir rattraper un hors-sujet.
+    if (analysis.territory === "OUT_OF_TERRITORY" || analysis.editorialValue.trim() === "") {
+      const reason =
+        analysis.territory === "OUT_OF_TERRITORY"
+          ? "Hors des huit territoires éditoriaux WEBLACK"
+          : "Aucune question de valeur éditoriale WEBLACK à laquelle le sujet réponde";
+      log("FINAL STATUS", `IGNORÉ (${reason}) — ${source.title}`);
+      persist(source, options, "skipped-low-score", report, { editorialScore: analysis.score });
+      ledger("REJECT", "editorial-analysis", reason);
+      return { status: "skipped-low-score", score: analysis.score, threshold: IGNORE_BELOW, report };
+    }
 
     if (analysis.score < IGNORE_BELOW) {
       log("FINAL STATUS", `IGNORÉ (score bas: ${analysis.score}) — ${source.title}`);

@@ -85,13 +85,43 @@ export interface VerifiedFactSet {
   rejected: { fact: string; status: VerificationStatus }[];
 }
 
+/**
+ * Les huit territoires éditoriaux du Journal WEBLACK. Un sujet qui n'entre
+ * dans aucun d'eux n'a pas sa place, si populaire soit-il — d'où la valeur
+ * explicite OUT_OF_TERRITORY plutôt qu'un rattachement forcé au territoire
+ * le moins invraisemblable.
+ */
+export const WEBLACK_TERRITORIES = [
+  "FASHION_LUXURY",
+  "ART_CULTURE",
+  "DESIGN_ARCHITECTURE",
+  "CREATIVE_INDUSTRIES",
+  "TALENTS",
+  "CULTURAL_CREATIVE_BUSINESS",
+  "CULTURAL_SCENES_EVENTS",
+  "CULTURAL_AGENDA",
+  "OUT_OF_TERRITORY",
+] as const;
+export type WeblackTerritory = (typeof WEBLACK_TERRITORIES)[number];
+
 /** Phase 6 editorial analysis output. */
 export interface EditorialAnalysis {
+  /** Lequel des huit territoires le sujet occupe réellement. */
+  territory: WeblackTerritory;
+  /** La question forte à laquelle le sujet répond. Vide s'il n'en satisfait aucune — ce qui vaut rejet. */
+  editorialValue: string;
   relevance: number; // 0-100
+  /** Importance CULTURELLE, pas importance économique ou médiatique. */
   importance: number; // 0-100
   novelty: number; // 0-100
   reliability: number; // 0-100
   readerInterest: number; // 0-100
+  /** Ce que le sujet apporte à la création elle-même, au-delà de son actualité. */
+  creativeInterest: number; // 0-100
+  /** De quoi tenir un article, ou seulement de quoi recopier un communiqué. */
+  analyticalPotential: number; // 0-100
+  /** Sujet déjà traité partout, ou angle réellement neuf. */
+  originality: number; // 0-100
   seoPotential: number; // 0-100
   category: JournalCategory;
   format: JournalFormat | undefined;

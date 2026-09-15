@@ -33,6 +33,8 @@ export interface LedgerEntry {
     newsworthiness?: number;
     seoOpportunity?: number;
   };
+  /** Territoire éditorial retenu et question de valeur à laquelle le sujet répond — pourquoi il a été gardé ou écarté. */
+  editorial?: { territory: string; editorialValue: string };
   /** Post-writing fact check: how each published claim resolved. */
   claims?: { total: number; verified: number; partiallyVerified: number; unverified: number; contradicted: number; blocking: number; recoveredFromPack: number };
   /** Pre-writing Evidence Pack: what the writer was allowed to work from, and what was dropped. */

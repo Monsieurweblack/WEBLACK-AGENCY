@@ -12,11 +12,16 @@ import type { KeywordStrategy } from "../intelligence/keywordStrategy.ts";
 
 function makeAnalysis(overrides: Partial<EditorialAnalysis> = {}): EditorialAnalysis {
   return {
+    territory: "FASHION_LUXURY",
+    editorialValue: "Évolution importante dans la création",
     relevance: 80,
     importance: 70,
     novelty: 60,
     reliability: 90,
     readerInterest: 70,
+    creativeInterest: 75,
+    analyticalPotential: 70,
+    originality: 65,
     seoPotential: 65,
     category: "news",
     format: undefined,

@@ -23,7 +23,8 @@
     "editorial:test-unit": "node --experimental-strip-types --test \"editorial-engine/tests/*.test.ts\"",
     "editorial:review": "node --experimental-strip-types editorial-engine/cli.ts review",
     "editorial:ledger": "node --experimental-strip-types editorial-engine/cli.ts ledger",
-    "editorial:newsletter": "node --experimental-strip-types editorial-engine/cli.ts newsletter"
+    "editorial:newsletter": "node --experimental-strip-types editorial-engine/cli.ts newsletter",
+    "editorial:agenda": "node --experimental-strip-types editorial-engine/cli.ts agenda"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",

@@ -15,6 +15,8 @@ import { getSanityClient } from "./sanity/client.ts";
 import { log } from "./logs/logger.ts";
 import { reviewQueue, readLedger } from "./logs/productionLedger.ts";
 import { currentQueue } from "./newsletter/queue.ts";
+import { upcomingEvents, reviewEvents, currentEvents } from "./agenda/store.ts";
+import { runAgendaCycle } from "./agenda/runAgendaCycle.ts";
 import { dispatchDue, buildDigest, providerProblem } from "./newsletter/dispatch.ts";
 import { parseArgs } from "./cliArgs.ts";
 
@@ -165,6 +167,30 @@ async function main() {
       break;
     }
 
+    case "agenda": {
+      if (positional[0] === "search") {
+        const result = await runAgendaCycle(dryRun);
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+      const upcoming = upcomingEvents();
+      const review = reviewEvents();
+      console.log(`== Agenda culturel — ${currentEvents().length} événement(s) en stock ==`);
+      console.log(`${upcoming.length} vérifié(s) à venir ou en cours · ${review.length} en attente de décision humaine\n`);
+      for (const e of upcoming) {
+        console.log(`[${e.status}] ${e.startDate}${e.endDate ? " → " + e.endDate : ""} — ${e.eventName}`);
+        console.log(`  ${e.venue}, ${e.city}${e.country ? " (" + e.country + ")" : ""} · ${e.discipline || e.eventType}`);
+        console.log(`  source ${e.sourceRank} : ${e.officialUrl}`);
+        console.log(`  pertinence ${e.editorialRelevance} · vérifié le ${e.lastVerifiedAt.slice(0, 10)}\n`);
+      }
+      if (review.length > 0) {
+        console.log("-- en attente de décision humaine --");
+        for (const e of review) console.log(`  ${e.eventName} — ${e.note}`);
+      }
+      if (currentEvents().length === 0) console.log("Stock vide.");
+      break;
+    }
+
     case "test": {
       console.log("== editorial:test ==");
       console.log("1) Config...");
@@ -227,6 +253,8 @@ async function main() {
       console.log("  npm run editorial:freshness -- [jours]     — articles Journal jamais mis à jour depuis N jours (défaut 90)");
       console.log("  npm run editorial:review                   — file de revue: ce qui attend une décision humaine");
       console.log("  npm run editorial:ledger                   — registre de production: cycles, décisions, coûts");
+      console.log("  npm run editorial:agenda                    — événements culturels vérifiés en stock");
+      console.log("  npm run editorial:agenda -- search          — un passage de recherche (--dry-run pour ne rien stocker)");
       console.log("  npm run editorial:newsletter -- [list|preview|digest|send] — file des numéros");
       console.log("  npm run editorial:publish -- <documentId> — publie un brouillon déjà validé par un humain");
       process.exitCode = 1;
