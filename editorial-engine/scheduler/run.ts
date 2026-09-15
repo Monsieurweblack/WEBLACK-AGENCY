@@ -66,6 +66,16 @@ export type PipelineOutcome =
   | { status: "published"; documentId: string; report: DryRunReport }
   | { status: "error"; error: string; report: DryRunReport };
 
+/** Below this, the subject is not worth a single further model call. */
+const IGNORE_BELOW = 40;
+/**
+ * Below this, the subject may be genuine news but is too far from WEBLACK's
+ * territory — talent, création, culture — to become a draft without a human
+ * looking first. Raised from the single 40 bar after the first production
+ * cycle auto-drafted a CBD-extraction article that scored 43.
+ */
+const AUTO_DRAFT_FROM = 60;
+
 function isKnownCategory(category: string): boolean {
   return (JOURNAL_CATEGORIES as readonly string[]).includes(category);
 }
@@ -115,11 +125,23 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     report.newsworthiness = newsworthiness;
     report.priority = combinePriority(analysis.score, seoOpportunity.seoOpportunityScore, newsworthiness.newsworthinessScore);
 
-    if (analysis.score < 40) {
+    if (analysis.score < IGNORE_BELOW) {
       log("FINAL STATUS", `IGNORÉ (score bas: ${analysis.score}) — ${source.title}`);
       persist(source, options, "skipped-low-score", report, { editorialScore: analysis.score });
-      ledger("REJECT", "editorial-analysis", `Score editorial ${analysis.score} sous le seuil de 40`);
-      return { status: "skipped-low-score", score: analysis.score, threshold: 40, report };
+      ledger("REJECT", "editorial-analysis", `Score editorial ${analysis.score} sous le seuil de ${IGNORE_BELOW}`);
+      return { status: "skipped-low-score", score: analysis.score, threshold: IGNORE_BELOW, report };
+    }
+    if (analysis.score < AUTO_DRAFT_FROM) {
+      // Passing the "worth a look" bar is not the same as being WEBLACK
+      // material. The first real production cycle turned a CBD-extraction
+      // piece into a draft on a relevance score of 43: factually spotless,
+      // and entirely outside a creative agency's editorial territory. An
+      // article this marginal goes to a human instead of to Sanity.
+      const reason = `Pertinence WEBLACK marginale (score ${analysis.score}, seuil de rédaction automatique ${AUTO_DRAFT_FROM})`;
+      log("FINAL STATUS", `REVIEW (${reason}) — ${source.title}`);
+      persist(source, options, "needs-review", report, { reason, editorialScore: analysis.score });
+      ledger("REVIEW", "editorial-analysis", reason);
+      return { status: "needs-review", reason, report };
     }
     if (!isKnownCategory(analysis.category)) {
       log("FINAL STATUS", `REVIEW (catégorie incertaine: "${analysis.category}") — ${source.title}`);
