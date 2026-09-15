@@ -14,6 +14,8 @@ import { loadConfig } from "./config/env.ts";
 import { getSanityClient } from "./sanity/client.ts";
 import { log } from "./logs/logger.ts";
 import { reviewQueue, readLedger } from "./logs/productionLedger.ts";
+import { currentQueue } from "./newsletter/queue.ts";
+import { dispatchDue, buildDigest, providerProblem } from "./newsletter/dispatch.ts";
 import { parseArgs } from "./cliArgs.ts";
 
 const [, , command, ...rest] = process.argv;
@@ -97,12 +99,69 @@ async function main() {
         const ms = items.reduce((sum, i) => sum + i.durationMs, 0);
         console.log(`${cycleId}`);
         console.log(
-          `  ${items.length} article(s) — PASS ${count("PASS")} | REVIEW ${count("REVIEW")} | REJECT ${count("REJECT")} — ${tokens} tokens, ~${usd.toFixed(4)} USD estimés, ${Math.round(ms / 1000)}s`,
+          `  ${items.length} article(s) — PUBLIÉ ${count("PUBLISHED")} | PASS ${count("PASS")} | REVIEW ${count("REVIEW")} | REJECT ${count("REJECT")} — ${tokens} tokens, ~${usd.toFixed(4)} USD estimés, ${Math.round(ms / 1000)}s`,
         );
-        for (const i of items.filter((x) => x.decision === "PASS")) {
-          console.log(`    PASS → ${i.sanityDraftId}  "${i.article?.title ?? ""}"`);
+        for (const i of items.filter((x) => x.decision === "PUBLISHED" || x.decision === "PASS")) {
+          console.log(`    ${i.decision} → ${i.sanityDraftId}  "${i.article?.title ?? ""}"`);
         }
       }
+      break;
+    }
+
+    case "newsletter": {
+      const action = positional[0] ?? "list";
+      if (action === "list") {
+        const queue = currentQueue();
+        const problem = providerProblem();
+        console.log(`== Newsletter — ${queue.length} numéro(s) ==`);
+        console.log(`Envoi: ${problem ? `IMPOSSIBLE (${problem})` : "configuré"}\n`);
+        for (const entry of queue) {
+          const when = entry.status === "sent" ? `envoyé ${entry.sentAt?.slice(0, 16).replace("T", " ")}` : entry.sendAfter ? `après ${entry.sendAfter.slice(0, 16).replace("T", " ")}` : "en attente";
+          console.log(`[${entry.status}] ${entry.mode.padEnd(9)} ${when}`);
+          console.log(`  ${entry.newsletter.subject}`);
+          console.log(`  ${entry.newsletter.articleUrl}`);
+          if (entry.error) console.log(`  erreur: ${entry.error}`);
+          console.log(`  id: ${entry.id}\n`);
+        }
+        if (queue.length === 0) console.log("File vide.");
+        break;
+      }
+      if (action === "preview") {
+        const id = positional[1];
+        const entry = currentQueue().find((x) => x.id === id) ?? currentQueue()[0];
+        if (!entry) {
+          console.log("File vide — rien à prévisualiser.");
+          break;
+        }
+        console.log(`Objet     : ${entry.newsletter.subject}`);
+        console.log(`Preheader : ${entry.newsletter.preheader}`);
+        console.log(`Lien      : ${entry.newsletter.articleUrl}\n`);
+        console.log(entry.newsletter.text);
+        break;
+      }
+      if (action === "digest") {
+        const digest = buildDigest();
+        if (!digest) {
+          console.log("Aucun numéro en attente en mode digest.");
+          break;
+        }
+        console.log(`Digest — ${digest.issues.length} article(s)\nObjet : ${digest.subject}\n`);
+        console.log(digest.text);
+        break;
+      }
+      if (action === "send") {
+        const result = await dispatchDue();
+        if (result.blocked) {
+          console.log(`Envoi refusé — ${result.blocked}`);
+          console.log("Aucun numéro n'a été marqué comme envoyé.");
+          process.exitCode = 1;
+          break;
+        }
+        console.log(`${result.sent} envoyé(s), ${result.failed} échec(s) sur ${result.attempted} dû(s).`);
+        break;
+      }
+      console.log(`Action inconnue "${action}". Utiliser: list | preview [id] | digest | send`);
+      process.exitCode = 1;
       break;
     }
 
@@ -168,6 +227,7 @@ async function main() {
       console.log("  npm run editorial:freshness -- [jours]     — articles Journal jamais mis à jour depuis N jours (défaut 90)");
       console.log("  npm run editorial:review                   — file de revue: ce qui attend une décision humaine");
       console.log("  npm run editorial:ledger                   — registre de production: cycles, décisions, coûts");
+      console.log("  npm run editorial:newsletter -- [list|preview|digest|send] — file des numéros");
       console.log("  npm run editorial:publish -- <documentId> — publie un brouillon déjà validé par un humain");
       process.exitCode = 1;
   }

@@ -53,6 +53,17 @@ export interface EditorialConfig {
   /** §12 Search Console readiness — both undefined until a real connection is configured; see intelligence/searchConsole.ts. */
   googleSearchConsoleCredentialsJson: string | undefined;
   googleSearchConsoleSiteUrl: string | undefined;
+  /** Public site root, used to build the article link inside a newsletter. */
+  siteUrl: string;
+  /** How a newsletter leaves the queue: as soon as the article is published, at a set time, or gathered into a digest. */
+  newsletterMode: NewsletterMode;
+  /** All four undefined until a real mail provider is configured — dispatch refuses to run rather than pretending to send. */
+  newsletterProvider: string | undefined;
+  newsletterApiKey: string | undefined;
+  newsletterFrom: string | undefined;
+  newsletterAudienceId: string | undefined;
+  /** Hours to wait before a "scheduled" issue may go out. */
+  newsletterScheduleDelayHours: number;
 }
 
 function requireVar(name: string): string {
@@ -89,5 +100,21 @@ export function loadConfig(): EditorialConfig {
     copyRiskBlockThreshold: Number(raw.COPY_RISK_BLOCK_THRESHOLD ?? 40),
     googleSearchConsoleCredentialsJson: raw.GOOGLE_SEARCH_CONSOLE_CREDENTIALS_JSON || undefined,
     googleSearchConsoleSiteUrl: raw.GOOGLE_SEARCH_CONSOLE_SITE_URL || undefined,
+    siteUrl: raw.SITE_URL || "https://weblack.fr",
+    newsletterMode: parseNewsletterMode(raw.NEWSLETTER_MODE),
+    newsletterProvider: raw.NEWSLETTER_PROVIDER || undefined,
+    newsletterApiKey: raw.NEWSLETTER_API_KEY || undefined,
+    newsletterFrom: raw.NEWSLETTER_FROM || undefined,
+    newsletterAudienceId: raw.NEWSLETTER_AUDIENCE_ID || undefined,
+    newsletterScheduleDelayHours: Number(raw.NEWSLETTER_SCHEDULE_DELAY_HOURS ?? 24),
   };
+}
+
+export type NewsletterMode = "immediate" | "scheduled" | "digest";
+
+function parseNewsletterMode(value: string | undefined): NewsletterMode {
+  if (value === "immediate" || value === "scheduled" || value === "digest") return value;
+  // Digest is the safe default: nothing leaves on its own until someone
+  // decides an issue is ready to go out.
+  return "digest";
 }

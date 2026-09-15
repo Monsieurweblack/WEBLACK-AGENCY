@@ -49,3 +49,27 @@ export function classifyNewsworthiness(source: SourceArticle, analysis: Editoria
 
   return { newsworthinessScore, classification };
 }
+
+/**
+ * Settles the `format` the article is stored with — which is what decides,
+ * at render time, whether the page declares schema.org `NewsArticle` or
+ * plain `Article` (see src/components/pages/JournalDetail.astro).
+ *
+ * The declaration has to be earned, not claimed. `NewsArticle` tells Google
+ * the page is genuine news, and labelling an evergreen analysis that way is
+ * a structured-data misstatement that search engines penalise. So the
+ * model's own choice of format is accepted for everything EXCEPT "news":
+ * that one is only kept when the deterministic classifier — which needs a
+ * real publication timestamp, not an impression of freshness — independently
+ * agrees it is BREAKING or NEWS. This function can only ever downgrade an
+ * over-claim, never manufacture one.
+ */
+export function resolveArticleFormat(
+  analysisFormat: EditorialAnalysis["format"],
+  classification: NewsworthinessClass,
+): EditorialAnalysis["format"] {
+  if (analysisFormat !== "news") return analysisFormat;
+  if (classification === "BREAKING" || classification === "NEWS") return "news";
+  // The model called it news; the timestamp evidence does not support it.
+  return classification === "REPORT" ? "report" : "analysis";
+}

@@ -17,7 +17,7 @@ import { newRunId } from "../logs/runId.ts";
 import { appendLedgerEntry, costForRun, type ProductionDecision } from "../logs/productionLedger.ts";
 import { log, logError } from "../logs/logger.ts";
 import { computeSeoOpportunity, type SeoOpportunity } from "../seo/opportunityEngine.ts";
-import { classifyNewsworthiness, type NewsworthinessResult } from "../seo/newsworthiness.ts";
+import { classifyNewsworthiness, resolveArticleFormat, type NewsworthinessResult } from "../seo/newsworthiness.ts";
 import { buildKeywordStrategy } from "../intelligence/keywordStrategy.ts";
 import type { KeywordStrategy } from "../intelligence/keywordStrategy.ts";
 import { suggestInternalLinks, type InternalLinkSuggestion } from "../seo/internalLinking.ts";
@@ -26,6 +26,8 @@ import { combinePriority, type CombinedPriority } from "../seo/priority.ts";
 import { buildClaimRegistry, type ClaimRegistryResult, type RegisteredSource } from "../validation/claimRegistry.ts";
 import { buildVerifiedFactSet, isEmpty, type VerifiedFactSet } from "../generation/verifiedFacts.ts";
 import { shouldIncludeReferences, buildReferencesBlock } from "../generation/references.ts";
+import { buildNewsletter } from "../newsletter/buildNewsletter.ts";
+import { enqueueNewsletter } from "../newsletter/queue.ts";
 
 export interface PipelineOptions {
   dryRun: boolean;
@@ -175,6 +177,8 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     report.keywordStrategy = keywordStrategy;
 
     const article = await generateArticle(source, verifiedFacts, analysis, keywordStrategy, runId);
+    // Decides Article vs NewsArticle in the published page's structured data.
+    article.format = resolveArticleFormat(analysis.format, newsworthiness.classification);
     report.article = article;
 
     const quality = runQualityCheck(article, facts);
@@ -244,7 +248,26 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     });
     recordTestResult({ source, options, checks: reportToChecks(report), article, status: gate.finalDecision === "publish" ? "published" : "draft", sanityDocumentId: documentId });
 
-    ledger("PASS", "sanity-draft", undefined, documentId);
+    // A newsletter is only ever built for something actually published. A
+    // draft still has a human decision ahead of it, and an issue is the one
+    // artefact that cannot be taken back once it leaves.
+    if (gate.finalDecision === "publish") {
+      const newsletter = buildNewsletter(article, config.siteUrl);
+      const mode = config.newsletterMode;
+      const queued = enqueueNewsletter({
+        runId,
+        sanityDocumentId: documentId,
+        mode,
+        sendAfter:
+          mode === "scheduled"
+            ? new Date(Date.now() + config.newsletterScheduleDelayHours * 3_600_000).toISOString()
+            : undefined,
+        newsletter,
+      });
+      log("NEWSLETTER", `Numéro préparé (${mode}) — ${newsletter.subject} [${queued.id}]`);
+    }
+
+    ledger(gate.finalDecision === "publish" ? "PUBLISHED" : "PASS", gate.finalDecision === "publish" ? "publication" : "sanity-draft", undefined, documentId);
     log("FINAL STATUS", `${gate.finalDecision === "publish" ? "PUBLIÉ" : "BROUILLON"} — ${article.title} (${documentId})`);
     return gate.finalDecision === "publish" ? { status: "published", documentId, report } : { status: "draft", documentId, report };
   } catch (error) {

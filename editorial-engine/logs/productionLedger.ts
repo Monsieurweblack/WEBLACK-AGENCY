@@ -10,7 +10,7 @@ const LEDGER_FILE = path.join(ENGINE_ROOT, "logs", "production-ledger.jsonl");
  * Deliberately NOT the same vocabulary as the internal run statuses: those
  * say where the pipeline stopped, this says what a human should do about it.
  */
-export type ProductionDecision = "PASS" | "REVIEW" | "REJECT";
+export type ProductionDecision = "PASS" | "PUBLISHED" | "REVIEW" | "REJECT";
 
 export interface LedgerEntry {
   runId: string;

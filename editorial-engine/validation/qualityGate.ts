@@ -72,12 +72,28 @@ export function evaluateQualityGate(inputs: QualityGateInputs): QualityGate {
 
   const allCriticalPass = factCheck === "pass" && copyCheck === "pass" && editorialCheck === "pass" && schemaCheck === "pass" && duplicateCheck === "pass";
 
+  // Publishing without a human is the one decision in this pipeline that
+  // cannot be walked back: the page goes live on the next deploy. A draft
+  // leaves an editor between the engine and the reader and can absorb a
+  // claim that merely could not be sourced; publication cannot. So going
+  // out unattended demands more than passing the gates — it demands that
+  // NOTHING in the article is unverified, whatever its importance, not
+  // merely that nothing blocking is.
+  const unsettled = inputs.claimRegistry.claims.filter(
+    (c) => c.verificationStatus === "UNVERIFIED" || c.verificationStatus === "CONTRADICTED",
+  );
+
   let finalDecision: FinalDecision;
   if (!allCriticalPass) {
     finalDecision = "reject";
-  } else if (inputs.eligibleForAutoPublish) {
+  } else if (inputs.eligibleForAutoPublish && unsettled.length === 0) {
     finalDecision = "publish";
   } else {
+    if (inputs.eligibleForAutoPublish && unsettled.length > 0) {
+      reasons.push(
+        `Publication automatique refusée (brouillon créé à la place): ${unsettled.length} affirmation(s) non établie(s) — ${unsettled.map((c) => `"${c.claim}"`).join("; ")}`,
+      );
+    }
     finalDecision = "draft";
   }
 

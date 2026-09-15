@@ -18,6 +18,7 @@ export type LogStep =
   | "SEO"
   | "QUALITY CHECK"
   | "SANITY"
+  | "NEWSLETTER"
   | "FINAL STATUS"
   | "ERROR";
 
