@@ -1,9 +1,13 @@
 import type { WeblackTerritory } from "../generation/types.ts";
 
 /**
- * Structure interne de l'Agenda culturel. Rien de tout ceci n'est écrit
- * dans Sanity à ce stade : le sous-système doit d'abord démontrer qu'il
- * sait chercher, vérifier, dédupliquer et faire expirer des événements.
+ * Structure interne de l'Agenda culturel.
+ *
+ * Le stock retient tout ce qui a été lu, y compris ce qui ne sera jamais
+ * publié — c'est lui qui garde la trace de ce qui a été écarté et pourquoi.
+ * Seule sa part éligible devient un document Sanity, puis une page
+ * publique : chaque étage est plus étroit que le précédent, jamais plus
+ * large.
  */
 
 /** Où en est l'événement par rapport à aujourd'hui — calculé depuis les dates vérifiées, jamais déclaré par un modèle. */
@@ -31,7 +35,9 @@ export interface AgendaEvent {
   id: string;
   eventName: string;
   eventType: string;
+  /** La discipline en français ; `disciplineEn` porte le même libellé en anglais. Traduire une étiquette n'est pas inventer une donnée. */
   discipline: string;
+  disciplineEn: string;
   artistOrCreator: string;
   institution: string;
   /** ISO court (YYYY-MM-DD) quand la page la donne ; chaîne vide sinon — jamais déduite. */
@@ -40,7 +46,9 @@ export interface AgendaEvent {
   time: string;
   venue: string;
   city: string;
+  /** Le pays en français ; `countryEn` porte le même nom en anglais. */
   country: string;
+  countryEn: string;
   organizer: string;
   officialUrl: string;
   /** Toutes les pages réellement consultées pour cet événement, la première étant celle qui fait foi. */
@@ -63,8 +71,20 @@ export interface AgendaEvent {
   status: EventStatus;
   /** Le territoire WEBLACK que l'événement occupe réellement, jugé sur la page lue. */
   territory: WeblackTerritory;
+  /**
+   * Les territoires attribués à cet événement au fil des lectures.
+   *
+   * Un cas limite se reconnaît à ceci : relu, il change de territoire. Ce
+   * désaccord avec soi-même est la seule preuve fiable que la pertinence
+   * est ambiguë — et l'ambiguïté vaut REVIEW, pas un tirage au sort entre
+   * deux réponses.
+   */
+  territoryHistory?: WeblackTerritory[];
   /** Ce qui justifie que WEBLACK annonce cet événement. Vide = rien ne le justifie. */
   editorialValue: string;
+  /** Une ou deux phrases décrivant l'événement, tirées de la page. Vides si la page n'en donne pas. */
+  descriptionFr: string;
+  descriptionEn: string;
   editorialRelevance: number;
 }
 
@@ -93,6 +113,24 @@ export function isAgendaEligible(event: AgendaEvent, minRelevance = 70): boolean
   if (!event.territory || event.territory === "OUT_OF_TERRITORY") return false;
   if (!(event.editorialValue ?? "").trim()) return false;
   return event.editorialRelevance >= minRelevance;
+}
+
+/**
+ * Le statut tel qu'il est publié : celui que le CMS et le site lisent.
+ *
+ * Il réunit deux choses que le moteur garde séparées en interne — où en est
+ * l'événement dans le temps, et ce qui a pu être établi de lui. Un lecteur
+ * n'a pas à faire cette distinction : un événement annulé, une page qui a
+ * disparu ou une donnée qui manque aboutissent tous au même résultat, il
+ * n'est pas annoncé. Seuls UPCOMING et ONGOING paraissent.
+ */
+export type PublishedStatus = EventStatus | "CANCELLED" | "REVIEW";
+
+export function effectiveStatus(event: AgendaEvent): PublishedStatus {
+  if (event.verificationStatus === "CANCELLED") return "CANCELLED";
+  if (event.verificationStatus !== "VERIFIED") return "REVIEW";
+  if (event.missingFields.length > 0) return "REVIEW";
+  return computeStatus(event.startDate, event.endDate);
 }
 
 /** UPCOMING / ONGOING / EXPIRED, depuis les seules dates vérifiées. Une date de fin absente fait foi de la date de début. */

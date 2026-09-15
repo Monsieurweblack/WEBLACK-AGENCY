@@ -1,0 +1,202 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { getAgendaEvents, agendaFacets, type AgendaEventData } from "../../lib/content";
+import { dayNumber, shortMonth, monthKey, monthLabel, dateRange, placeLine, withinDays, whoOf } from "../../lib/agenda-format";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const events = await getAgendaEvents(lang);
+const facets = agendaFacets(events);
+
+/**
+ * L'agenda se lit par mois : le regroupement porte une information réelle
+ * — quand cela se passe — plutôt qu'un ornement de mise en page. Les
+ * événements arrivent déjà triés par date de début.
+ */
+const months: { key: string; label: string; events: AgendaEventData[] }[] = [];
+for (const event of events) {
+  const key = monthKey(event.startDate);
+  const current = months.at(-1);
+  if (current?.key === key) current.events.push(event);
+  else months.push({ key, label: monthLabel(event.startDate, lang), events: [event] });
+}
+
+const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.length} ${t("agenda.count.many")}`;
+---
+
+<section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
+  <div class="mx-auto max-w-(--container-content)" data-reveal>
+    <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("agenda.hero.eyebrow")}</p>
+    <h1 class="font-display text-balance mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+      {t("agenda.hero.title")}
+    </h1>
+    <p class="mt-6 max-w-2xl text-lg text-(--color-paper)/70">{t("agenda.hero.intro")}</p>
+    <p class="label-tracked mt-8 text-(--color-paper)/40">{countLabel}</p>
+  </div>
+</section>
+
+<section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    {
+      events.length > 0 && (
+        <form
+          id="agenda-filter"
+          class="flex flex-wrap items-end gap-x-8 gap-y-5 border-y border-(--color-line) py-6"
+          data-reveal
+        >
+          <fieldset class="contents">
+            <legend class="sr-only">{t("agenda.filter.legend")}</legend>
+
+            <label class="flex min-w-0 flex-col gap-2">
+              <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.period")}</span>
+              <select
+                name="period"
+                class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+              >
+                <option value="all">{t("agenda.filter.all")}</option>
+                <option value="30">{t("agenda.filter.period.month")}</option>
+                <option value="90">{t("agenda.filter.period.quarter")}</option>
+              </select>
+            </label>
+
+            {facets.disciplines.length > 1 && (
+              <label class="flex min-w-0 flex-col gap-2">
+                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.discipline")}</span>
+                <select
+                  name="discipline"
+                  class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+                >
+                  <option value="all">{t("agenda.filter.all")}</option>
+                  {facets.disciplines.map((value) => (
+                    <option value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {facets.cities.length > 1 && (
+              <label class="flex min-w-0 flex-col gap-2">
+                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.city")}</span>
+                <select
+                  name="city"
+                  class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+                >
+                  <option value="all">{t("agenda.filter.all")}</option>
+                  {facets.cities.map((value) => (
+                    <option value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {facets.countries.length > 1 && (
+              <label class="flex min-w-0 flex-col gap-2">
+                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.country")}</span>
+                <select
+                  name="country"
+                  class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+                >
+                  <option value="all">{t("agenda.filter.all")}</option>
+                  {facets.countries.map((value) => (
+                    <option value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </fieldset>
+
+          <button
+            type="reset"
+            class="label-tracked ml-auto border-b border-transparent pb-2 text-(--color-paper)/50 transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          >
+            {t("agenda.filter.reset")}
+          </button>
+        </form>
+      )
+    }
+
+    {
+      events.length === 0 ? (
+        <p class="mt-14 text-(--color-paper)/60">{t("agenda.empty")}</p>
+      ) : (
+        <div id="agenda-list" class="mt-4">
+          {months.map((month) => (
+            <section data-month={month.key}>
+              <h2
+                class="label-tracked sticky top-0 z-10 bg-(--color-ink) py-6 text-(--color-gold)"
+                data-month-heading
+              >
+                {month.label}
+              </h2>
+
+              <ul class="m-0 list-none p-0">
+                {month.events.map((event) => (
+                  <li
+                    class="border-t border-(--color-line)"
+                    data-event
+                    data-city={event.city}
+                    data-country={event.country ?? ""}
+                    data-discipline={event.discipline ?? ""}
+                    data-start={event.startDate}
+                    data-within-30={String(withinDays(event, 30))}
+                    data-within-90={String(withinDays(event, 90))}
+                  >
+                    <a
+                      href={localizedPath(lang, `/agenda/${event.slug}/`)}
+                      class="group grid grid-cols-1 gap-x-8 gap-y-3 py-8 sm:grid-cols-[6rem_1fr] md:grid-cols-[8rem_1fr_auto]"
+                    >
+                      <p class="flex items-baseline gap-2 sm:flex-col sm:gap-0">
+                        <span class="font-display text-3xl leading-none text-(--color-gold) tabular-nums">
+                          {dayNumber(event.startDate, lang)}
+                        </span>
+                        <span class="label-tracked text-(--color-paper)/40">{shortMonth(event.startDate, lang)}</span>
+                      </p>
+
+                      <div class="min-w-0">
+                        <p class="label-tracked text-(--color-paper)/40">
+                          {event.discipline ?? event.eventType ?? t(`agenda.status.${event.status}`)}
+                        </p>
+                        <h3 class="font-display mt-2 text-2xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
+                          {event.eventName}
+                        </h3>
+                        {/*
+                          Qui — l'artiste d'abord, l'institution à défaut, et
+                          rien du tout quand cette institution est déjà le lieu :
+                          « Station Berlin » au-dessus de « Station Berlin,
+                          Berlin » n'apprend rien au lecteur.
+                        */}
+                        {whoOf(event) && <p class="mt-2 text-(--color-paper)/80">{whoOf(event)}</p>}
+                        <p class="mt-2 text-sm text-(--color-paper)/60">{placeLine(event)}</p>
+                        {event.description && (
+                          <p class="mt-3 max-w-2xl text-(--color-paper)/70">{event.description}</p>
+                        )}
+                      </div>
+
+                      <p class="label-tracked self-center whitespace-nowrap text-(--color-paper)/40 md:text-right">
+                        {event.status === "ONGOING" ? t("agenda.status.ONGOING") : dateRange(event, lang, t("agenda.dateTo"))}
+                      </p>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )
+    }
+
+    <p id="agenda-empty" class="mt-14 text-(--color-paper)/60" hidden>{t("agenda.emptyFiltered")}</p>
+
+    <a
+      href={localizedPath(lang, "/journal/")}
+      class="label-tracked mt-16 inline-flex items-center gap-2 border-b border-(--color-line) pb-2 text-(--color-paper)/60 transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+    >
+      {t("agenda.toJournal")} &rarr;
+    </a>
+  </div>
+</section>

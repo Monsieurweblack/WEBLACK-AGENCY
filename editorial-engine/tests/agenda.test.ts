@@ -1,12 +1,12 @@
 import "./setup.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStatus, isAgendaEligible, ESSENTIAL_FIELDS, type AgendaEvent } from "../agenda/types.ts";
+import { computeStatus, effectiveStatus, isAgendaEligible, ESSENTIAL_FIELDS, type AgendaEvent } from "../agenda/types.ts";
 import { eventIdentity, mergeEvent } from "../agenda/store.ts";
-import { rankSource, dateAppears } from "../agenda/verify.ts";
+import { rankSource, dateAppears, settleTerritory } from "../agenda/verify.ts";
 import { planSearches } from "../agenda/discover.ts";
 import { refersToSameEvent } from "../agenda/resolve.ts";
-import { eventSlug, toEventDocument } from "../sanity/events.ts";
+import { eventSlug, toEventDocument, preserveSlug } from "../sanity/events.ts";
 
 function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
   const base: AgendaEvent = {
@@ -14,6 +14,7 @@ function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     eventName: "Barthélémy Toguo — The Nomadic Studio",
     eventType: "exposition",
     discipline: "art contemporain",
+    disciplineEn: "contemporary art",
     artistOrCreator: "Barthélémy Toguo",
     institution: "Galerie Lelong",
     startDate: "2026-09-10",
@@ -22,6 +23,7 @@ function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     venue: "Galerie Lelong",
     city: "Paris",
     country: "France",
+    countryEn: "France",
     organizer: "Galerie Lelong",
     officialUrl: "https://www.galerie-lelong.com/fr/expo/toguo",
     sourceUrls: ["https://www.galerie-lelong.com/fr/expo/toguo"],
@@ -35,6 +37,8 @@ function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     editorialRelevance: 80,
     territory: "ART_CULTURE",
     editorialValue: "Une exposition personnelle dans une galerie de référence.",
+    descriptionFr: "Une exposition personnelle de Barthélémy Toguo à la Galerie Lelong.",
+    descriptionEn: "A solo exhibition by Barthélémy Toguo at Galerie Lelong.",
     fieldSources: {},
     ...overrides,
   };
@@ -239,6 +243,47 @@ test("élargir les formes acceptées ne confirme pas une date que la page ne por
   assert.equal(dateAppears("2026-09-13", "130 September 2026"), false, "le jour ne doit pas être un fragment de nombre");
 });
 
+// --- Statut publié ---------------------------------------------------------
+
+test("seuls un événement à venir ou en cours peuvent paraître", () => {
+  assert.equal(effectiveStatus(event({ startDate: "2099-01-01", endDate: "2099-01-05" })), "UPCOMING");
+  assert.equal(effectiveStatus(event({ startDate: "2000-01-01", endDate: "2000-01-05" })), "EXPIRED");
+  assert.equal(effectiveStatus(event({ verificationStatus: "CANCELLED" })), "CANCELLED");
+});
+
+test("tout ce qui n'est pas établi aboutit à REVIEW, quel que soit le motif", () => {
+  for (const statut of ["REVIEW", "UNVERIFIED", "GONE"] as const) {
+    assert.equal(effectiveStatus(event({ verificationStatus: statut })), "REVIEW", statut);
+  }
+  assert.equal(
+    effectiveStatus(event({ missingFields: ["city"], startDate: "2099-01-01" })),
+    "REVIEW",
+    "une donnée essentielle absente empêche l'annonce, même pour un événement futur",
+  );
+});
+
+// --- Territoire instable ---------------------------------------------------
+
+test("un événement qui change de territoire entre deux lectures passe en revue", () => {
+  const premier = event({ territory: "CREATIVE_INDUSTRIES", territoryHistory: ["CREATIVE_INDUSTRIES"] });
+  const relu = event({ territory: "OUT_OF_TERRITORY" });
+
+  const tranche = settleTerritory(premier, relu);
+  assert.equal(tranche.verificationStatus, "REVIEW");
+  assert.match(tranche.note, /ambig/);
+  assert.equal(isAgendaEligible(tranche), false, "un cas limite ne se publie pas");
+});
+
+test("une lecture qui confirme la précédente ne déclenche rien", () => {
+  const premier = event({ territory: "ART_CULTURE", territoryHistory: ["ART_CULTURE"] });
+  const relu = event({ territory: "ART_CULTURE" });
+
+  const tranche = settleTerritory(premier, relu);
+  assert.equal(tranche.verificationStatus, "VERIFIED");
+  assert.equal(isAgendaEligible(tranche), true);
+  assert.deepEqual(tranche.territoryHistory, ["ART_CULTURE"]);
+});
+
 // --- Document Sanity -------------------------------------------------------
 
 test("le document Sanity ne porte que des données réellement lues", () => {
@@ -248,6 +293,8 @@ test("le document Sanity ne porte que des données réellement lues", () => {
   assert.equal("time" in doc, false, "un horaire absent ne s'écrit pas");
   assert.equal("organizer" in doc, false);
   assert.equal(doc.venue, "Galerie Lelong");
+  assert.equal(doc.status, "EXPIRED", "le statut publié est calculé, jamais recopié");
+  assert.deepEqual(doc.sourceUrls, ["https://www.galerie-lelong.com/fr/expo/toguo"]);
 });
 
 test("la provenance de chaque donnée voyage avec le document", () => {
@@ -268,6 +315,21 @@ test("l'identité moteur ancre le document : deux cycles ne créent pas deux év
 
 test("le slug reste lisible et daté", () => {
   assert.equal(eventSlug(event()), "barthelemy-toguo-the-nomadic-studio-2026-09-10");
+});
+
+test("l'URL publique ne bouge pas quand une relecture reformule le nom", () => {
+  // Cas réel : « Berlin Fashion Week 2027 » relu « Berlin Fashion Week ».
+  // La page était déjà en ligne et déjà partageable.
+  const relu = toEventDocument(event({ eventName: "Berlin Fashion Week", startDate: "2027-01-29" }));
+  const fige = preserveSlug(relu, "berlin-fashion-week-2027-2027-01-29");
+
+  assert.equal((fige.slug as { current: string }).current, "berlin-fashion-week-2027-2027-01-29");
+  assert.equal(fige.eventName, "Berlin Fashion Week", "le nom affiché, lui, se met bien à jour");
+});
+
+test("un événement encore jamais publié reçoit le slug déduit de son nom", () => {
+  const neuf = toEventDocument(event());
+  assert.equal((preserveSlug(neuf, undefined).slug as { current: string }).current, eventSlug(event()));
 });
 
 // --- Couverture géographique ----------------------------------------------

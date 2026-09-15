@@ -1,6 +1,6 @@
 import { getSanityClient } from "./client.ts";
 import { log } from "../logs/logger.ts";
-import { isAgendaEligible, type AgendaEvent } from "../agenda/types.ts";
+import { isAgendaEligible, effectiveStatus, type AgendaEvent } from "../agenda/types.ts";
 
 /**
  * Écrit l'Agenda vérifié dans Sanity, un document `event` par événement.
@@ -52,7 +52,12 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
     editorialValue: event.editorialValue,
     editorialRelevance: event.editorialRelevance,
     officialUrl: event.officialUrl,
+    sourceUrls: [...new Set(event.sourceUrls)],
     verificationStatus: event.verificationStatus,
+    // Le statut publié réunit la position dans le temps et ce qui a pu être
+    // établi : c'est le seul champ que le site ait à lire pour décider
+    // d'annoncer un événement ou non.
+    status: effectiveStatus(event),
     lastVerifiedAt: event.lastVerifiedAt,
     engineId: event.id,
     featured: false,
@@ -68,10 +73,14 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
     ["time", event.time],
     ["eventType", event.eventType],
     ["discipline", event.discipline],
+    ["disciplineEn", event.disciplineEn ?? ""],
     ["artistOrCreator", event.artistOrCreator],
     ["institution", event.institution],
     ["organizer", event.organizer],
     ["country", event.country],
+    ["countryEn", event.countryEn ?? ""],
+    ["descriptionFr", event.descriptionFr ?? ""],
+    ["descriptionEn", event.descriptionEn ?? ""],
   ];
   for (const [key, value] of optional) {
     if (value.trim()) doc[key] = value.trim();
@@ -80,9 +89,23 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
 }
 
 /** Retrouve le document déjà écrit pour cet événement, s'il existe. */
-export async function findEventDocument(engineId: string): Promise<{ _id: string } | null> {
+export async function findEventDocument(engineId: string): Promise<{ _id: string; slug?: { current?: string } } | null> {
   const client = getSanityClient();
-  return client.fetch<{ _id: string } | null>(`*[_type == "event" && engineId == $engineId][0]{ _id }`, { engineId });
+  return client.fetch(`*[_type == "event" && engineId == $engineId][0]{ _id, slug }`, { engineId });
+}
+
+/**
+ * Une URL publique ne bouge pas.
+ *
+ * Le slug se déduit du nom de l'événement, et une re-lecture de la même page
+ * peut le formuler autrement — « Berlin Fashion Week 2027 » puis « Berlin
+ * Fashion Week ». Laisser le slug suivre reviendrait à déplacer une page
+ * déjà indexée et déjà partagée, sur une variation de style. Le nom affiché,
+ * lui, se met bien à jour : c'est l'adresse qui est figée, pas le contenu.
+ */
+export function preserveSlug(doc: Record<string, unknown>, existingSlug: string | undefined): Record<string, unknown> {
+  if (!existingSlug) return doc;
+  return { ...doc, slug: { _type: "slug", current: existingSlug } };
 }
 
 /**
@@ -105,7 +128,7 @@ export async function publishEvent(event: AgendaEvent): Promise<EventPublication
 
   if (existing) {
     log("SANITY", `Agenda — mise à jour ${existing._id} : ${event.eventName}`);
-    await client.patch(existing._id).set(doc).commit();
+    await client.patch(existing._id).set(preserveSlug(doc, existing.slug?.current)).commit();
     return { documentId: existing._id, created: false };
   }
 
@@ -132,7 +155,7 @@ export async function listPublishedEvents(): Promise<{ _id: string; engineId: st
 export async function withdrawEvent(documentId: string, reason: string): Promise<void> {
   const client = getSanityClient();
   log("SANITY", `Agenda — retrait de l'annonce ${documentId} : ${reason}`);
-  await client.patch(documentId).set({ verificationStatus: "REVIEW", lastVerifiedAt: new Date().toISOString() }).commit();
+  await client.patch(documentId).set({ verificationStatus: "REVIEW", status: "REVIEW", lastVerifiedAt: new Date().toISOString() }).commit();
 }
 
 /**
@@ -152,7 +175,7 @@ export async function reflectStatusChange(event: AgendaEvent): Promise<boolean> 
   log("SANITY", `Agenda — ${event.eventName} passe en ${event.verificationStatus}, document ${existing._id} mis à jour`);
   await client
     .patch(existing._id)
-    .set({ verificationStatus: event.verificationStatus, lastVerifiedAt: event.lastVerifiedAt })
+    .set({ verificationStatus: event.verificationStatus, status: effectiveStatus(event), lastVerifiedAt: event.lastVerifiedAt })
     .commit();
   return true;
 }

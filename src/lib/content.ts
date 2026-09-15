@@ -2,6 +2,7 @@ import { createClient, type SanityClient } from "@sanity/client";
 import { toHTML } from "@portabletext/to-html";
 import type { PortableTextBlock } from "@portabletext/types";
 import type { Lang } from "../i18n/utils";
+import { toPublicEvent, isStillRunning, type AgendaEventData } from "./agenda-public";
 
 export const sanityClient: SanityClient = createClient({
   projectId: import.meta.env.SANITY_PROJECT_ID,
@@ -733,4 +734,52 @@ export async function getLiveEvents(lang: Lang): Promise<LiveData[]> {
 /** Picks which live entry to show: an actual "live" one first, else the featured one, else the first by order. Never infers "live" from a URL or date. */
 export function getPrimaryLive(entries: LiveData[]): LiveData | undefined {
   return entries.find((e) => e.status === "live") ?? entries.find((e) => e.featured) ?? entries[0];
+}
+
+// --- Agenda (type "event", écrit par le moteur éditorial) --------------------
+
+/**
+ * La lecture de l'Agenda. La règle qui décide ce qui a le droit d'être
+ * annoncé vit dans src/lib/agenda-public.ts, sans dépendance à Sanity ni à
+ * Astro : c'est la seule partie du site dont une erreur se verrait dehors,
+ * et elle doit pouvoir être vérifiée seule.
+ */
+export type { AgendaStatus, PublicAgendaStatus, AgendaEventData } from "./agenda-public";
+export { agendaFacets } from "./agenda-public";
+
+const AGENDA_PROJECTION = `{
+  _id, slug, eventName, eventType, discipline, artistOrCreator, institution,
+  startDate, endDate, time, venue, city, country, organizer,
+  disciplineEn, countryEn, descriptionFr, descriptionEn, officialUrl, sourceUrls,
+  status, verificationStatus, lastVerifiedAt, editorialRelevance
+}`;
+
+/** Les événements à annoncer, du plus proche au plus lointain. */
+export async function getAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
+  const docs = await sanityClient.fetch(`*[_type == "event"] | order(startDate asc) ${AGENDA_PROJECTION}`);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const events: AgendaEventData[] = [];
+  for (const doc of docs as any[]) {
+    const event = toPublicEvent(doc);
+    if (!event || !isStillRunning(event, today)) continue;
+    // La discipline sert d'étiquette ET de filtre : affichée dans une langue
+    // et filtrée dans l'autre, une même discipline compterait deux fois.
+    const description = localized(lang, doc.descriptionFr, doc.descriptionEn);
+    const discipline = localized(lang, doc.discipline, doc.disciplineEn);
+    const country = localized(lang, doc.country, doc.countryEn);
+    events.push({
+      ...event,
+      discipline: discipline || undefined,
+      country: country || undefined,
+      description: description || undefined,
+    });
+  }
+  return events;
+}
+
+/** Un événement précis, pour sa page propre. Même filtre que la liste : ce qui ne s'annonce pas n'a pas de page. */
+export async function getAgendaEvent(slug: string, lang: Lang): Promise<AgendaEventData | undefined> {
+  const events = await getAgendaEvents(lang);
+  return events.find((event) => event.slug === slug);
 }

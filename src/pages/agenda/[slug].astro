@@ -1,0 +1,35 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AgendaDetail from "../../components/pages/AgendaDetail.astro";
+import { getAgendaEvents } from "../../lib/content";
+import { placeLine } from "../../lib/agenda-format";
+
+/**
+ * Une page par événement annoncé — et par événement seulement : la liste
+ * consultée ici est déjà filtrée (vérifié, à venir ou en cours, données
+ * essentielles présentes). Un événement en revue, annulé ou terminé n'a
+ * donc pas d'URL du tout, plutôt qu'une page vide ou dépubliée.
+ *
+ * Le slug est le même dans les deux langues — l'événement, lui, n'a pas de
+ * langue : mêmes dates, même lieu, même nom propre. La résolution hreflang
+ * par défaut (même chemin, autre préfixe) est donc exacte, et aucune carte
+ * de traductions n'a besoin d'être fournie.
+ */
+export async function getStaticPaths() {
+  const events = await getAgendaEvents("fr");
+  return events.map((event) => ({ params: { slug: event.slug }, props: { event } }));
+}
+
+const lang = "fr" as const;
+const { event } = Astro.props;
+const description = event.description ?? `${event.eventName} — ${placeLine(event)}`;
+---
+
+<BaseLayout lang={lang} title={event.eventName} description={description}>
+  <AgendaDetail lang={lang} event={event} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

@@ -1,0 +1,149 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { LOCALES } from "../../i18n/locales";
+import type { AgendaEventData } from "../../lib/content";
+import { longDate, dateRange, placeLine, whoOf } from "../../lib/agenda-format";
+
+interface Props {
+  lang: Lang;
+  event: AgendaEventData;
+}
+
+const { lang, event } = Astro.props;
+const t = useTranslations(lang);
+
+/**
+ * Les données structurées ne décrivent que ce qui a été vérifié.
+ *
+ * Le moteur ne publie un événement qu'après avoir retrouvé son nom, ses
+ * dates, son lieu et sa ville dans le texte réel de la page officielle, et
+ * la lecture côté site refuse déjà ce qui n'en porte pas. La garde
+ * ci-dessous est la troisième : annoncer à un moteur de recherche une date
+ * ou un lieu qu'on n'a pas établis serait exactement la fabrication que
+ * toute la chaîne existe pour empêcher. Un champ absent n'est pas déclaré.
+ */
+const canDescribeEvent = Boolean(event.eventName && event.startDate && event.venue && event.city);
+
+const structuredData = canDescribeEvent
+  ? {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      name: event.eventName,
+      startDate: event.startDate,
+      ...(event.endDate ? { endDate: event.endDate } : {}),
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: {
+        "@type": "Place",
+        name: event.venue,
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: event.city,
+          ...(event.country ? { addressCountry: event.country } : {}),
+        },
+      },
+      ...(event.description ? { description: event.description } : {}),
+      ...(event.organizer ? { organizer: { "@type": "Organization", name: event.organizer } } : {}),
+      ...(event.artistOrCreator ? { performer: { "@type": "Person", name: event.artistOrCreator } } : {}),
+      url: event.officialUrl,
+      inLanguage: LOCALES[lang].hreflang,
+    }
+  : undefined;
+
+const facts: { label: string; value: string }[] = [
+  { label: t("agenda.label.when"), value: dateRange(event, lang, t("agenda.dateTo")) },
+  ...(event.time ? [{ label: t("agenda.label.time"), value: event.time }] : []),
+  { label: t("agenda.label.venue"), value: placeLine(event) },
+  ...(whoOf(event) ? [{ label: t("agenda.label.who"), value: whoOf(event)! }] : []),
+  ...(event.institution && event.institution !== event.venue
+    ? [{ label: t("agenda.label.what"), value: event.institution }]
+    : []),
+  ...(event.discipline ? [{ label: t("agenda.label.discipline"), value: event.discipline }] : []),
+  ...(event.organizer && event.organizer !== event.institution
+    ? [{ label: t("agenda.label.organizer"), value: event.organizer }]
+    : []),
+];
+---
+
+<article class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    <a
+      href={localizedPath(lang, "/agenda/")}
+      class="label-tracked inline-flex items-center gap-2 text-(--color-paper)/50 transition-colors hover:text-(--color-gold)"
+    >
+      &larr; {t("agenda.back")}
+    </a>
+
+    <header class="mt-10 max-w-4xl" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">
+        {t(`agenda.status.${event.status}`)}
+      </p>
+      <h1 class="font-display text-balance mt-4 text-4xl text-(--color-paper) sm:text-5xl">{event.eventName}</h1>
+      {event.description && <p class="mt-6 text-lg text-(--color-paper)/70">{event.description}</p>}
+    </header>
+
+    <dl
+      class="mt-14 grid grid-cols-1 gap-x-10 gap-y-8 border-t border-(--color-line) pt-10 sm:grid-cols-2 lg:grid-cols-3"
+      data-reveal
+    >
+      {
+        facts.map((fact) => (
+          <div class="min-w-0">
+            <dt class="label-tracked text-(--color-paper)/40">{fact.label}</dt>
+            <dd class="mt-2 text-lg text-(--color-paper)">{fact.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <a
+      href={event.officialUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="label-tracked mt-14 inline-flex items-center gap-2 border border-(--color-gold) px-6 py-4 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-on-gold)"
+    >
+      {t("agenda.official")} &rarr;
+    </a>
+
+    <footer class="mt-16 border-t border-(--color-line) pt-8 text-sm text-(--color-paper)/40">
+      {
+        event.lastVerifiedAt && (
+          <p>
+            {t("agenda.verifiedOn")} <time datetime={event.lastVerifiedAt}>{longDate(event.lastVerifiedAt.slice(0, 10), lang)}</time>
+          </p>
+        )
+      }
+      {
+        event.sourceUrls.length > 0 && (
+          <div class="mt-4">
+            <p class="label-tracked text-(--color-paper)/40">{t("agenda.sources")}</p>
+            <ul class="mt-2 flex flex-col gap-1">
+              {event.sourceUrls.map((url) => (
+                <li class="min-w-0">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="break-all underline decoration-(--color-line) underline-offset-4 transition-colors hover:text-(--color-gold)"
+                  >
+                    {url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </footer>
+  </div>
+</article>
+
+{
+  structuredData && (
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify(structuredData).replace(/</g, "\\u003c")}
+    />
+  )
+}

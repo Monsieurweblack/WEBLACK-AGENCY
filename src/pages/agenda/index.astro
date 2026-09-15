@@ -1,0 +1,21 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AgendaList from "../../components/pages/AgendaList.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import { useTranslations } from "../../i18n/utils";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+---
+
+<BaseLayout lang={lang} title={t("agenda.seo.title")} description={t("agenda.seo.description")}>
+  <AgendaList lang={lang} />
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  import { initAgendaFilter } from "../../scripts/filters/agenda-filter";
+  initScrollChoreography();
+  initAgendaFilter();
+</script>
