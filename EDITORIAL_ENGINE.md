@@ -119,7 +119,44 @@ Trois journaux complémentaires, tous locaux et hors git :
 
 `npm run editorial:ledger` résume les cycles ; `npm run editorial:review` liste ce qui attend un humain. Aucun de ces fichiers ne contient de clé d'API : les traces ne portent que des métadonnées d'appel.
 
-**PASS** crée un brouillon Sanity. **REVIEW** n'en crée aucun et part dans la file de revue. **REJECT** est ignoré — mais enregistré, pour que le même article ne soit pas re-analysé et re-facturé au cycle suivant.
+**PUBLIÉ** met l'article en ligne sans relecture. **PASS** crée un brouillon Sanity. **REVIEW** n'en crée aucun et part dans la file de revue. **REJECT** est ignoré — mais enregistré, pour que le même article ne soit pas re-analysé et re-facturé au cycle suivant.
+
+## Publication automatique
+
+`EDITORIAL_MODE=publish` autorise un article à partir en ligne sans intervention. Repasser à `draft` suffit à tout arrêter, immédiatement et sans autre changement.
+
+Pour être publié sans relecture, un article doit réunir **toutes** ces conditions :
+
+1. les huit portes passent (fact-check, anti-fabrication, anti-copie, éditorial, SEO, schéma, dédoublonnage) ;
+2. score éditorial ≥ `AUTO_PUBLISH_SCORE` (90) **et** confiance ≥ `AUTO_PUBLISH_CONFIDENCE` (90) ;
+3. **aucune affirmation non établie**, quelle que soit son importance — pas seulement aucune affirmation bloquante.
+
+La troisième condition n'existe que pour la publication. Un brouillon laisse un rédacteur entre le moteur et le lecteur, et peut absorber une affirmation qu'on n'a pas su sourcer ; une page en ligne, non. Un article qui bute sur cette condition est quand même rédigé, devient un brouillon, et le Quality Gate écrit pourquoi il a été retenu.
+
+## Newsletter
+
+Un numéro n'est préparé que pour un article **réellement publié** — jamais pour un brouillon, qui a encore une décision humaine devant lui.
+
+Ce n'est délibérément pas un appel de modèle. Tout ce dont un numéro a besoin existe déjà dans un article passé par la vérification des affirmations, le fact-check adverse, l'anti-fabrication et les portes. Demander à un modèle de réécrire ça en objet « plus accrocheur » rouvrirait, dans le seul artefact qui atterrit directement dans une boîte mail et ne peut plus être corrigé après envoi, exactement la surface d'hallucination que toute la chaîne existe pour fermer. L'objet **est** le titre, le preheader **est** l'excerpt, le corps reprend les premiers paragraphes de l'article mot pour mot.
+
+| Mode | Comportement |
+| --- | --- |
+| `immediate` | éligible à l'envoi dès la publication |
+| `scheduled` | retenu jusqu'à `NEWSLETTER_SCHEDULE_DELAY_HOURS` après la publication |
+| `digest` | retenu jusqu'à regroupement explicite — **valeur par défaut** |
+
+```bash
+npm run editorial:newsletter                   # file des numéros et état de l'envoi
+npm run editorial:newsletter -- preview [id]   # aperçu texte d'un numéro
+npm run editorial:newsletter -- digest         # regroupe ce qui attend, sans envoyer
+npm run editorial:newsletter -- send           # envoie ce qui est dû
+```
+
+Aucun fournisseur d'e-mail n'est configuré sur ce projet, et aucun n'est inventé : tant que `NEWSLETTER_PROVIDER`, `NEWSLETTER_API_KEY`, `NEWSLETTER_FROM` et `NEWSLETTER_AUDIENCE_ID` ne sont pas renseignés, `send` refuse de s'exécuter et le dit. Les numéros restent `queued`, jamais marqués `sent` — une newsletter faussement enregistrée comme délivrée se cache pendant des semaines.
+
+## Article ou NewsArticle
+
+Le champ `format` décide, au rendu, si la page déclare `NewsArticle` ou `Article` en données structurées. La déclaration se mérite : le format choisi par le modèle est accepté pour tout **sauf** « news », qui n'est conservé que si le classifieur déterministe — lequel exige un vrai horodatage de publication, pas une impression de fraîcheur — confirme BREAKING ou NEWS. La résolution ne peut que rétrograder une sur-déclaration, jamais en fabriquer une : annoncer à Google qu'une analyse intemporelle est une actualité est une fausse déclaration de données structurées, et elle se paie.
 
 ## Publication automatique — à activer en connaissance de cause
 
