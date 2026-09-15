@@ -9,9 +9,10 @@ const QUEUE_FILE = path.join(ENGINE_ROOT, "logs", "newsletter-queue.jsonl");
 /**
  * immediate — eligible for dispatch as soon as the article is published.
  * scheduled — held until `sendAfter`.
- * digest    — held until gathered with others into one issue.
+ * digest    — held until gathered with others into one issue, on demand.
+ * dailyDigest / weeklyDigest — same, on a fixed rhythm.
  */
-export type NewsletterMode = "immediate" | "scheduled" | "digest";
+export type NewsletterMode = "immediate" | "scheduled" | "digest" | "dailyDigest" | "weeklyDigest";
 export type NewsletterStatus = "queued" | "sent" | "failed";
 
 export interface QueuedNewsletter {
@@ -73,6 +74,9 @@ export function dueNewsletters(now = new Date()): QueuedNewsletter[] {
   });
 }
 
+const DIGEST_MODES: ReadonlySet<NewsletterMode> = new Set(["digest", "dailyDigest", "weeklyDigest"]);
+
+/** Everything waiting to be gathered, whatever its rhythm. Individual sending is unaffected: an immediate or scheduled issue never lands here. */
 export function pendingDigest(): QueuedNewsletter[] {
-  return currentQueue().filter((entry) => entry.status === "queued" && entry.mode === "digest");
+  return currentQueue().filter((entry) => entry.status === "queued" && DIGEST_MODES.has(entry.mode));
 }

@@ -185,7 +185,7 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     report.quality = quality;
     const antiCopy = checkAntiCopy(article, source);
     report.antiCopy = antiCopy;
-    const antiFabrication = await checkAntiFabrication(article, facts, runId);
+    const antiFabrication = await checkAntiFabrication(article, verifiedFacts, runId);
     report.antiFabrication = antiFabrication;
 
     // FINAL FACT-CHECK PASS (source-traceable claim registry, evidence

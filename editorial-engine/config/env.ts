@@ -110,10 +110,10 @@ export function loadConfig(): EditorialConfig {
   };
 }
 
-export type NewsletterMode = "immediate" | "scheduled" | "digest";
+export type NewsletterMode = "immediate" | "scheduled" | "digest" | "dailyDigest" | "weeklyDigest";
 
 function parseNewsletterMode(value: string | undefined): NewsletterMode {
-  if (value === "immediate" || value === "scheduled" || value === "digest") return value;
+  if (value === "immediate" || value === "scheduled" || value === "digest" || value === "dailyDigest" || value === "weeklyDigest") return value;
   // Digest is the safe default: nothing leaves on its own until someone
   // decides an issue is ready to go out.
   return "digest";

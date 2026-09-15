@@ -3,6 +3,8 @@ import { fetchRssSource } from "../ingestion/rss.ts";
 import { processArticle } from "./run.ts";
 import { loadConfig } from "../config/env.ts";
 import { acquireCycleLock, releaseCycleLock } from "./cycleLock.ts";
+import { readLedger } from "../logs/productionLedger.ts";
+import { currentQueue } from "../newsletter/queue.ts";
 import { log, logError } from "../logs/logger.ts";
 
 /**
@@ -27,7 +29,8 @@ export async function runOneCycle(dryRun: boolean): Promise<void> {
   if (!acquireCycleLock()) return;
   // One id for the whole cycle, so the production ledger can show what a
   // single pass over every source produced, end to end.
-  const cycleId = `cycle-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  const startedAt = new Date().toISOString();
+  const cycleId = `cycle-${startedAt.replace(/[:.]/g, "-")}`;
   log("SOURCE FOUND", `Cycle ${cycleId} — ${sources.length} source(s) activée(s)`);
   try {
     for (const source of sources) {
@@ -46,7 +49,38 @@ export async function runOneCycle(dryRun: boolean): Promise<void> {
   } finally {
     releaseCycleLock();
   }
-  log("SOURCE FOUND", `Cycle ${cycleId} terminé.`);
+  logCycleSummary(cycleId, startedAt, sources.length);
+}
+
+/** One line per finished cycle, read back from the ledger the cycle itself wrote — no parallel accounting to drift out of sync. */
+function logCycleSummary(cycleId: string, startedAt: string, sourceCount: number): void {
+  const entries = readLedger().filter((e) => e.cycleId === cycleId);
+  const count = (d: string) => entries.filter((e) => e.decision === d).length;
+  const newsletters = currentQueue().filter((n) => entries.some((e) => e.runId === n.runId));
+
+  const summary = {
+    run_id: cycleId,
+    start: startedAt,
+    end: new Date().toISOString(),
+    sources: sourceCount,
+    analysed: entries.length,
+    eligible: entries.filter((e) => e.stoppedAt !== "deduplication").length,
+    generated: entries.filter((e) => e.article !== undefined).length,
+    pass: count("PASS"),
+    review: count("REVIEW"),
+    reject: count("REJECT"),
+    skip: entries.filter((e) => e.stoppedAt === "deduplication").length,
+    published: count("PUBLISHED"),
+    newsletterGenerated: newsletters.length,
+    newsletterSent: newsletters.filter((n) => n.status === "sent").length,
+    cost: {
+      calls: entries.reduce((s, e) => s + e.cost.calls, 0),
+      tokens: entries.reduce((s, e) => s + e.cost.totalTokens, 0),
+      estimatedUsd: Number(entries.reduce((s, e) => s + e.cost.estimatedUsd, 0).toFixed(4)),
+    },
+    errors: entries.filter((e) => e.stoppedAt === "error").length,
+  };
+  log("FINAL STATUS", `Cycle terminé — ${JSON.stringify(summary)}`);
 }
 
 export async function watchLoop(): Promise<void> {

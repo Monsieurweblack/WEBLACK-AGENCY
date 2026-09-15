@@ -3,8 +3,16 @@ import type { GeneratedArticle } from "../generation/types.ts";
 export interface Newsletter {
   subject: string;
   preheader: string;
+  headline: string;
+  intro: string;
+  excerpt: string;
+  /** Only ever the article's own cover image; undefined when it has none — an issue never invents one. */
+  image?: { url: string; alt: string };
+  cta: { label: string; url: string };
+  canonicalUrl: string;
   html: string;
   text: string;
+  /** Same as canonicalUrl — kept because the queue and CLI already read it. */
   articleUrl: string;
 }
 
@@ -37,6 +45,12 @@ export function buildNewsletter(article: GeneratedArticle, siteUrl: string): New
   return {
     subject: article.title,
     preheader: article.excerpt,
+    headline: article.title,
+    intro: opening[0] ?? article.excerpt,
+    excerpt: article.excerpt,
+    image: article.coverImage ? { url: article.coverImage.url, alt: article.coverImage.alt } : undefined,
+    cta: { label: "Lire l'article complet", url: articleUrl },
+    canonicalUrl: articleUrl,
     articleUrl,
     text: buildText(article, opening, articleUrl),
     html: buildHtml(article, opening, articleUrl),

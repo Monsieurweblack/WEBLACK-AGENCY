@@ -6,7 +6,7 @@ import { JOURNAL_CATEGORIES } from "../generation/types.ts";
 import type { GeneratedArticle } from "../generation/types.ts";
 import type { QualityCheckResult } from "../validation/qualityCheck.ts";
 import type { AntiCopyResult } from "../validation/antiCopy.ts";
-import type { AntiFabricationResult } from "../validation/antiFabrication.ts";
+import { emptyVerdictTally, type AntiFabricationResult } from "../validation/antiFabrication.ts";
 import type { DuplicateDecision } from "../validation/dedupe.ts";
 import type { ClaimRegistryResult } from "../validation/claimRegistry.ts";
 
@@ -37,7 +37,7 @@ function baseArticle(overrides: Partial<GeneratedArticle> = {}): GeneratedArticl
 
 const passingQuality: QualityCheckResult = { pass: true, errors: [], warnings: [] };
 const passingCopy: AntiCopyResult = { copyRiskScore: 5, pass: true, lexicalOverlapRatio: 0, longestSharedRunWords: 0, components: { lexical: 0, structural: 0 } };
-const passingFabrication: AntiFabricationResult = { pass: true, claims: [], unsupportedClaims: [] };
+const passingFabrication: AntiFabricationResult = { pass: true, claims: [], unsupportedClaims: [], byVerdict: emptyVerdictTally() };
 const passingClaimRegistry: ClaimRegistryResult = { claims: [], pass: true, blockingClaims: [] };
 const distinctDuplicate: DuplicateDecision = { decision: "new_story", confidence: 80, reason: "", matchedArticleId: null, needsReview: false, signals: {} };
 
@@ -77,8 +77,9 @@ test("quality gate — unsupported claim (fact-check fail) always rejects, even 
     antiCopy: passingCopy,
     antiFabrication: {
       pass: false,
-      claims: [{ claim: "500 designers attended", supported: false, sourceEvidence: "", confidence: 90 }],
-      unsupportedClaims: [{ claim: "500 designers attended", supported: false, sourceEvidence: "", confidence: 90 }],
+      claims: [{ claim: "500 designers attended", supported: false, verdict: "TRUE_FABRICATION" as const, sourceEvidence: "", confidence: 90 }],
+      unsupportedClaims: [{ claim: "500 designers attended", supported: false, verdict: "TRUE_FABRICATION" as const, sourceEvidence: "", confidence: 90 }],
+      byVerdict: { ...emptyVerdictTally(), TRUE_FABRICATION: 1 },
     },
     claimRegistry: passingClaimRegistry,
     duplicate: distinctDuplicate,
