@@ -80,6 +80,51 @@ const BANNED_PHRASES = [
   "now more than ever",
 ];
 
+/**
+ * Grammatical words that exist in English and not in French. A French
+ * title routinely carries English NOUNS — brands, houses, "Fashion Week" —
+ * so nouns prove nothing; function words are what betray a title that was
+ * never translated at all.
+ *
+ * Caught in the first production cycle: an article with lang "fr", a French
+ * body and a French excerpt went to Sanity titled "Analyzing Public
+ * School's SS27 Collection: Urban Fashion and Identity".
+ *
+ * Counting English words alone is not enough — that title carries a single
+ * one ("and"), while "Le retour de The Row" carries one too and is
+ * perfectly French. What separates them is the other side: a real French
+ * title always carries at least one French grammatical word. So a title is
+ * only flagged when it shows English grammar AND none of its own.
+ */
+const ENGLISH_FUNCTION_WORDS = [
+  "the", "and", "with", "from", "for", "why", "how", "what", "when", "this",
+  "these", "your", "our", "their", "is", "are", "was", "were", "into", "about",
+  "of", "as", "has", "have", "been", "will", "its", "it", "that", "which", "who",
+];
+
+// "a" is deliberately absent: it is the English indefinite article as much
+// as the French verb, and counting it as French lets any English headline
+// containing "a" pass unnoticed.
+const FRENCH_FUNCTION_WORDS = [
+  "le", "la", "les", "un", "une", "des", "du", "de", "et", "au", "aux",
+  "en", "pour", "sur", "dans", "par", "avec", "sans", "ce", "cet", "cette",
+  "son", "sa", "ses", "leur", "leurs", "qui", "que", "plus", "chez", "entre",
+  "comme", "quand", "ou", "mais", "ne", "se", "est", "sont", "vers", "depuis",
+];
+
+function looksEnglish(title: string): boolean {
+  const words = title
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s']/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  const english = words.filter((w) => ENGLISH_FUNCTION_WORDS.includes(w)).length;
+  const french = words.filter((w) => FRENCH_FUNCTION_WORDS.includes(w)).length;
+  return english > 0 && french === 0;
+}
+
 function findBannedPhrases(text: string): string[] {
   const normalized = text
     .normalize("NFD")
@@ -117,6 +162,10 @@ export function runQualityCheck(article: GeneratedArticle, facts: ExtractedFacts
   const ungroundedNumbers = findUngroundedNumbers(article, facts);
   if (ungroundedNumbers.length > 0) {
     errors.push(`Chiffres présents dans l'article mais absents des faits extraits (possible invention): ${ungroundedNumbers.join(", ")}`);
+  }
+
+  if (article.lang === "fr" && looksEnglish(article.title)) {
+    errors.push(`Titre en anglais dans un article francophone: "${article.title}"`);
   }
 
   const banned = findBannedPhrases(bodyText + " " + article.title + " " + article.excerpt);
