@@ -48,6 +48,13 @@ export interface AgendaEvent {
   /** Ce qui a été retrouvé mot pour mot dans la page, et ce qui manquait. */
   verifiedFields: string[];
   missingFields: string[];
+  /**
+   * La page qui porte chaque donnée retenue. Un champ complété depuis une
+   * page complémentaire garde l'URL de CETTE page, pas celle de la
+   * découverte initiale : sans cela, on ne saurait plus sur quoi repose une
+   * date d'ouverture lue ailleurs que sur la page de l'événement.
+   */
+  fieldSources: Record<string, string>;
   /** Pourquoi l'événement est en revue ou non vérifié. */
   note: string;
   lastVerifiedAt: string;

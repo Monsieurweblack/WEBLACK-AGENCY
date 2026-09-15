@@ -2,6 +2,7 @@ import { newRunId } from "../logs/runId.ts";
 import { log } from "../logs/logger.ts";
 import { planSearches, discoverPages } from "./discover.ts";
 import { verifyEventPage, revalidateEvent } from "./verify.ts";
+import { resolveMissingFields } from "./resolve.ts";
 import { currentEvents, findEvent, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents } from "./store.ts";
 
 export interface AgendaCycleResult {
@@ -14,6 +15,11 @@ export interface AgendaCycleResult {
   expired: number;
   revalidated: number;
   cancelledOrGone: number;
+  /** Pages voisines du domaine officiel ouvertes pour combler une donnée manquante. */
+  complementaryPages: number;
+  fieldsResolved: number;
+  /** Événements qui seraient partis en revue et que le domaine officiel a permis de vérifier. */
+  resolvedToVerified: number;
 }
 
 /** Combien de recherches par cycle. Volontairement bas : la fiabilité prime sur le volume, et la rotation couvre les villes au fil des cycles. */
@@ -33,6 +39,7 @@ export async function runAgendaCycle(dryRun: boolean): Promise<AgendaCycleResult
   const result: AgendaCycleResult = {
     searches: 0, pagesConsulted: 0, eventsFound: 0, eventsNew: 0,
     eventsMerged: 0, inReview: 0, expired: 0, revalidated: 0, cancelledOrGone: 0,
+    complementaryPages: 0, fieldsResolved: 0, resolvedToVerified: 0,
   };
 
   // Ce qui est fini cesse d'abord d'être annoncé comme à venir.
@@ -44,9 +51,30 @@ export async function runAgendaCycle(dryRun: boolean): Promise<AgendaCycleResult
     result.pagesConsulted += pages.length;
 
     for (const page of pages) {
-      const event = await verifyEventPage(page.url, runId);
+      let event = await verifyEventPage(page.url, runId);
       if (!event) continue;
       result.eventsFound++;
+
+      // Une donnée essentielle absente de la page principale ne vaut pas
+      // rejet tant que le domaine officiel n'a pas été interrogé : les
+      // horaires et les dates vivent souvent sur la page voisine.
+      if (event.missingFields.length > 0 && event.verificationStatus === "REVIEW") {
+        const resolution = await resolveMissingFields(event, runId);
+        result.complementaryPages += resolution.pagesTried.length;
+        result.fieldsResolved += resolution.resolvedFields.length;
+
+        if (resolution.contradiction) {
+          event = { ...resolution.event, verificationStatus: "REVIEW", note: resolution.contradiction };
+        } else if (resolution.event.missingFields.length === 0) {
+          event = { ...resolution.event, verificationStatus: "VERIFIED", note: "" };
+          result.resolvedToVerified++;
+        } else {
+          event = {
+            ...resolution.event,
+            note: `Donnée(s) essentielle(s) introuvable(s), y compris sur le domaine officiel : ${resolution.event.missingFields.join(", ")}.`,
+          };
+        }
+      }
 
       if (event.verificationStatus === "REVIEW") result.inReview++;
       if (event.verificationStatus === "CANCELLED" || event.verificationStatus === "GONE") result.cancelledOrGone++;

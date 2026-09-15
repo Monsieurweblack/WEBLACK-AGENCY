@@ -143,6 +143,9 @@ export async function verifyEventPage(url: string, runId: string): Promise<Agend
     verificationStatus,
     verifiedFields,
     missingFields: [...missingFields],
+    // Tout ce qui est confirmé ici vient de cette page ; une résolution
+    // complémentaire réécrira ensuite l'entrée du champ qu'elle comble.
+    fieldSources: Object.fromEntries(verifiedFields.map((field) => [field, url])),
     note,
     lastVerifiedAt: new Date().toISOString(),
     status: computeStatus(startDate, endDate),

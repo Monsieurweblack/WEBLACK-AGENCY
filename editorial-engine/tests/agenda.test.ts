@@ -5,6 +5,7 @@ import { computeStatus, isAgendaEligible, ESSENTIAL_FIELDS, type AgendaEvent } f
 import { eventIdentity, mergeEvent } from "../agenda/store.ts";
 import { rankSource } from "../agenda/verify.ts";
 import { planSearches } from "../agenda/discover.ts";
+import { refersToSameEvent } from "../agenda/resolve.ts";
 
 function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
   const base: AgendaEvent = {
@@ -31,11 +32,13 @@ function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     lastVerifiedAt: "2026-09-15T00:00:00.000Z",
     status: "UPCOMING",
     editorialRelevance: 80,
+    fieldSources: {},
     ...overrides,
   };
   // Comme en production : verifyEventPage part de la page qu'il vient de lire.
   const sourceUrls = overrides.sourceUrls ?? [base.officialUrl];
-  return { ...base, sourceUrls, id: base.id || eventIdentity(base) };
+  const fieldSources = overrides.fieldSources ?? Object.fromEntries(base.verifiedFields.map((f) => [f, base.officialUrl]));
+  return { ...base, sourceUrls, fieldSources, id: base.id || eventIdentity(base) };
 }
 
 // --- Expiration ------------------------------------------------------------
@@ -128,6 +131,55 @@ test("ni un événement non vérifié ni un événement expiré ne sont éligibl
   assert.equal(isAgendaEligible(event({ verificationStatus: "UNVERIFIED" })), false);
   assert.equal(isAgendaEligible(event({ verificationStatus: "CANCELLED" })), false);
   assert.equal(isAgendaEligible(event({ status: "EXPIRED" })), false);
+});
+
+// --- Résolution complémentaire sur le domaine officiel ---------------------
+
+test("une page voisine ne complète l'événement que si elle parle bien du même", () => {
+  const connu = event();
+
+  const memeEvenement = event({
+    eventName: "Toguo — The Nomadic Studio, informations pratiques",
+    officialUrl: "https://www.galerie-lelong.com/fr/infos-pratiques",
+  });
+  assert.equal(refersToSameEvent(connu, memeEvenement), true, "nom concordant et institution partagée");
+
+  const autreExpo = event({
+    eventName: "Nocturne Tour au Grand Palais",
+    artistOrCreator: "Autre artiste",
+    institution: "Grand Palais",
+    venue: "Grand Palais",
+    startDate: "2027-01-05",
+  });
+  assert.equal(refersToSameEvent(connu, autreExpo), false, "un autre événement du même site ne doit rien compléter");
+});
+
+test("un nom proche ne suffit pas seul — il faut un second identifiant", () => {
+  const connu = event();
+  // Même intitulé générique, mais rien d'autre en commun.
+  const homonyme = event({
+    eventName: "Barthélémy Toguo — The Nomadic Studio",
+    artistOrCreator: "",
+    institution: "Institution sans rapport",
+    venue: "Lieu sans rapport",
+    startDate: "2027-05-05",
+  });
+  assert.equal(refersToSameEvent(connu, homonyme), false);
+});
+
+test("chaque donnée essentielle porte l'URL de la page qui l'établit", () => {
+  const officialUrl = "https://www.galerie-lelong.com/fr/expo/toguo";
+  const complet = event();
+  for (const field of ESSENTIAL_FIELDS) {
+    assert.equal(complet.fieldSources[field], officialUrl, `${field} doit citer la page qui le porte`);
+  }
+
+  // Une date comblée depuis la billetterie officielle cite CETTE page.
+  const compléte = event({
+    fieldSources: { ...complet.fieldSources, startDate: "https://www.galerie-lelong.com/fr/billetterie" },
+  });
+  assert.equal(compléte.fieldSources.startDate, "https://www.galerie-lelong.com/fr/billetterie");
+  assert.equal(compléte.fieldSources.venue, officialUrl, "les autres champs gardent leur propre provenance");
 });
 
 // --- Couverture géographique ----------------------------------------------
