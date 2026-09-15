@@ -26,6 +26,7 @@ import { combinePriority, type CombinedPriority } from "../seo/priority.ts";
 import { buildClaimRegistry, type ClaimRegistryResult, type RegisteredSource } from "../validation/claimRegistry.ts";
 import { buildVerifiedFactSet, isEmpty, type VerifiedFactSet } from "../generation/verifiedFacts.ts";
 import { shouldIncludeReferences, buildReferencesBlock } from "../generation/references.ts";
+import { neutralizeCausality, type Neutralization } from "../generation/neutralizeCausality.ts";
 import { buildNewsletter } from "../newsletter/buildNewsletter.ts";
 import { enqueueNewsletter } from "../newsletter/queue.ts";
 
@@ -46,6 +47,8 @@ export interface DryRunReport {
   /** What survived pre-writing verification, and what was dropped before the writer saw it. */
   verifiedFacts?: VerifiedFactSet;
   article?: GeneratedArticle;
+  /** Causal connectives removed after writing, each with the sentence before and after. */
+  causalityRewrites?: Neutralization[];
   quality?: QualityCheckResult;
   antiCopy?: AntiCopyResult;
   antiFabrication?: AntiFabricationResult;
@@ -179,6 +182,15 @@ export async function processArticle(source: SourceArticle, options: PipelineOpt
     const article = await generateArticle(source, verifiedFacts, analysis, keywordStrategy, runId);
     // Decides Article vs NewsArticle in the published page's structured data.
     article.format = resolveArticleFormat(analysis.format, newsworthiness.classification);
+
+    // A consequence asserted by a connective laid over two verified facts is
+    // an invented claim sitting on top of sound material. Removing the
+    // connective removes the claim and leaves the facts. Nothing else is
+    // touched: causality carried by the verb survives this pass and is left
+    // for the fact check to reject.
+    const neutralized = neutralizeCausality(article);
+    article.body = neutralized.article.body;
+    report.causalityRewrites = neutralized.rewrites;
     report.article = article;
 
     const quality = runQualityCheck(article, facts);

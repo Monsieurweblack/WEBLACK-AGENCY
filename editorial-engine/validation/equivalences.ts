@@ -112,10 +112,11 @@ export function extractComparableTokens(text: string): string[] {
  */
 const RELATION_MARKERS = [
   // French — causality / consequence / motivation
-  "a cause de", "en raison de", "grace a", "du fait", "ce qui a conduit", "conduit a", "a conduit",
-  "entraine", "entrainant", "provoque", "provoquant", "resulte", "resultant", "par consequent",
-  "consequence", "explique par", "s explique", "afin de", "dans le but", "motive par", "pousse par",
-  "permet de", "permettant", "c est pourquoi", "de ce fait", "si bien que", "au point de", "faute de",
+  "a cause de", "parce que", "en raison de", "grace a", "du fait", "ce qui a conduit", "conduit a", "a conduit",
+  "entraine", "entrainant", "provoque", "provoquant", "resulte", "resultant", "decoule", "par consequent",
+  "consequence", "explique par", "s explique", "ce qui explique", "afin de", "dans le but", "motive par", "pousse par",
+  "permet de", "permettant", "a permis", "c est pourquoi", "pour cette raison", "de ce fait", "si bien que",
+  "au point de", "faute de",
   // French — comparison / dependency
   "plus que", "moins que", "davantage que", "contrairement a", "au detriment de", "depend de", "grace auquel",
   // English equivalents, for same-language sources
@@ -123,10 +124,19 @@ const RELATION_MARKERS = [
   "therefore", "consequently", "in order to", "driven by", "so that", "more than", "less than",
 ];
 
+/**
+ * "donc" and "ainsi" assert a consequence just as surely as "par
+ * cons\u00e9quent", but both have common non-causal uses \u2014 "ainsi que" means
+ * "as well as", and both appear inside longer words. They are matched as
+ * whole words with "ainsi que" excluded, rather than left out of the net.
+ */
+const STANDALONE_MARKERS = /(^|[\s,;:-])(donc|ainsi)(?!\s+que)\b/;
+
 export function containsRelationMarker(text: string): boolean {
   if (!text) return false;
   const normalized = stripAccents(text).toLowerCase().replace(/['\u2019]/g, " ").replace(/\s+/g, " ");
-  return RELATION_MARKERS.some((marker) => normalized.includes(marker));
+  if (RELATION_MARKERS.some((marker) => normalized.includes(marker))) return true;
+  return STANDALONE_MARKERS.test(normalized);
 }
 
 const STOPWORDS = new Set([
