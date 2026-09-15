@@ -32,7 +32,7 @@ const INFO_HINTS = [
 
 export interface ResolutionOutcome {
   event: AgendaEvent;
-  /** Les pages voisines réellement ouvertes, qu'elles aient servi ou non. */
+  /** Les pages voisines réellement extraites, qu'elles aient servi ou non. */
   pagesTried: string[];
   resolvedFields: string[];
   /** Renseigné si deux pages faisant autorité se contredisent. */
@@ -126,6 +126,30 @@ export function refersToSameEvent(known: AgendaEvent, candidate: AgendaEvent): b
 }
 
 /**
+ * Filtre gratuit avant de payer une extraction : la page voisine
+ * mentionne-t-elle seulement l'événement ?
+ *
+ * Un calendrier d'institution liste des dizaines d'événements ; la plupart
+ * ne concernent pas celui qu'on cherche à compléter. Lire le texte brut
+ * coûte une requête, l'extraire coûte un appel de modèle — autant ne le
+ * dépenser que sur les pages qui parlent effectivement du sujet. Ce test
+ * ne décide de rien : il écarte seulement ce qui ne peut pas convenir.
+ */
+async function pageMentionsEvent(url: string, event: AgendaEvent): Promise<boolean> {
+  let text: string;
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(15_000), redirect: "follow" });
+    if (!response.ok) return false;
+    text = (await response.text()).replace(/<[^>]+>/g, " ");
+  } catch {
+    return false;
+  }
+  const haystack = new Set(stems(text));
+  const shared = new Set(stems(event.eventName).filter((s) => haystack.has(s)));
+  return shared.size >= 2;
+}
+
+/**
  * Tente de combler les champs essentiels manquants depuis les pages
  * voisines du domaine officiel. Renvoie l'événement complété, la liste des
  * champs résolus et, le cas échéant, la contradiction rencontrée.
@@ -143,6 +167,9 @@ export async function resolveMissingFields(event: AgendaEvent, runId: string): P
 
   for (const url of candidates) {
     if (working.missingFields.length === 0) break;
+    // Une page qui ne nomme même pas l'événement ne peut rien confirmer :
+    // inutile de la faire extraire.
+    if (!(await pageMentionsEvent(url, working))) continue;
     pagesTried.push(url);
 
     const neighbour = await verifyEventPage(url, runId);
