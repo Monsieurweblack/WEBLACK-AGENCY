@@ -142,12 +142,21 @@ function dejaRepondu(): boolean {
 
 /**
  * Le bandeau de consentement écrit son choix sous cette clé (voir
- * src/scripts/consent.ts). Tant qu'elle est vide, le bandeau est à l'écran
- * et la lettre attend son tour.
+ * src/scripts/consent.ts). Tant qu'il est à l'écran, la lettre attend son
+ * tour : deux demandes empilées sur un même écran n'en obtiennent aucune.
+ *
+ * On relit donc exactement la forme que `readConsent()` exige pour se
+ * taire — statut et booléen — et non la simple présence de la clé. Une
+ * valeur tronquée ou d'un ancien schéma laisse le bandeau affiché ; la
+ * tester comme une réponse valide aurait produit précisément
+ * l'empilement que ce verrou existe pour empêcher.
  */
 function consentementDonne(): boolean {
   try {
-    return Boolean(localStorage.getItem("weblack-consent"));
+    const brut = localStorage.getItem("weblack-consent");
+    if (!brut) return false;
+    const valeur = JSON.parse(brut);
+    return Boolean(valeur) && typeof valeur.analytics === "boolean" && typeof valeur.status === "string";
   } catch {
     return false;
   }
