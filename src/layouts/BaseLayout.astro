@@ -4,6 +4,7 @@ import Header from "../components/layout/Header.astro";
 import Footer from "../components/layout/Footer.astro";
 import Seo from "../components/layout/Seo.astro";
 import ConsentBanner from "../components/layout/ConsentBanner.astro";
+import NewsletterPopup from "../components/sections/NewsletterPopup.astro";
 import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
 import { LOCALES } from "../i18n/locales";
 import { getSiteSettings } from "../lib/content";
@@ -140,6 +141,7 @@ const siteSettings = await getSiteSettings(lang);
       <slot />
     </main>
     <Footer lang={lang} siteSettings={siteSettings} />
+    <NewsletterPopup lang={lang} />
     <ConsentBanner lang={lang} />
   </body>
 </html>

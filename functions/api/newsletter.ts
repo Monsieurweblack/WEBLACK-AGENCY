@@ -66,6 +66,20 @@ function json(body: Record<string, unknown>, status: number): Response {
   });
 }
 
+/**
+ * Le service est-il en état de fonctionner ?
+ *
+ * La fenêtre d'inscription interroge cette adresse avant de s'afficher.
+ * Interrompre un visiteur pour lui répondre ensuite « service indisponible »
+ * est pire que ne rien lui proposer : tant que les variables ne sont pas
+ * définies, la fenêtre ne s'arme pas.
+ *
+ * Aucun secret ne transite : la réponse est un booléen, jamais une clé ni
+ * un identifiant d'audience.
+ */
+export const onRequestGet: PagesHandler = async ({ env }) =>
+  json({ configured: Boolean(env.NEWSLETTER_API_KEY && env.NEWSLETTER_AUDIENCE_ID) }, 200);
+
 export const onRequestPost: PagesHandler = async ({ request, env }) => {
   let payload: Payload;
   try {

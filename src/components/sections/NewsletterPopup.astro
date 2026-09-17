@@ -1,0 +1,107 @@
+---
+import NewsletterForm from "../forms/NewsletterForm.astro";
+import { useTranslations, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+{/*
+  Fenêtre d'inscription à la lettre.
+
+  Une fenêtre qui s'impose est une dette envers le visiteur : elle ne se
+  rembourse que si elle arrive au bon moment et ne revient jamais. Quatre
+  conditions la retiennent donc, toutes vérifiées dans le script :
+
+  — le service d'inscription fonctionne réellement (sinon interrompre pour
+    annoncer une panne est pire que se taire) ;
+  — le choix de consentement a déjà été fait, pour ne pas empiler deux
+    demandes sur un premier écran ;
+  — le visiteur a lu la moitié d'une page, donc il lit ;
+  — il ne l'a ni fermée ni remplie auparavant.
+
+  Le balisage reste un vrai dialogue : `role="dialog"`, `aria-modal`, focus
+  capturé et rendu, Échap pour fermer. Le formulaire est celui du pied de
+  page — même validation, même honeypot, même endpoint — avec ses propres
+  identifiants pour ne pas en dupliquer.
+*/}
+<div
+  id="newsletter-popup"
+  class="newsletter-popup fixed inset-0 z-[78] hidden items-end justify-center px-4 pb-4 sm:items-center sm:p-6"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="newsletter-popup-title"
+  data-newsletter-popup
+>
+  <div class="popup-veil absolute inset-0 bg-(--color-ink)/80 backdrop-blur-sm" data-newsletter-popup-veil></div>
+
+  <div
+    class="popup-panel relative w-full max-w-lg border border-(--color-line) bg-(--color-ink) px-6 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:px-10 sm:py-10"
+  >
+    <button
+      type="button"
+      class="label-tracked absolute right-4 top-4 inline-flex min-h-11 min-w-11 items-center justify-center text-(--color-paper)/50 transition-colors hover:text-(--color-gold)"
+      data-newsletter-popup-close
+      aria-label={t("newsletter.popup.close")}
+    >
+      <span aria-hidden="true">&#10005;</span>
+    </button>
+
+    <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("newsletter.popup.eyebrow")}</p>
+    <h2 id="newsletter-popup-title" class="font-display mt-4 text-3xl text-(--color-paper) sm:text-4xl">
+      {t("newsletter.popup.title")}
+    </h2>
+    <p class="mt-4 text-(--color-paper)/70">{t("newsletter.popup.lead")}</p>
+
+    <NewsletterForm lang={lang} idPrefix="newsletter-popup" />
+  </div>
+</div>
+
+<script>
+  import { initNewsletterPopup } from "../../scripts/forms/newsletter-popup";
+  initNewsletterPopup();
+</script>
+
+<style>
+  .newsletter-popup[data-open] {
+    display: flex;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .newsletter-popup[data-open] .popup-veil {
+      animation: popup-veil 0.3s ease-out both;
+    }
+
+    .newsletter-popup[data-open] .popup-panel {
+      animation: popup-panel 0.42s var(--ease-signature, cubic-bezier(0.16, 1, 0.3, 1)) both;
+    }
+  }
+
+  @keyframes popup-veil {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /*
+    La fenêtre monte de quelques pixels — assez pour qu'on la voie arriver,
+    pas assez pour qu'on l'attende.
+  */
+  @keyframes popup-panel {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

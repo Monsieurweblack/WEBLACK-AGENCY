@@ -276,6 +276,11 @@ const translations = {
     "territories.design": "Design",
     "territories.creativeIndustries": "Industries créatives",
     "territories.talent": "Talents",
+
+    "newsletter.popup.eyebrow": "La lettre WEBLACK",
+    "newsletter.popup.title": "Ce qui se passe, avant tout le monde.",
+    "newsletter.popup.lead": "Les parutions du Journal et les rendez-vous de l'Agenda, envoyés quand il y a quelque chose à dire. Rien d'autre.",
+    "newsletter.popup.close": "Fermer",
     "newsletter.title": "Rester informé",
     "newsletter.intro": "Les parutions du Journal et les rendez-vous de l'Agenda, envoyés quand il y a quelque chose à dire.",
     "newsletter.field": "Adresse e-mail",
@@ -749,6 +754,11 @@ const translations = {
     "territories.design": "Design",
     "territories.creativeIndustries": "Creative industries",
     "territories.talent": "Talent",
+
+    "newsletter.popup.eyebrow": "The WEBLACK letter",
+    "newsletter.popup.title": "What’s happening, before everyone else.",
+    "newsletter.popup.lead": "Journal pieces and Agenda dates, sent when there is something worth saying. Nothing else.",
+    "newsletter.popup.close": "Close",
     "newsletter.title": "Stay informed",
     "newsletter.intro": "Journal pieces and Agenda dates, sent when there is something worth saying.",
     "newsletter.field": "Email address",

@@ -3,9 +3,16 @@ import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 
 interface Props {
   lang: Lang;
+  /**
+   * Préfixe des identifiants HTML. Le formulaire vit à deux endroits — le
+   * pied de page et la fenêtre d'inscription — et deux éléments ne peuvent
+   * pas partager un id : un aria-describedby dupliqué renvoie le lecteur
+   * d'écran vers le mauvais message.
+   */
+  idPrefix?: string;
 }
 
-const { lang } = Astro.props;
+const { lang, idPrefix = "newsletter" } = Astro.props;
 const t = useTranslations(lang);
 ---
 
@@ -39,7 +46,7 @@ const t = useTranslations(lang);
       inputmode="email"
       autocomplete="email"
       placeholder=" "
-      aria-describedby="newsletter-status newsletter-consent"
+      aria-describedby={`${idPrefix}-status ${idPrefix}-consent`}
       class="peer w-full border-b border-(--color-line) bg-transparent pb-2 pt-5 text-(--color-paper) outline-none transition-colors focus-visible:border-(--color-gold) aria-[invalid=true]:border-(--color-gold)"
     />
     {/*
@@ -80,14 +87,14 @@ const t = useTranslations(lang);
     quand le texte apparaît après coup.
   */}
   <p
-    id="newsletter-status"
+    id={`${idPrefix}-status`}
     role="status"
     aria-live="polite"
     class="newsletter-status mt-4 text-sm"
     data-newsletter-status
   ></p>
 
-  <p id="newsletter-consent" class="mt-4 text-xs leading-relaxed text-(--color-paper)/40">
+  <p id={`${idPrefix}-consent`} class="mt-4 text-xs leading-relaxed text-(--color-paper)/40">
     {t("newsletter.consent")}{" "}
     <a
       href={localizedPath(lang, "/politique-de-confidentialite")}
