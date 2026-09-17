@@ -21,8 +21,14 @@ const t = useTranslations(lang);
     annoncer une panne est pire que se taire) ;
   — le choix de consentement a déjà été fait, pour ne pas empiler deux
     demandes sur un premier écran ;
-  — le visiteur a lu la moitié d'une page, donc il lit ;
+  — le visiteur a lu : un quart de la page sur celles qui défilent assez
+    pour que ce quart veuille dire quelque chose, un temps de présence sur
+    les autres — un pourcentage seul s'effondre aux deux extrémités ;
   — il ne l'a ni fermée ni remplie auparavant.
+
+  Et deux retenues qui ajournent sans désarmer : on ne recouvre pas un
+  champ en cours de saisie, et on ne réclame pas en fenêtre un formulaire
+  déjà visible à l'écran.
 
   Le balisage reste un vrai dialogue : `role="dialog"`, `aria-modal`, focus
   capturé et rendu, Échap pour fermer. Le formulaire est celui du pied de
@@ -31,7 +37,7 @@ const t = useTranslations(lang);
 */}
 <div
   id="newsletter-popup"
-  class="newsletter-popup fixed inset-0 z-[78] hidden items-end justify-center px-4 pb-4 sm:items-center sm:p-6"
+  class="newsletter-popup fixed inset-0 z-[78] hidden items-end justify-center overflow-y-auto p-4 sm:items-center sm:p-6"
   role="dialog"
   aria-modal="true"
   aria-labelledby="newsletter-popup-title"
@@ -40,7 +46,7 @@ const t = useTranslations(lang);
   <div class="popup-veil absolute inset-0 bg-(--color-ink)/80 backdrop-blur-sm" data-newsletter-popup-veil></div>
 
   <div
-    class="popup-panel relative w-full max-w-lg border border-(--color-line) bg-(--color-ink) px-6 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:px-10 sm:py-10"
+    class="popup-panel relative my-auto w-full max-w-lg border border-(--color-line) bg-(--color-ink) px-6 py-8 shadow-[0_24px_60px_rgba(0,0,0,0.5)] sm:px-10 sm:py-10"
   >
     <button
       type="button"
@@ -69,6 +75,52 @@ const t = useTranslations(lang);
 <style>
   .newsletter-popup[data-open] {
     display: flex;
+  }
+
+  /*
+    Téléphone en paysage, petit portable, clavier virtuel ouvert : la
+    hauteur disponible tombe sous les 500 px et le panneau, conçu pour
+    respirer, ne tient plus. Plutôt que de le laisser déborder hors de
+    l'écran — la case de fermeture partant la première —, on resserre les
+    marges et on descend d'un cran typographique. Le conteneur défile déjà
+    si cela ne suffit pas : rien ne devient inatteignable.
+  */
+  @media (max-height: 500px) {
+    /*
+      La marge du conteneur coûte ici deux fois : elle s'ajoute en haut et
+      en bas, et suffit à faire apparaître une barre de défilement pour dix
+      pixels alors que le panneau, lui, tient.
+    */
+    .newsletter-popup {
+      padding-block: 0.5rem;
+    }
+
+    .newsletter-popup .popup-panel {
+      padding-block: 1.25rem;
+    }
+
+    .newsletter-popup .popup-panel h2 {
+      margin-top: 0.5rem;
+      font-size: 1.375rem;
+      line-height: 1.2;
+    }
+
+    /* L'accroche, seule ligne de corps de texte : c'est elle qui coûte le plus de hauteur. */
+    .newsletter-popup .popup-panel h2 + p {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    /*
+      Le formulaire vient d'un autre composant, donc hors de la portée de
+      cette feuille : `:global` est nécessaire pour l'atteindre, et le
+      sélecteur reste ancré sur le panneau pour ne rien toucher ailleurs.
+    */
+    .newsletter-popup .popup-panel :global(.newsletter-form),
+    .newsletter-popup .popup-panel :global(.newsletter-form button),
+    .newsletter-popup .popup-panel :global(.newsletter-form > p:last-child) {
+      margin-top: 0.75rem;
+    }
   }
 
   @media (prefers-reduced-motion: no-preference) {
