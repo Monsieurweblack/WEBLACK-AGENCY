@@ -15,6 +15,20 @@ const { lang, work } = Astro.props;
 const t = useTranslations(lang);
 
 const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
+
+/**
+ * Le hero est un bandeau large ; la couverture y est recadrée pour le
+ * remplir. C'est juste pour une photographie, faux pour une image dont la
+ * composition est le sujet — un logo, une affiche : un cadrage 16/9 lui
+ * couperait la tête et les pieds.
+ *
+ * On compare donc les proportions réelles de l'image à celles du cadre.
+ * Loin du format large, elle est contenue plutôt que rognée, sur un fond
+ * qui prolonge la page. Aucune liste de cas particuliers à tenir : c'est
+ * l'image elle-même qui décide.
+ */
+const coverRatio = work.data.coverImage.width / work.data.coverImage.height;
+const coverIsWide = coverRatio >= 1.5;
 ---
 
 <article class="bg-(--color-ink)">
@@ -27,6 +41,7 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
         height={1350}
         loading="eager"
         fetchpriority="high"
+        fit={coverIsWide ? "cover" : "contain"}
         class="h-full w-full opacity-55"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/40 to-(--color-ink)/10"></div>

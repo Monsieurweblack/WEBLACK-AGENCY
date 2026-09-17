@@ -27,6 +27,13 @@ interface Props {
   loading?: "lazy" | "eager";
   fetchpriority?: "high" | "low" | "auto";
   class?: string;
+  /**
+   * Comment l'image occupe son cadre. « cover » remplit et rogne — juste
+   * pour une photographie. « contain » respecte les proportions — seule
+   * option acceptable pour une image dont la composition EST le sujet :
+   * un logo rogné n'est plus un logo.
+   */
+  fit?: "cover" | "contain";
   sizes?: string;
 }
 
@@ -40,6 +47,7 @@ const {
   loading = "lazy",
   fetchpriority = "auto",
   class: className,
+  fit = "cover",
   sizes = "100vw",
 } = Astro.props;
 
@@ -70,7 +78,7 @@ const finalSrc = isRemote ? withWidth(src, width) : src;
     loading={loading}
     decoding="async"
     fetchpriority={fetchpriority}
-    class="block h-full w-full object-cover"
+    class:list={["block h-full w-full", fit === "contain" ? "object-contain" : "object-cover"]}
     onerror="this.style.display='none';this.nextElementSibling?.removeAttribute('hidden')"
   />
   <div hidden class="absolute inset-0 flex items-center justify-center bg-(--color-ink-soft)">
