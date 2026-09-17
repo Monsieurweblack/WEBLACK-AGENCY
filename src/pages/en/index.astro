@@ -7,6 +7,8 @@ import SelectedWorkPreview from "../../components/sections/SelectedWorkPreview.a
 import PartnersPreview from "../../components/sections/PartnersPreview.astro";
 import Perspective from "../../components/sections/Perspective.astro";
 import TeamPreview from "../../components/sections/TeamPreview.astro";
+import AgendaTicker from "../../components/sections/AgendaTicker.astro";
+import AgendaPreview from "../../components/sections/AgendaPreview.astro";
 import JournalPreview from "../../components/sections/JournalPreview.astro";
 import TalentNetworkPreview from "../../components/sections/TalentNetworkPreview.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
@@ -98,7 +100,9 @@ const translations: TranslationMap = {
 
 <BaseLayout lang={lang} translations={translations}>
   <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
+  <AgendaTicker lang={lang} />
   <JournalPreview lang={lang} articles={latestJournal} />
+  <AgendaPreview lang={lang} standalone />
   <DivisionsGrid lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
   <SelectedWorkPreview lang={lang} work={displayedWork} />
   <PartnersPreview lang={lang} partners={partnerLogos} section={homepage?.partnersSection} />

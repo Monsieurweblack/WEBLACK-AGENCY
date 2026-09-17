@@ -7,9 +7,15 @@ interface Props {
   lang: Lang;
   /** Combien de rendez-vous montrer. Trois suffisent à donner le ton sans concurrencer l'article mis en avant. */
   limit?: number;
+  /**
+   * Sur le Journal, le bloc suit une section qui a déjà son espace bas et
+   * n'a donc rien à ajouter au-dessus. Sur l'accueil, il arrive après une
+   * section claire et doit respirer.
+   */
+  standalone?: boolean;
 }
 
-const { lang, limit = 3 } = Astro.props;
+const { lang, limit = 3, standalone = false } = Astro.props;
 const t = useTranslations(lang);
 
 /**
@@ -27,7 +33,7 @@ const events = (await getAgendaEvents(lang)).slice(0, limit);
 
 {
   events.length > 0 && (
-    <section class="bg-(--color-ink) px-6 pb-20 md:px-10">
+    <section class:list={["bg-(--color-ink) px-6 pb-20 md:px-10", standalone && "pt-20 md:pt-24"]}>
       <div class="mx-auto max-w-(--container-content)">
         <div class="flex flex-wrap items-baseline justify-between gap-4 border-t border-(--color-line) pt-10" data-reveal>
           <h2 class="label-tracked label-tracked-dot text-(--color-gold)">{t("agenda.hero.eyebrow")}</h2>
