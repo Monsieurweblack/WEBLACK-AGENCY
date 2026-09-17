@@ -44,7 +44,7 @@ const REVALIDATIONS_PER_CYCLE = 3;
  * Sanity. Le stock garde donc la trace de ce qui a été écarté et pourquoi,
  * ce que Sanity, lui, n'a pas à porter.
  */
-export async function runAgendaCycle(dryRun: boolean): Promise<AgendaCycleResult> {
+export async function runAgendaCycle(dryRun: boolean, searchSeed?: number): Promise<AgendaCycleResult> {
   const runId = newRunId();
   const result: AgendaCycleResult = {
     searches: 0, pagesConsulted: 0, eventsFound: 0, eventsNew: 0,
@@ -56,7 +56,10 @@ export async function runAgendaCycle(dryRun: boolean): Promise<AgendaCycleResult
   // Ce qui est fini cesse d'abord d'être annoncé comme à venir.
   result.expired = expirePastEvents().expired;
 
-  for (const query of planSearches(SEARCHES_PER_CYCLE)) {
+  // Sans graine explicite, la rotation avance d'elle-même d'un cran par
+  // heure — soit un cycle. En passer une permet de dérouler plusieurs
+  // cycles d'affilée sans qu'ils interrogent tous les mêmes villes.
+  for (const query of planSearches(SEARCHES_PER_CYCLE, searchSeed)) {
     result.searches++;
     const pages = await discoverPages(query, runId);
     result.pagesConsulted += pages.length;

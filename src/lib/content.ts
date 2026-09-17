@@ -2,7 +2,7 @@ import { createClient, type SanityClient } from "@sanity/client";
 import { toHTML } from "@portabletext/to-html";
 import type { PortableTextBlock } from "@portabletext/types";
 import type { Lang } from "../i18n/utils";
-import { toPublicEvent, isStillRunning, type AgendaEventData } from "./agenda-public";
+import { toPublicEvent, startsAfterPublication, type AgendaEventData } from "./agenda-public";
 
 export const sanityClient: SanityClient = createClient({
   projectId: import.meta.env.SANITY_PROJECT_ID,
@@ -762,7 +762,7 @@ export async function getAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
   const events: AgendaEventData[] = [];
   for (const doc of docs as any[]) {
     const event = toPublicEvent(doc);
-    if (!event || !isStillRunning(event, today)) continue;
+    if (!event || !startsAfterPublication(event, today)) continue;
     // La discipline sert d'étiquette ET de filtre : affichée dans une langue
     // et filtrée dans l'autre, une même discipline compterait deux fois.
     const description = localized(lang, doc.descriptionFr, doc.descriptionEn);

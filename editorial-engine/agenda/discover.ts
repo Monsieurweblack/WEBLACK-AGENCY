@@ -16,15 +16,31 @@ import { recordTrace } from "../logs/observability.ts";
  * (voir verify.ts).
  */
 
+/**
+ * Les villes interrogées, dans l'ordre où la rotation les balaie.
+ *
+ * L'Europe et l'Afrique ouvrent la liste et y occupent le plus de place :
+ * ce sont les deux scènes que le Journal suit de près, et c'est une
+ * décision éditoriale assumée, pas un hasard de tirage. Le reste du monde
+ * reste présent — le positionnement est international — mais y revient
+ * moins souvent.
+ *
+ * Ce choix pèse sur ce qui est CHERCHÉ, jamais sur ce qui est retenu :
+ * un événement lagosien passe exactement la même vérification qu'un
+ * événement tokyoïte, et aucun quota ne garantit à une région d'être
+ * publiée.
+ */
 const CITIES = [
-  // Afrique
-  "Lomé", "Accra", "Lagos", "Dakar", "Abidjan", "Bamako", "Cotonou", "Kinshasa", "Johannesburg", "Nairobi", "Marrakech", "Le Caire",
   // Europe
   "Paris", "Londres", "Milan", "Berlin", "Madrid", "Bruxelles", "Amsterdam",
+  "Anvers", "Copenhague", "Vienne", "Lisbonne", "Rome", "Stockholm", "Zurich",
+  // Afrique
+  "Lomé", "Accra", "Lagos", "Dakar", "Abidjan", "Bamako", "Cotonou", "Kinshasa",
+  "Johannesburg", "Le Cap", "Nairobi", "Marrakech", "Casablanca", "Le Caire", "Tunis", "Addis-Abeba",
   // Amériques
-  "New York", "Los Angeles", "Montréal", "Mexico", "São Paulo",
+  "New York", "Montréal", "São Paulo",
   // Moyen-Orient / Asie
-  "Dubaï", "Doha", "Riyad", "Tokyo", "Séoul", "Shanghai",
+  "Dubaï", "Tokyo", "Séoul",
 ];
 
 /**
@@ -54,13 +70,19 @@ export interface DiscoveredPage {
 }
 
 /**
- * Tire au sort les angles de recherche du cycle plutôt que de balayer la
- * liste entière : trente villes fois sept types feraient deux cents appels
- * par cycle pour un agenda qui n'a pas besoin d'être exhaustif à chaque
- * heure. La rotation couvre l'ensemble au fil des cycles, sans imposer de
- * quota géographique — la pertinence prime, pas la répartition.
+ * Choisit les angles de recherche du cycle plutôt que de balayer la liste
+ * entière : trente-six villes fois sept types feraient deux cent cinquante
+ * appels par cycle pour un agenda qui n'a pas besoin d'être exhaustif à
+ * chaque heure.
+ *
+ * La graine avance d'une unité par heure, soit un cycle : la rotation
+ * progresse alors pas à pas dans la liste et l'a parcourue entièrement en
+ * un jour et demi. Semée sur l'horodatage à la milliseconde, comme
+ * auparavant, elle tirait au hasard à chaque passage — et le hasard s'est
+ * arrêté six fois de suite sur Tokyo, ce qui a donné un agenda japonais.
+ * Une rotation qui avance est ce qui garantit la couverture, pas un quota.
  */
-export function planSearches(count: number, seed = Date.now()): string[] {
+export function planSearches(count: number, seed = Math.floor(Date.now() / 3_600_000)): string[] {
   const plans: string[] = [];
   for (let i = 0; i < count; i++) {
     const city = CITIES[(seed + i * 7) % CITIES.length]!;

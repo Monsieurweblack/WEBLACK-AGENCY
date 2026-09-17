@@ -334,10 +334,42 @@ test("un événement encore jamais publié reçoit le slug déduit de son nom", 
 
 // --- Couverture géographique ----------------------------------------------
 
-test("la rotation des recherches couvre l'international sans quota imposé", () => {
+test("la rotation couvre l'international, l'Europe et l'Afrique en premier", () => {
   const plans = planSearches(40, 0);
   const villes = ["Lomé", "Lagos", "Dakar", "Paris", "Londres", "New York", "Tokyo", "Dubaï"];
   const couvertes = villes.filter((v) => plans.some((p) => p.includes(v)));
   assert.ok(couvertes.length >= 6, `couverture trop étroite : ${couvertes.join(", ")}`);
   assert.ok(plans.some((p) => p.includes("exposition")) || plans.some((p) => p.includes("festival")));
+});
+
+test("la rotation avance d'un cycle à l'autre au lieu de tirer au hasard", () => {
+  // Semée sur l'horodatage à la milliseconde, la rotation s'était arrêtée six
+  // fois de suite sur Tokyo et l'agenda public était devenu japonais. Une
+  // graine qui avance d'un cran par cycle est ce qui garantit la couverture.
+  const premier = planSearches(3, 100);
+  const suivant = planSearches(3, 101);
+  assert.notDeepEqual(premier, suivant, "deux cycles consécutifs ne doivent pas interroger la même chose");
+
+  const villes = new Set<string>();
+  for (let cycle = 0; cycle < 12; cycle++) {
+    for (const plan of planSearches(3, 100 + cycle)) villes.add(plan.split(" à ")[1]!);
+  }
+  assert.ok(villes.size >= 20, `douze cycles ne couvrent que ${villes.size} ville(s)`);
+});
+
+test("l'Europe et l'Afrique dominent la liste interrogée", () => {
+  // Un choix éditorial assumé, qui porte sur ce qui est CHERCHÉ : il ne
+  // garantit à aucune région d'être publiée, la vérification reste la même
+  // pour tous.
+  const europeAfrique = ["Paris", "Londres", "Milan", "Berlin", "Anvers", "Lisbonne", "Lomé", "Lagos", "Dakar", "Le Cap", "Tunis", "Casablanca"];
+  const ailleurs = ["Tokyo", "Séoul", "New York", "Dubaï", "Montréal", "São Paulo"];
+
+  const villes: string[] = [];
+  for (let cycle = 0; cycle < 24; cycle++) {
+    for (const plan of planSearches(3, cycle)) villes.push(plan.split(" à ")[1]!);
+  }
+  const proches = villes.filter((v) => europeAfrique.includes(v)).length;
+  const lointaines = villes.filter((v) => ailleurs.includes(v)).length;
+  assert.ok(proches > lointaines * 2, `Europe+Afrique ${proches} vs ailleurs ${lointaines}`);
+  assert.ok(lointaines > 0, "le reste du monde ne disparaît pas pour autant");
 });

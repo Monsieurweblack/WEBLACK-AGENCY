@@ -92,14 +92,25 @@ export function toPublicEvent(doc: Record<string, any>): AgendaEventData | undef
 }
 
 /**
- * L'événement est-il encore à venir au moment où la page est construite ?
+ * L'événement commence-t-il APRÈS la date de publication ?
  *
- * Le statut stocké ne suffit pas : il a été calculé quand le moteur a écrit
- * le document, parfois des semaines plus tôt, et un site statique n'est
- * reconstruit qu'au déploiement suivant. La date, elle, ne ment pas.
+ * Un agenda annonce ce qui vient. Une exposition ouverte depuis deux
+ * semaines n'est plus une annonce : elle donne à la page l'air d'avoir été
+ * écrite avant-hier, et c'est la première chose qu'un lecteur remarque. La
+ * règle est donc stricte — c'est la date de DÉBUT qui doit être postérieure
+ * au jour de publication, pas seulement la date de fin.
+ *
+ * Le prix en est assumé : une exposition qui court jusqu'en décembre
+ * disparaît de l'agenda le lendemain de son ouverture. Elle reste dans le
+ * CMS avec son statut ONGOING, qui dit la vérité sur elle ; c'est l'annonce
+ * qui cesse, pas la donnée.
+ *
+ * La date est recalculée à chaque construction du site plutôt que lue sur le
+ * document : le statut stocké a été établi quand le moteur a écrit
+ * l'événement, parfois des semaines plus tôt.
  */
-export function isStillRunning(event: AgendaEventData, today: string): boolean {
-  return (event.endDate || event.startDate) >= today;
+export function startsAfterPublication(event: AgendaEventData, today: string): boolean {
+  return event.startDate > today;
 }
 
 /** Les valeurs réellement présentes dans la liste, pour ne proposer que des filtres qui filtrent quelque chose. */

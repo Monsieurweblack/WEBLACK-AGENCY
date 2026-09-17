@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   toPublicEvent,
-  isStillRunning,
+  startsAfterPublication,
   agendaFacets,
   type AgendaEventData,
 } from "../../src/lib/agenda-public.ts";
@@ -96,18 +96,32 @@ test("un événement en cours paraît aussi", () => {
   assert.equal(event?.status, "ONGOING");
 });
 
-// --- Expiration au moment du build -----------------------------------------
+// --- L'agenda annonce ce qui vient --------------------------------------
 
-test("un événement cesse d'être annoncé après sa date de fin, même s'il est écrit à venir", () => {
-  const event = toPublicEvent(doc({ startDate: "2026-09-10", endDate: "2026-10-10" }))!;
-  assert.equal(isStillRunning(event, "2026-10-10"), true, "le dernier jour compte encore");
-  assert.equal(isStillRunning(event, "2026-10-11"), false);
+test("un événement déjà commencé n'est plus annoncé, même s'il dure encore", () => {
+  // Cas réel : une exposition ouverte le 4 septembre et courant jusqu'au
+  // 20 décembre figurait en tête d'agenda deux semaines après son
+  // vernissage. Ce n'est plus une annonce.
+  const longue = toPublicEvent(doc({ startDate: "2026-09-04", endDate: "2026-12-20" }))!;
+  assert.equal(startsAfterPublication(longue, "2026-09-17"), false, "commencée depuis deux semaines");
+  assert.equal(startsAfterPublication(longue, "2026-09-03"), true, "la veille, c'est bien une annonce");
 });
 
-test("sans date de fin, c'est la date de début qui fait foi — elle n'est pas prolongée", () => {
-  const event = toPublicEvent(doc({ endDate: undefined }))!;
-  assert.equal(isStillRunning(event, "2026-09-10"), true);
-  assert.equal(isStillRunning(event, "2026-09-11"), false);
+test("le jour même ne compte pas comme postérieur à la publication", () => {
+  const event = toPublicEvent(doc({ startDate: "2026-09-17" }))!;
+  assert.equal(startsAfterPublication(event, "2026-09-17"), false);
+  assert.equal(startsAfterPublication(event, "2026-09-16"), true);
+});
+
+test("une date de fin lointaine ne rattrape pas une ouverture passée", () => {
+  const event = toPublicEvent(doc({ startDate: "2020-01-01", endDate: "2099-12-31" }))!;
+  assert.equal(startsAfterPublication(event, "2026-09-17"), false, "c'est la date de début qui décide");
+});
+
+test("un événement terminé est écarté deux fois : par son statut et par sa date", () => {
+  assert.equal(toPublicEvent(doc({ status: "EXPIRED" })), undefined);
+  const passe = toPublicEvent(doc({ startDate: "2026-01-01", endDate: "2026-01-05" }))!;
+  assert.equal(startsAfterPublication(passe, "2026-09-17"), false);
 });
 
 // --- Filtres ----------------------------------------------------------------
