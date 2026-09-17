@@ -264,6 +264,15 @@ const translations = {
 
     "agenda.hero.eyebrow": "Agenda",
 
+
+    "territories.label": "Territoires créatifs",
+    "territories.fashion": "Mode",
+    "territories.luxury": "Luxe",
+    "territories.art": "Art",
+    "territories.culture": "Culture",
+    "territories.design": "Design",
+    "territories.creativeIndustries": "Industries créatives",
+    "territories.talent": "Talents",
     "newsletter.title": "Rester informé",
     "newsletter.intro": "Les parutions du Journal et les rendez-vous de l'Agenda, envoyés quand il y a quelque chose à dire.",
     "newsletter.field": "Adresse e-mail",
@@ -725,6 +734,15 @@ const translations = {
 
     "agenda.hero.eyebrow": "Agenda",
 
+
+    "territories.label": "Creative territories",
+    "territories.fashion": "Fashion",
+    "territories.luxury": "Luxury",
+    "territories.art": "Art",
+    "territories.culture": "Culture",
+    "territories.design": "Design",
+    "territories.creativeIndustries": "Creative industries",
+    "territories.talent": "Talent",
     "newsletter.title": "Stay informed",
     "newsletter.intro": "Journal pieces and Agenda dates, sent when there is something worth saying.",
     "newsletter.field": "Email address",

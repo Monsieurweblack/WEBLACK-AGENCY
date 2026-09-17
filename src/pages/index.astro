@@ -7,7 +7,7 @@ import SelectedWorkPreview from "../components/sections/SelectedWorkPreview.astr
 import PartnersPreview from "../components/sections/PartnersPreview.astro";
 import Perspective from "../components/sections/Perspective.astro";
 import TeamPreview from "../components/sections/TeamPreview.astro";
-import AgendaTicker from "../components/sections/AgendaTicker.astro";
+import TerritoriesMarquee from "../components/sections/TerritoriesMarquee.astro";
 import AgendaPreview from "../components/sections/AgendaPreview.astro";
 import JournalPreview from "../components/sections/JournalPreview.astro";
 import TalentNetworkPreview from "../components/sections/TalentNetworkPreview.astro";
@@ -61,7 +61,14 @@ function selectBySlug<T extends { data: { slug: string; publishDate?: Date; star
     const bySlug = new Map(all.map((e) => [e.data.slug, e]));
     return selectedSlugs.map((s) => bySlug.get(s)).filter((e): e is T => Boolean(e)).slice(0, limit);
   }
-  return sortByDateDesc(useFeaturedFallback ? featuredOnly : all).slice(0, limit);
+  // « Préférer les mis en avant » ne peut pas vouloir dire « ne rien
+  // montrer si personne n'en a coché ». C'est pourtant ce qui se passait :
+  // cinq articles publiés, aucun marqué, et la section Journal disparaissait
+  // entièrement de l'accueil — sans erreur, sans trace. Une section qui
+  // s'efface parce qu'une case n'est pas cochée est un piège, pas un
+  // réglage. Le repli vers l'ensemble, trié par date, rétablit le sens.
+  const pool = useFeaturedFallback && featuredOnly.length > 0 ? featuredOnly : all;
+  return sortByDateDesc(pool).slice(0, limit);
 }
 
 const latestJournal = selectBySlug<JournalEntry>(
@@ -99,17 +106,36 @@ const translations: TranslationMap = {
 ---
 
 <BaseLayout lang={lang} translations={translations}>
+  {/* ATTENTION */}
   <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
-  <AgendaTicker lang={lang} />
-  <JournalPreview lang={lang} articles={latestJournal} />
-  <AgendaPreview lang={lang} standalone />
-  <DivisionsGrid lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
+
+  {/* MEMOIRE DE MARQUE — dans quel monde travaille WEBLACK */}
+  <TerritoriesMarquee lang={lang} />
+
+  {/* PREUVE — le travail avant le discours sur le travail */}
   <SelectedWorkPreview lang={lang} work={displayedWork} />
-  <PartnersPreview lang={lang} partners={partnerLogos} section={homepage?.partnersSection} />
-  <TalentNetworkPreview lang={lang} talent={talent} />
+
+  {/* EXPERTISE — comment WEBLACK intervient */}
+  <DivisionsGrid lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
+
+  {/* POSITION puis METHODE — deux phrases, pas deux sections lourdes */}
   <ManifestoQuote lang={lang} text={homepage?.manifesto.text} />
   <Perspective lang={lang} />
+
+  {/* AUTORITE EDITORIALE */}
+  <JournalPreview lang={lang} articles={latestJournal} />
+
+  {/* CULTURE — une seule fois : la bande de marque occupe déjà le rôle
+      d attention en haut de page, et l Agenda mérite une section, pas une
+      décoration qui répète ses propres dates. */}
+  <AgendaPreview lang={lang} />
+
+  {/* HUMAIN, puis ALLIANCES — la crédibilité arrive après la preuve */}
+  <TalentNetworkPreview lang={lang} talent={talent} />
   <TeamPreview lang={lang} members={teamMembers} section={homepage?.teamSection} />
+  <PartnersPreview lang={lang} partners={partnerLogos} section={homepage?.partnersSection} />
+
+  {/* ACTION */}
   <CtaContact
     lang={lang}
     title={homepage?.contactSection.title}

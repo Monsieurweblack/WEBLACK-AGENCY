@@ -1,0 +1,106 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+/**
+ * Les territoires de WEBLACK, en bande, immédiatement sous le hero.
+ *
+ * Cette place est la plus lue de la page : ce qui s'y trouve décide de ce
+ * qu'un visiteur croit avoir devant lui. Une liste de dates et de villes y
+ * disait « annuaire d'événements » — le contre-sens exact que le
+ * positionnement cherche à éviter. Six mots y disent en revanche dans quel
+ * monde l'agence travaille, et c'est ce dont on se souvient.
+ *
+ * Aucun de ces territoires n'est inventé : ce sont ceux que la ligne
+ * éditoriale du moteur et le positionnement de la marque nomment déjà.
+ *
+ * La bande est un seul lien vers les projets : après avoir compris le
+ * monde, on veut voir la preuve.
+ */
+const territories = [
+  t("territories.fashion"),
+  t("territories.luxury"),
+  t("territories.art"),
+  t("territories.culture"),
+  t("territories.design"),
+  t("territories.creativeIndustries"),
+  t("territories.talent"),
+];
+
+/** Vitesse proportionnelle au nombre de termes, pour une lecture constante. */
+const duration = territories.length * 7;
+---
+
+<section class="territories-marquee border-y border-(--color-line) bg-(--color-ink)" aria-label={t("territories.label")}>
+  <a
+    href={localizedPath(lang, "/selected-work/")}
+    class="group block overflow-hidden py-6"
+    style={`--marquee-duration:${duration}s`}
+  >
+    <div class="marquee-track flex w-max items-center">
+      {/*
+        Deux copies exactes : la première sort de l'écran pendant que la
+        seconde prend sa place, et la translation de la moitié referme la
+        boucle sans saut. La copie est masquée aux lecteurs d'écran, qui
+        entendraient sinon la liste deux fois.
+      */}
+      {[false, true].map((clone) => (
+        <ul class="m-0 flex list-none items-center p-0" aria-hidden={clone ? "true" : undefined}>
+          {territories.map((territory) => (
+            <li class="flex shrink-0 items-center gap-10 px-10">
+              <span class="font-display whitespace-nowrap text-2xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
+                {territory}
+              </span>
+              <span class="text-(--color-gold)" aria-hidden="true">&#183;</span>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  </a>
+</section>
+
+<style>
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee-track {
+      animation: territories-scroll var(--marquee-duration, 45s) linear infinite;
+    }
+
+    .territories-marquee:hover .marquee-track,
+    .territories-marquee:focus-within .marquee-track {
+      animation-play-state: paused;
+    }
+  }
+
+  /*
+    Mouvement refusé : la bande ne se fige pas — une piste deux fois plus
+    large que l'écran serait illisible — elle redevient une rangée que l'on
+    fait glisser, et la copie disparaît. Le geste s'arrête à la bande plutôt
+    que d'entraîner la page derrière.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .territories-marquee a {
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
+
+    .territories-marquee ul[aria-hidden="true"] {
+      display: none;
+    }
+  }
+
+  @keyframes territories-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+</style>
