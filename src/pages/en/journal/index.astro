@@ -2,6 +2,7 @@
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RemoteImage from "../../../components/media/RemoteImage.astro";
 import CardJournal from "../../../components/cards/CardJournal.astro";
+import AgendaPreview from "../../../components/sections/AgendaPreview.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
 import { useTranslations, localizedPath, type UiKey } from "../../../i18n/utils";
 import { intlTagFor } from "../../../i18n/locales";
@@ -33,12 +34,6 @@ const leadCategoryLabel = featuredFirst
       <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
         {t("journal.hero.title")}
       </h1>
-      <a
-        href={localizedPath(lang, "/agenda/")}
-        class="label-tracked mt-8 inline-flex items-center gap-2 border-b border-(--color-line) pb-2 text-(--color-paper)/60 transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
-      >
-        {t("agenda.fromJournal")} &rarr;
-      </a>
     </div>
   </section>
 
@@ -81,6 +76,8 @@ const leadCategoryLabel = featuredFirst
       </section>
     )
   }
+
+  <AgendaPreview lang={lang} />
 
   <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
     <div class="mx-auto max-w-(--container-content)">

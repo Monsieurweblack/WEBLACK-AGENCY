@@ -263,12 +263,12 @@ const translations = {
 
 
     "agenda.hero.eyebrow": "Agenda",
-    "agenda.hero.title": "Les rendez-vous de la création, vérifiés un par un.",
+    "agenda.hero.title": "La création, dans les mois qui viennent.",
     "agenda.hero.intro":
-      "Expositions, défilés, biennales et foires à travers le monde. Chaque événement est lu sur la page officielle de son organisateur : ce qui n'y figure pas n'est pas annoncé.",
-    "agenda.seo.title": "Agenda — Expositions, défilés, biennales",
+      "Expositions, défilés, biennales et foires, en Europe, en Afrique et au-delà. Une sélection courte, vérifiée sur les pages officielles des organisateurs : ce qu'elles n'annoncent pas ne figure pas ici.",
+    "agenda.seo.title": "Agenda — Les prochains rendez-vous de la création",
     "agenda.seo.description":
-      "L'agenda WEBLACK des rendez-vous de la mode, de l'art, du design et des industries créatives, vérifiés sur les sources officielles.",
+      "Expositions, défilés, biennales et foires à venir, en mode, art, design et industries créatives — vérifiés sur les pages officielles des organisateurs.",
     "agenda.filter.all": "Tout",
     "agenda.filter.city": "Ville",
     "agenda.filter.country": "Pays",
@@ -297,7 +297,7 @@ const translations = {
     "agenda.sources": "Pages consultées",
     "agenda.count.one": "1 événement",
     "agenda.count.many": "événements",
-    "agenda.fromJournal": "Voir l'agenda",
+    "agenda.fromJournal": "Tout l'agenda",
     "agenda.toJournal": "Lire le Journal",
     "agenda.dateTo": "au",
     "nav.agenda": "Agenda",
@@ -711,12 +711,12 @@ const translations = {
 
 
     "agenda.hero.eyebrow": "Agenda",
-    "agenda.hero.title": "Creative events, verified one by one.",
+    "agenda.hero.title": "The months ahead in fashion, art and design.",
     "agenda.hero.intro":
-      "Exhibitions, runway shows, biennials and fairs around the world. Every event is read on its organiser’s official page: what is not stated there is not announced.",
-    "agenda.seo.title": "Agenda — Exhibitions, shows, biennials",
+      "Exhibitions, runway shows, biennials and fairs — in Europe, Africa and beyond. A short selection, verified against the organisers’ own pages: what they do not announce is not listed here.",
+    "agenda.seo.title": "Agenda — Upcoming events in fashion, art and design",
     "agenda.seo.description":
-      "The WEBLACK agenda of fashion, art, design and creative industry events, verified against official sources.",
+      "Upcoming exhibitions, runway shows, biennials and fairs across fashion, art, design and the creative industries — verified against the organisers’ official pages.",
     "agenda.filter.all": "All",
     "agenda.filter.city": "City",
     "agenda.filter.country": "Country",
@@ -745,7 +745,7 @@ const translations = {
     "agenda.sources": "Pages consulted",
     "agenda.count.one": "1 event",
     "agenda.count.many": "events",
-    "agenda.fromJournal": "View the agenda",
+    "agenda.fromJournal": "The full agenda",
     "agenda.toJournal": "Read the Journal",
     "agenda.dateTo": "to",
     "nav.agenda": "Agenda",
