@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import SocialLinks from "./SocialLinks.astro";
+import NewsletterForm from "../forms/NewsletterForm.astro";
 import ShareButtons from "./ShareButtons.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import type { SiteSettingsData } from "../../lib/content";
@@ -50,6 +51,19 @@ const legalLinks = [
         </div>
         <p class="label-tracked mt-4 text-(--color-paper)/60">{tagline}</p>
         <p class="mt-6 max-w-xs text-sm text-(--color-paper)/50">{sinceText}</p>
+
+        {/*
+          L'inscription vit dans la première colonne, sous la signature :
+          c'est la place qu'occupe déjà ce que la marque dit d'elle-même, et
+          elle laisse les trois colonnes de liens intactes. Le pied de page
+          étant sur chaque page, l'inscription l'est aussi — sans qu'aucune
+          page n'ait à lui céder de la surface.
+        */}
+        <div class="mt-10 max-w-sm">
+          <p class="label-tracked text-(--color-gold)">{t("newsletter.title")}</p>
+          <p class="mt-3 text-sm text-(--color-paper)/60">{t("newsletter.intro")}</p>
+          <NewsletterForm lang={lang} />
+        </div>
       </div>
 
       <nav aria-label={t("footer.explore")}>

@@ -263,6 +263,19 @@ const translations = {
 
 
     "agenda.hero.eyebrow": "Agenda",
+
+    "newsletter.title": "Rester informé",
+    "newsletter.intro": "Les parutions du Journal et les rendez-vous de l'Agenda, envoyés quand il y a quelque chose à dire.",
+    "newsletter.field": "Adresse e-mail",
+    "newsletter.submit": "S'inscrire",
+    "newsletter.sending": "Envoi…",
+    "newsletter.success": "Inscription enregistrée. À bientôt.",
+    "newsletter.already": "Cette adresse est déjà inscrite.",
+    "newsletter.invalid": "Cette adresse ne semble pas valide.",
+    "newsletter.unconfigured": "Le service d'inscription n'est pas encore actif. Réessayez plus tard.",
+    "newsletter.error": "L'inscription n'a pas pu être enregistrée. Réessayez dans un instant.",
+    "newsletter.consent": "Votre adresse sert uniquement à l'envoi de cette lettre. Désinscription possible à tout moment.",
+    "newsletter.privacy": "Politique de confidentialité",
     "agenda.hero.title": "La création, dans les mois qui viennent.",
     "agenda.hero.intro":
       "Expositions, défilés, biennales et foires, en Europe, en Afrique et au-delà. Une sélection courte, vérifiée sur les pages officielles des organisateurs : ce qu'elles n'annoncent pas ne figure pas ici.",
@@ -711,6 +724,19 @@ const translations = {
 
 
     "agenda.hero.eyebrow": "Agenda",
+
+    "newsletter.title": "Stay informed",
+    "newsletter.intro": "Journal pieces and Agenda dates, sent when there is something worth saying.",
+    "newsletter.field": "Email address",
+    "newsletter.submit": "Subscribe",
+    "newsletter.sending": "Sending…",
+    "newsletter.success": "You’re subscribed. See you soon.",
+    "newsletter.already": "This address is already subscribed.",
+    "newsletter.invalid": "This address doesn’t look valid.",
+    "newsletter.unconfigured": "Subscriptions aren’t live yet. Please try again later.",
+    "newsletter.error": "We couldn’t record your subscription. Please try again in a moment.",
+    "newsletter.consent": "Your address is used only to send this letter. You can unsubscribe at any time.",
+    "newsletter.privacy": "Privacy policy",
     "agenda.hero.title": "The months ahead in fashion, art and design.",
     "agenda.hero.intro":
       "Exhibitions, runway shows, biennials and fairs — in Europe, Africa and beyond. A short selection, verified against the organisers’ own pages: what they do not announce is not listed here.",

@@ -1,0 +1,141 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+{/*
+  Un seul champ, et c'est délibéré : chaque champ supplémentaire sur une
+  inscription à une newsletter coûte des abonnés sans rien apprendre. Le nom
+  et la société se demandent plus tard, quand la relation existe.
+
+  Le formulaire est un vrai <form> avec une action : sans JavaScript il
+  envoie tout de même la requête et la page se recharge sur la réponse. Le
+  script ci-dessous ne fait qu'intercepter pour éviter ce rechargement.
+*/}
+<form
+  class="newsletter-form mt-4"
+  action="/api/newsletter"
+  method="post"
+  novalidate
+  data-newsletter-form
+  data-copy-invalid={t("newsletter.invalid")}
+  data-copy-sending={t("newsletter.sending")}
+  data-copy-success={t("newsletter.success")}
+  data-copy-already={t("newsletter.already")}
+  data-copy-unconfigured={t("newsletter.unconfigured")}
+  data-copy-error={t("newsletter.error")}
+>
+  <label class="newsletter-field relative block">
+    <input
+      type="email"
+      name="email"
+      required
+      inputmode="email"
+      autocomplete="email"
+      placeholder=" "
+      aria-describedby="newsletter-status newsletter-consent"
+      class="peer w-full border-b border-(--color-line) bg-transparent pb-2 pt-5 text-(--color-paper) outline-none transition-colors focus-visible:border-(--color-gold) aria-[invalid=true]:border-(--color-gold)"
+    />
+    {/*
+      Le libellé flotte au-dessus du champ dès qu'il est rempli ou survolé
+      par le clavier. `placeholder=" "` est ce qui rend `:placeholder-shown`
+      utilisable — c'est un libellé véritable, pas un placeholder déguisé,
+      qui disparaîtrait à la saisie et laisserait l'utilisateur sans repère.
+    */}
+    <span
+      class="label-tracked pointer-events-none absolute left-0 top-5 text-(--color-paper)/40 transition-all duration-300 ease-(--ease-signature) peer-focus:top-0 peer-focus:text-(--color-gold) peer-[:not(:placeholder-shown)]:top-0"
+    >
+      {t("newsletter.field")}
+    </span>
+  </label>
+
+  {/*
+    Leurre anti-robot. Hors flux, invisible, retiré de l'ordre de tabulation
+    et de l'arbre d'accessibilité : un humain ne le rencontre jamais.
+  */}
+  <div class="absolute h-0 w-0 overflow-hidden" aria-hidden="true">
+    <label>
+      Société
+      <input type="text" name="company" tabindex="-1" autocomplete="off" />
+    </label>
+  </div>
+
+  <button
+    type="submit"
+    class="label-tracked mt-5 inline-flex items-center gap-2 border border-(--color-gold) px-5 py-3 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-on-gold) disabled:opacity-50"
+    data-newsletter-submit
+  >
+    <span data-newsletter-label>{t("newsletter.submit")}</span>
+  </button>
+
+  {/*
+    aria-live="polite" : le résultat est annoncé sans interrompre ce que
+    l'utilisateur est en train de faire. role="status" le rend audible même
+    quand le texte apparaît après coup.
+  */}
+  <p
+    id="newsletter-status"
+    role="status"
+    aria-live="polite"
+    class="newsletter-status mt-4 text-sm"
+    data-newsletter-status
+  ></p>
+
+  <p id="newsletter-consent" class="mt-4 text-xs leading-relaxed text-(--color-paper)/40">
+    {t("newsletter.consent")}{" "}
+    <a
+      href={localizedPath(lang, "/politique-de-confidentialite")}
+      class="underline decoration-(--color-line) underline-offset-4 transition-colors hover:text-(--color-gold)"
+    >
+      {t("newsletter.privacy")}
+    </a>
+  </p>
+</form>
+
+<script>
+  import { initNewsletterForm } from "../../scripts/forms/newsletter";
+  initNewsletterForm();
+</script>
+
+<style>
+  /*
+    Le trait sous le champ se colore de l'or au succès, et la coche apparaît
+    en s'écrivant. Rien ne bouge en dehors de la zone du formulaire : une
+    confirmation qui déplace le contenu de la page ferait sursauter le
+    lecteur plus qu'elle ne le rassurerait.
+  */
+  .newsletter-form[data-state="success"] .newsletter-field input {
+    border-color: var(--color-gold);
+  }
+
+  .newsletter-status[data-tone="success"] {
+    color: var(--color-gold);
+  }
+
+  .newsletter-status[data-tone="error"] {
+    color: var(--color-paper);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .newsletter-status[data-tone="success"] {
+      animation: newsletter-in 0.45s var(--ease-signature, ease-out) both;
+    }
+  }
+
+  @keyframes newsletter-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
