@@ -152,6 +152,58 @@
 }
 
 @layer utilities {
+  /* Grille portfolio asymétrique.
+
+     Le rythme se joue par tranches de trois : un grand format, un format
+     étroit décalé vers le bas, un panoramique remonté et indenté. Il ne
+     s'applique qu'à partir de trois projets — en dessous, une asymétrie
+     calculée pour trois éléments ne se lit pas comme un parti pris mais
+     comme une mise en page ratée, et la grille régulière fait mieux le
+     travail.
+
+     Les décalages sont exprimés en rem et non en pourcentage : ils doivent
+     rester constants quand la largeur change, sinon le rythme se creuse sur
+     grand écran et disparaît sur petit. */
+  .work-grid-asymmetric {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    column-gap: 3rem;
+    row-gap: 4rem;
+  }
+
+  .work-grid-asymmetric > *:nth-child(3n + 1) {
+    grid-column: span 8;
+  }
+
+  .work-grid-asymmetric > *:nth-child(3n + 2) {
+    grid-column: span 4;
+    margin-top: 6rem;
+  }
+
+  .work-grid-asymmetric > *:nth-child(3n + 3) {
+    grid-column: 2 / span 7;
+    margin-top: -2rem;
+  }
+
+  /* En dessous de 1024px la colonne unique reprend : les décalages
+     verticaux n'ont plus de voisin avec quoi contraster, ils ne seraient
+     plus que des trous. Le point de rupture suit celui de Tailwind (lg)
+     plutôt qu'une valeur isolée, pour rester cohérent avec le reste du
+     site. */
+  @media (max-width: 1023px) {
+    .work-grid-asymmetric {
+      grid-template-columns: 1fr;
+      row-gap: 2.5rem;
+    }
+
+    .work-grid-asymmetric > *:nth-child(3n + 1),
+    .work-grid-asymmetric > *:nth-child(3n + 2),
+    .work-grid-asymmetric > *:nth-child(3n + 3) {
+      grid-column: 1 / -1;
+      margin-top: 0;
+    }
+  }
+
   .font-display {
     font-family: var(--font-display);
     font-optical-sizing: auto;

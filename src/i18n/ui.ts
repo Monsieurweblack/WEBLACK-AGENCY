@@ -144,7 +144,7 @@ const translations = {
     "about.body2":
       "Son approche repose sur une conviction simple : le potentiel ne prend de la valeur que lorsqu’il est accompagné d’une vision, d’une exigence et d’un véritable savoir-faire.",
     "about.body3":
-      "Basée entre la France et l’Afrique de l’Ouest, WEBLACK développe des collaborations et des projets à dimension internationale, en connectant talents, industries créatives et marchés au-delà des frontières.",
+      "Portée par une vision africaine et afro-descendante, WEBLACK développe des collaborations et des projets à dimension internationale, en connectant talents, industries créatives et marchés — de l’Afrique vers le monde.",
     "about.vision.title": "Notre ambition",
     "about.vision.body":
       "Construire une référence indépendante dans le management des talents et les industries créatives, en faisant émerger des personnalités, des marques et des projets qui comptent. Chaque collaboration est pensée comme un projet à part entière : une vision claire, une exécution exigeante, et une valeur culturelle qui dépasse le temps d’une campagne.",
@@ -426,7 +426,7 @@ const translations = {
     "contact.form.error": "Merci de renseigner tous les champs obligatoires avant d’envoyer.",
     "contact.form.mailto": "Ou écrivez-nous directement à",
     "contact.form.back": "Changer de profil",
-    "contact.info.address.label": "WEBLACK — Agence créative indépendante entre la France et l’Afrique de l’Ouest, au rayonnement international.",
+    "contact.info.address.label": "WEBLACK — Agence créative indépendante. Une vision africaine et afro-descendante, au rayonnement international.",
     "contact.info.email.label": "E-mail",
 
     "footer.tagline": "Talent. Créativité. Culture.",
@@ -607,7 +607,7 @@ const translations = {
     "about.body2":
       "Its approach rests on a simple conviction: potential only gains value when paired with vision, rigour and genuine expertise.",
     "about.body3":
-      "Based between France and West Africa, WEBLACK develops collaborations and projects with international reach, connecting talent, creative industries and markets across borders.",
+      "Driven by an African and Afro-descendant vision, WEBLACK develops collaborations and projects with international reach, connecting talent, creative industries and markets — from Africa to the world.",
     "about.vision.title": "Our ambition",
     "about.vision.body":
       "To build an independent reference in talent management and the creative industries, bringing forward personalities, brands and projects that matter. Every collaboration is treated as a project in its own right: a clear vision, rigorous execution, and cultural value that outlasts any single campaign.",
@@ -883,7 +883,7 @@ const translations = {
     "contact.form.error": "Please fill in all required fields before sending.",
     "contact.form.mailto": "Or write to us directly at",
     "contact.form.back": "Change profile",
-    "contact.info.address.label": "WEBLACK — Independent creative agency based between France and West Africa, with international reach.",
+    "contact.info.address.label": "WEBLACK — Independent creative agency. An African and Afro-descendant vision, with international reach.",
     "contact.info.email.label": "Email",
 
     "footer.tagline": "Talent. Creativity. Culture.",

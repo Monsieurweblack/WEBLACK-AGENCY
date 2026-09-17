@@ -100,22 +100,42 @@ const structuredData = {
       founder: { "@id": FOUNDER_ID },
       sameAs,
       inLanguage: schemaLang,
-      // Où l'agence opère réellement : des équipes entre la France et
-      // l'Afrique de l'Ouest, un rayonnement international. Ce n'est pas une
-      // définition géographique de la marque, c'est son aire d'activité.
+      // L'aire d'activité, dans le sens du positionnement : une vision
+      // africaine et afro-descendante portée à l'international — de
+      // l'Afrique vers le monde. Le continent est nommé comme origine du
+      // regard, « Worldwide » comme portée réelle ; l'agence ne se limite
+      // à aucun marché.
       areaServed: [
-        { "@type": "Country", name: "France" },
-        { "@type": "Place", name: "Afrique de l'Ouest" },
-        { "@type": "Place", name: "International" },
+        { "@type": "Continent", name: lang === "en" ? "Africa" : "Afrique" },
+        { "@type": "Place", name: "Worldwide" },
       ],
-      knowsAbout: [
-        "Direction artistique",
-        "Management de talents",
-        "Stratégie de marque",
-        "Mode",
-        "Production de contenu",
-        "Intelligence culturelle",
-      ],
+      // `knowsAbout` est ce sur quoi un moteur génératif s'appuie pour citer
+      // une organisation à propos d'un sujet. La perspective culturelle y a
+      // donc sa place au même titre que les métiers — et les termes suivent
+      // la langue de la page : une liste française sur la version anglaise
+      // ne serait rapprochée d'aucune question posée en anglais.
+      knowsAbout:
+        lang === "en"
+          ? [
+              "Art direction",
+              "Talent management",
+              "Brand strategy",
+              "Fashion",
+              "Content production",
+              "Cultural intelligence",
+              "African and Afro-descendant creation",
+              "African creative industries",
+            ]
+          : [
+              "Direction artistique",
+              "Management de talents",
+              "Stratégie de marque",
+              "Mode",
+              "Production de contenu",
+              "Intelligence culturelle",
+              "Création africaine et afro-descendante",
+              "Industries créatives africaines",
+            ],
       // Les trois divisions, telles qu'elles existent dans la navigation du
       // site — pas une liste d'offres inventée pour le balisage.
       hasOfferCatalog: {

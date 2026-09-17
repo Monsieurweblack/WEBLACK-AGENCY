@@ -23,8 +23,20 @@ const work = sortByDateDesc(await getEntriesByLang("work", lang));
   <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
     <div class="mx-auto max-w-(--container-content)">
       {
+        /*
+          La grille asymétrique ne s'enclenche qu’à partir de trois projets :
+          son rythme se joue par tranches de trois, et appliqué à deux
+          éléments il se lit comme une mise en page ratée plutôt que comme un
+          parti pris. En dessous, la grille régulière fait mieux le travail.
+        */
         work.length > 0 ? (
-          <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            class:list={[
+              work.length >= 3
+                ? "work-grid-asymmetric"
+                : "grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3",
+            ]}
+          >
             {work.map((item, i) => (
               <CardWork lang={lang} work={item} index={i} />
             ))}
