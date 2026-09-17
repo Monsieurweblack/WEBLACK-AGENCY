@@ -86,6 +86,13 @@ const duration = Math.max(events.length * 9, 30);
   @media (prefers-reduced-motion: reduce) {
     .agenda-ticker a {
       overflow-x: auto;
+      /*
+        Le geste qui fait défiler la bande s'arrête à la bande. Sans cela,
+        arrivé au bout, iOS enchaîne le mouvement sur la page derrière —
+        et l'on se retrouve à déplacer tout le document en croyant lire un
+        agenda.
+      */
+      overscroll-behavior-x: contain;
     }
 
     .agenda-ticker ul[aria-hidden="true"] {

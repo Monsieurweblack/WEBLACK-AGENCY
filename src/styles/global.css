@@ -99,6 +99,21 @@
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
+
+    /* Le document ne défile jamais latéralement.
+
+       `clip` et non `hidden` : les deux empêchent le débordement, mais
+       `hidden` fait de l'élément un conteneur de défilement, ce qui
+       neutralise `position: sticky` chez tous ses descendants — les titres
+       de mois de l'Agenda, notamment, cesseraient de coller en haut.
+       `clip` coupe sans créer ce conteneur.
+
+       C'est une ceinture, pas une réparation : rien ne déborde aujourd'hui
+       (mesuré de 320 à 768 px), et un élément trop large resterait un
+       défaut à corriger à la source. Mais sur un site où la moindre marge
+       négative ou une chaîne insécable peut décaler toute la page sur un
+       téléphone, mieux vaut que le symptôme soit impossible. */
+    overflow-x: clip;
   }
 
   @media (prefers-reduced-motion: no-preference) {
