@@ -65,25 +65,95 @@ const sameAs = [
   siteSettings?.youtubeUrl,
 ].filter((url): url is string => Boolean(url));
 
-const structuredData = [
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: siteSettings?.siteName ?? "WEBLACK",
-    url: homeUrl,
-    logo: logoUrl,
-    description: siteSettings?.seoDescription ?? t("seo.default.description"),
-    sameAs,
-    inLanguage: schemaLang,
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: siteSettings?.siteName ?? "WEBLACK",
-    url: homeUrl,
-    inLanguage: schemaLang,
-  },
-];
+/**
+ * Graphe de connaissances du site.
+ *
+ * Deux objets plats coexistaient ici, sans lien entre eux : un moteur — ou
+ * un modèle de langage qui cite des sources — n'en tirait qu'un nom et une
+ * URL. Un `@graph` avec des `@id` dit autre chose : que ce site est publié
+ * par cette organisation, qu'elle a été fondée par cette personne, qu'elle
+ * opère dans ces régions et exerce ces trois métiers. C'est ce maillage qui
+ * se cite, pas une fiche isolée.
+ *
+ * Ce qui n'y figure pas est volontaire. Aucune adresse postale, aucun
+ * téléphone, aucun effectif, aucune distinction : rien de tout cela n'est
+ * vérifié, et la discipline de non-fabrication du projet vaut autant pour
+ * les données structurées que pour le texte visible — sans doute davantage,
+ * puisque personne ne les relit.
+ */
+const ORG_ID = `${homeUrl}#organization`;
+const FOUNDER_ID = `${homeUrl}#founder`;
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ProfessionalService",
+      "@id": ORG_ID,
+      name: siteSettings?.siteName ?? "WEBLACK",
+      url: homeUrl,
+      logo: logoUrl,
+      image: ogImage.toString(),
+      description: siteSettings?.seoDescription ?? t("seo.default.description"),
+      // Fondée en 2010 — le seul repère temporel que le projet établisse.
+      foundingDate: "2010",
+      founder: { "@id": FOUNDER_ID },
+      sameAs,
+      inLanguage: schemaLang,
+      // Où l'agence opère réellement : des équipes entre la France et
+      // l'Afrique de l'Ouest, un rayonnement international. Ce n'est pas une
+      // définition géographique de la marque, c'est son aire d'activité.
+      areaServed: [
+        { "@type": "Country", name: "France" },
+        { "@type": "Place", name: "Afrique de l'Ouest" },
+        { "@type": "Place", name: "International" },
+      ],
+      knowsAbout: [
+        "Direction artistique",
+        "Management de talents",
+        "Stratégie de marque",
+        "Mode",
+        "Production de contenu",
+        "Intelligence culturelle",
+      ],
+      // Les trois divisions, telles qu'elles existent dans la navigation du
+      // site — pas une liste d'offres inventée pour le balisage.
+      hasOfferCatalog: {
+        "@type": "OfferCatalog",
+        name: siteSettings?.siteName ?? "WEBLACK",
+        itemListElement: [
+          { "@type": "Offer", itemOffered: { "@type": "Service", name: "Talent", url: `${homeUrl}talent` } },
+          { "@type": "Offer", itemOffered: { "@type": "Service", name: "Creative", url: `${homeUrl}creative` } },
+          { "@type": "Offer", itemOffered: { "@type": "Service", name: "Consulting", url: `${homeUrl}consulting` } },
+        ],
+      },
+    },
+    {
+      "@type": "Person",
+      "@id": FOUNDER_ID,
+      name: "Deo-Gratias Kpodo",
+      jobTitle: "Founder & Creative Director",
+      worksFor: { "@id": ORG_ID },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${homeUrl}#website`,
+      name: siteSettings?.siteName ?? "WEBLACK",
+      url: homeUrl,
+      publisher: { "@id": ORG_ID },
+      inLanguage: schemaLang,
+    },
+    {
+      "@type": "WebPage",
+      "@id": canonicalUrl.toString(),
+      url: canonicalUrl.toString(),
+      name: pageTitle,
+      description: pageDescription,
+      isPartOf: { "@id": `${homeUrl}#website` },
+      inLanguage: schemaLang,
+    },
+  ],
+};
 ---
 
 <title>{pageTitle}</title>

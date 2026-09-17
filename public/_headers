@@ -1,0 +1,70 @@
+# En-têtes HTTP servis par Cloudflare Pages.
+#
+# Ce fichier n'existait pas : le site partait avec les valeurs par défaut de
+# la plateforme, donc sans politique de cache explicite sur les assets
+# empreintés, et sans aucun en-tête de sécurité.
+#
+# Cloudflare applique déjà Brotli et HTTP/2 côté edge — rien à configurer
+# pour cela. Ce qui manquait, c'est l'immutabilité des assets hachés, la
+# fraîcheur du HTML, et la posture de sécurité.
+#
+# Syntaxe : un motif de chemin, puis les en-têtes indentés de deux espaces.
+# Le motif le plus spécifique l'emporte.
+
+/*
+  # Protection contre le sniffing de type et le clickjacking.
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  # Aucune de ces API n'est utilisée par le site : on les refuse par défaut.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  # HSTS : un an, sous-domaines inclus. À ne pas activer avant d'être certain
+  # que tous les sous-domaines servent bien en HTTPS.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  #
+  # CSP en Report-Only d'abord, délibérément.
+  #
+  # Le site charge des images depuis cdn.sanity.io, images.unsplash.com,
+  # i.pinimg.com et www.facebook.com (voir l'audit : ces trois derniers sont
+  # des hotlinks à remplacer). Passer directement en CSP bloquante casserait
+  # ces images en production avant que le contenu ne soit corrigé.
+  #
+  # Marche à suivre : corriger les images tierces, vérifier que le rapport
+  # ne remonte plus rien, PUIS renommer cet en-tête en
+  # « Content-Security-Policy » et retirer les hôtes devenus inutiles.
+  Content-Security-Policy-Report-Only: default-src 'self'; img-src 'self' data: https://cdn.sanity.io https://images.unsplash.com https://i.pinimg.com https://www.facebook.com; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'
+
+# Assets empreintés par Astro : le nom change à chaque modification du
+# contenu, donc le cache peut être définitif. C'est la seule catégorie qui
+# mérite « immutable ».
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Photographies servies telles quelles depuis public/. Leur nom NE change
+# pas quand le fichier change : un cache d'un an y serait un piège. Un jour
+# de fraîcheur, puis réutilisation pendant une semaine le temps de
+# revalider.
+/photos/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# Icônes et favicon : stables, mais pas empreintés non plus.
+/*.png
+  Cache-Control: public, max-age=604800
+/*.svg
+  Cache-Control: public, max-age=604800
+/*.ico
+  Cache-Control: public, max-age=604800
+
+# Le HTML est reconstruit à chaque déploiement et doit être revalidé à
+# chaque visite : sans cela, un visiteur garderait l'agenda de la semaine
+# dernière. must-revalidate rend la règle explicite plutôt qu'implicite.
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Flux et index de recherche : courts, mais pas nuls.
+/sitemap*.xml
+  Cache-Control: public, max-age=3600
+/search-index.json
+  Cache-Control: public, max-age=3600

@@ -82,7 +82,10 @@ const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["Â« ", " Â
               <img
                 src={photo.src}
                 alt={photo.alt}
+                width={photo.width}
+                height={photo.height}
                 loading="lazy"
+                decoding="async"
                 class:list={["w-full object-cover", photo.wide ? "aspect-[16/10]" : "aspect-[3/4]"]}
               />
               <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/45">{photo.caption}</figcaption>

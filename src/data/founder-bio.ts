@@ -2,6 +2,14 @@ import type { Lang } from "../i18n/utils";
 
 export interface FounderBioPhoto {
   src: string;
+  /**
+   * Dimensions intrinsèques du fichier. La classe aspect-* réserve déjà la
+   * boîte une fois la feuille de style appliquée ; ces attributs la
+   * réservent AVANT, et évitent le décalage qui se produit sinon sur une
+   * connexion lente.
+   */
+  width: number;
+  height: number;
   alt: string;
   caption: string;
   wide?: boolean;
@@ -26,16 +34,22 @@ export const founderBio: Partial<Record<Lang, FounderBio>> = {
     photos: [
       {
         src: "/photos/founder-portrait-bw.jpg",
+        width: 1100,
+        height: 1100,
         alt: "Portrait de Deo-Gratias Kpodo, fondateur et directeur créatif de WEBLACK.",
         caption: "Deo-Gratias Kpodo, fondateur & directeur créatif de WEBLACK",
       },
       {
         src: "/photos/founder-portrait-profile.jpg",
+        width: 900,
+        height: 1350,
         alt: "Deo-Gratias Kpodo en représentation lors d’un événement.",
         caption: "Deo-Gratias Kpodo en représentation",
       },
       {
         src: "/photos/founder-ze-defile-stage.jpg",
+        width: 1400,
+        height: 933,
         alt: "Deo-Gratias Kpodo sur scène lors de ZÉ DÉFILÉ by WAXFASHION, à Paris.",
         caption: "ZÉ DÉFILÉ by WAXFASHION, Paris",
         wide: true,
@@ -55,16 +69,22 @@ export const founderBio: Partial<Record<Lang, FounderBio>> = {
     photos: [
       {
         src: "/photos/founder-portrait-bw.jpg",
+        width: 1100,
+        height: 1100,
         alt: "Portrait of Deo-Gratias Kpodo, founder and creative director of WEBLACK.",
         caption: "Deo-Gratias Kpodo, founder & creative director of WEBLACK",
       },
       {
         src: "/photos/founder-portrait-profile.jpg",
+        width: 900,
+        height: 1350,
         alt: "Deo-Gratias Kpodo speaking at an event.",
         caption: "Deo-Gratias Kpodo on stage",
       },
       {
         src: "/photos/founder-ze-defile-stage.jpg",
+        width: 1400,
+        height: 933,
         alt: "Deo-Gratias Kpodo on stage at ZÉ DÉFILÉ by WAXFASHION, in Paris.",
         caption: "ZÉ DÉFILÉ by WAXFASHION, Paris",
         wide: true,

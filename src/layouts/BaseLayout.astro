@@ -7,6 +7,11 @@ import ConsentBanner from "../components/layout/ConsentBanner.astro";
 import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
 import { LOCALES } from "../i18n/locales";
 import { getSiteSettings } from "../lib/content";
+// Importées en `?url` pour que Vite renvoie le chemin empreinté réellement
+// servi : écrire ces noms à la main préchargerait un fichier périmé au
+// premier changement de version de la police.
+import fraunces from "@fontsource-variable/fraunces/files/fraunces-latin-full-normal.woff2?url";
+import manrope from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
 
 interface Props {
   lang: Lang;
@@ -28,6 +33,30 @@ const siteSettings = await getSiteSettings(lang);
 <html lang={LOCALES[lang].htmlLang}>
   <head>
     <meta charset="UTF-8" />
+    <!--
+      L'image LCP de presque toutes les pages vient de cdn.sanity.io. Sans
+      preconnect, le navigateur ne résout le DNS et ne négocie le TLS qu'au
+      moment où il rencontre la balise <img>, loin dans le document : la
+      poignée de main s'ajoute intégralement au Largest Contentful Paint.
+      Ces deux lignes la déplacent au tout début du chargement.
+
+      Une seule origine est préconnectée volontairement : chaque preconnect
+      immobilise une connexion, et en multiplier sur des hôtes secondaires
+      ralentirait celui qui compte.
+    -->
+    <link rel="preconnect" href="https://cdn.sanity.io" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.sanity.io" />
+    <!--
+      Les deux seules fontes réellement téléchargées sur une page FR/EN —
+      les autres sous-ensembles (cyrillique, grec, vietnamien) portent un
+      unicode-range et ne sont jamais demandés. Elles sont découvertes
+      aujourd'hui APRÈS l'analyse de la feuille de style ; avec
+      font-display:swap, cela se voit à l'œil sous forme de bascule de
+      police. Les URL sont importées plutôt qu'écrites en dur : leur
+      empreinte change à chaque build.
+    -->
+    <link rel="preload" as="font" type="font/woff2" href={fraunces} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={manrope} crossorigin />
     <script is:inline>
       (function () {
         try {
