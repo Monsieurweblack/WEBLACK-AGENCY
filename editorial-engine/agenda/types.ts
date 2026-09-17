@@ -88,8 +88,22 @@ export interface AgendaEvent {
   editorialRelevance: number;
 }
 
-/** Les champs sans lesquels une entrée d'agenda n'a pas de sens. Aucun ne peut être comblé par inférence. */
-export const ESSENTIAL_FIELDS = ["eventName", "startDate", "venue", "city"] as const;
+/**
+ * Les champs sans lesquels une entrée d'agenda n'a pas de sens. Aucun ne
+ * peut être comblé par inférence.
+ *
+ * Le lieu n'en fait délibérément pas partie. Une biennale se tient à
+ * l'échelle d'une ville entière : ART X Lagos, la Biennale de Dakar, une
+ * semaine de la mode n'ont pas de salle unique à citer, et leurs pages
+ * officielles n'en nomment aucune. L'exiger écartait des rendez-vous
+ * majeurs pour une donnée qui n'existe pas — pas pour une donnée
+ * manquante.
+ *
+ * La ville, elle, reste obligatoire : c'est elle qui situe l'événement, et
+ * elle n'est jamais déduite du nom de l'institution. Le lieu s'affiche
+ * quand la source le donne, et disparaît sinon.
+ */
+export const ESSENTIAL_FIELDS = ["eventName", "startDate", "city"] as const;
 
 /**
  * Éligible à l'Agenda — délibérément distinct du seuil 90/90 des articles,

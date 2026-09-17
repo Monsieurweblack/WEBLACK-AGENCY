@@ -84,5 +84,5 @@ export function whoOf(event: AgendaEventData): string | undefined {
   if (event.artistOrCreator) return event.artistOrCreator;
   if (!event.institution) return undefined;
   const meme = event.institution.trim().toLowerCase();
-  return event.venue.trim().toLowerCase().includes(meme) ? undefined : event.institution;
+  return (event.venue ?? "").trim().toLowerCase().includes(meme) ? undefined : event.institution;
 }

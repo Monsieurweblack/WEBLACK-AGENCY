@@ -62,11 +62,25 @@ test("un statut public posé à la main sur un document non vérifié ne suffit 
 });
 
 test("une donnée essentielle effacée fait disparaître l'événement du site", () => {
-  for (const champ of ["eventName", "startDate", "venue", "city", "officialUrl"]) {
+  for (const champ of ["eventName", "startDate", "city", "officialUrl"]) {
     assert.equal(toPublicEvent(doc({ [champ]: "" })), undefined, `${champ} vide`);
     assert.equal(toPublicEvent(doc({ [champ]: undefined })), undefined, `${champ} absent`);
   }
   assert.equal(toPublicEvent(doc({ slug: undefined })), undefined, "sans slug, aucune URL propre");
+});
+
+test("un événement à l'échelle d'une ville est publiable sans lieu nommé", () => {
+  // ART X Lagos, la Biennale de Dakar : la page officielle donne le nom, les
+  // dates et la ville, jamais une salle — il n'y en a pas. Exiger un lieu
+  // écartait ces rendez-vous pour une donnée qui n'existe pas.
+  const biennale = toPublicEvent(doc({ eventName: "16e Biennale de Dakar", venue: "", city: "Dakar", country: "Sénégal" }));
+  assert.ok(biennale, "la ville suffit à situer l'événement");
+  assert.equal(biennale.venue, undefined, "aucun lieu n'est fabriqué à partir de la ville");
+  assert.equal(biennale.city, "Dakar");
+});
+
+test("la ville, elle, reste indispensable", () => {
+  assert.equal(toPublicEvent(doc({ city: "", venue: "Galerie Lelong" })), undefined, "un lieu ne remplace pas une ville");
 });
 
 test("une ville faite d'espaces n'est pas une ville", () => {

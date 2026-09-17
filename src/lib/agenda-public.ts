@@ -36,7 +36,8 @@ export interface AgendaEventData {
   startDate: string;
   endDate?: string;
   time?: string;
-  venue: string;
+  /** Absent pour un événement à l'échelle d'une ville — une biennale n'a pas de salle unique. */
+  venue?: string;
   city: string;
   country?: string;
   organizer?: string;
@@ -65,7 +66,9 @@ export function toPublicEvent(doc: Record<string, any>): AgendaEventData | undef
   if (doc.verificationStatus !== "VERIFIED") return undefined;
 
   const slug = doc.slug?.current;
-  const required = [slug, doc.eventName, doc.startDate, doc.venue, doc.city, doc.officialUrl];
+  // Le lieu n'est pas exigé : une biennale se tient dans toute une ville et
+  // sa page officielle n'en nomme aucun. La ville, elle, reste requise.
+  const required = [slug, doc.eventName, doc.startDate, doc.city, doc.officialUrl];
   if (required.some((value) => typeof value !== "string" || value.trim() === "")) return undefined;
 
   return {
@@ -79,7 +82,7 @@ export function toPublicEvent(doc: Record<string, any>): AgendaEventData | undef
     startDate: doc.startDate,
     endDate: doc.endDate || undefined,
     time: doc.time || undefined,
-    venue: doc.venue,
+    venue: doc.venue || undefined,
     city: doc.city,
     country: doc.country || undefined,
     organizer: doc.organizer || undefined,

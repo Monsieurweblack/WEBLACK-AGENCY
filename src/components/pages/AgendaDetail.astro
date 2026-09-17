@@ -16,13 +16,15 @@ const t = useTranslations(lang);
  * Les données structurées ne décrivent que ce qui a été vérifié.
  *
  * Le moteur ne publie un événement qu'après avoir retrouvé son nom, ses
- * dates, son lieu et sa ville dans le texte réel de la page officielle, et
- * la lecture côté site refuse déjà ce qui n'en porte pas. La garde
+ * dates et sa ville dans le texte réel de la page officielle, et la lecture
+ * côté site refuse déjà ce qui n'en porte pas. Le lieu, lui, n'est déclaré
+ * que si la source le nomme — une biennale se tient dans toute une ville, et
+ * présenter cette ville comme une salle serait une donnée inventée. La garde
  * ci-dessous est la troisième : annoncer à un moteur de recherche une date
  * ou un lieu qu'on n'a pas établis serait exactement la fabrication que
  * toute la chaîne existe pour empêcher. Un champ absent n'est pas déclaré.
  */
-const canDescribeEvent = Boolean(event.eventName && event.startDate && event.venue && event.city);
+const canDescribeEvent = Boolean(event.eventName && event.startDate && event.city);
 
 const structuredData = canDescribeEvent
   ? {
@@ -35,7 +37,10 @@ const structuredData = canDescribeEvent
       eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
       location: {
         "@type": "Place",
-        name: event.venue,
+        // Pas de nom de lieu quand la source n'en donne pas : le Place se
+        // réduit alors à son adresse, la ville. Nommer la ville comme si
+        // elle était une salle serait une donnée inventée.
+        ...(event.venue ? { name: event.venue } : {}),
         address: {
           "@type": "PostalAddress",
           addressLocality: event.city,
@@ -53,9 +58,12 @@ const structuredData = canDescribeEvent
 const facts: { label: string; value: string }[] = [
   { label: t("agenda.label.when"), value: dateRange(event, lang, t("agenda.dateTo")) },
   ...(event.time ? [{ label: t("agenda.label.time"), value: event.time }] : []),
-  { label: t("agenda.label.venue"), value: placeLine(event) },
+  { label: t(event.venue ? "agenda.label.venue" : "agenda.label.where"), value: placeLine(event) },
   ...(whoOf(event) ? [{ label: t("agenda.label.who"), value: whoOf(event)! }] : []),
-  ...(event.institution && event.institution !== event.venue
+  // L'institution n'a sa propre ligne que si elle n'est déjà ni le « qui »,
+  // ni le lieu : sans cela la même association apparaissait deux fois, ce qui
+  // fait passer une redite pour une seconde information.
+  ...(event.institution && event.institution !== event.venue && event.institution !== whoOf(event)
     ? [{ label: t("agenda.label.what"), value: event.institution }]
     : []),
   ...(event.discipline ? [{ label: t("agenda.label.discipline"), value: event.discipline }] : []),
