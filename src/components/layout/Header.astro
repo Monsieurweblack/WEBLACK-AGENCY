@@ -41,7 +41,7 @@ const liveHref = localizedPath(lang, "/live");
 
 <header
   id="site-header"
-  class="fixed inset-x-0 top-0 z-50 transition-colors duration-500"
+  class="fixed inset-x-0 top-0 z-[76] transition-colors duration-500"
   data-header
 >
   <div
@@ -122,7 +122,7 @@ const liveHref = localizedPath(lang, "/live");
 
 <div
   id="site-menu"
-  class="menu-overlay fixed inset-0 z-40 flex flex-col bg-(--color-ink) opacity-0 pointer-events-none"
+  class="menu-overlay fixed inset-0 z-[75] flex flex-col bg-(--color-ink) opacity-0 pointer-events-none"
   data-menu-panel
   aria-hidden="true"
   inert
@@ -186,6 +186,21 @@ const liveHref = localizedPath(lang, "/live");
    * its own and env() resolves to 0) — kept ready rather than added later
    * as an afterthought, at zero cost while inactive.
    */
+
+  /*
+   * Ordre d'empilement, et pourquoi ces valeurs précises.
+   *
+   * Le bandeau de consentement est en z-[70] et couvrait le bas du menu :
+   * en paysage, la dernière entrée disparaissait derrière lui. Le menu est
+   * une navigation modale — tant qu'il est ouvert, il doit passer devant
+   * tout ce qui est décoratif ou informatif.
+   *
+   *   76  en-tête      (le bouton FERMER doit rester atteignable)
+   *   75  menu
+   *   70  bandeau de consentement
+   *   80  fenêtre de préférences (reste au-dessus de tout : c'est un choix
+   *       que le visiteur doit pouvoir faire sans obstacle)
+   */
   .site-header-row {
     padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
   }
@@ -222,7 +237,12 @@ const liveHref = localizedPath(lang, "/live");
 
   .menu-spacer-bottom {
     flex: 1 1 0;
-    min-height: 1.5rem;
+    /*
+      Le plancher suit la hauteur disponible : sur un écran court, les
+      derniers pixels doivent aller aux entrées du menu, pas à une marge
+      décorative sous la dernière.
+    */
+    min-height: clamp(0rem, 2svh, 1.5rem);
   }
 
   .menu-footer {
@@ -250,7 +270,17 @@ const liveHref = localizedPath(lang, "/live");
 
   @media (min-width: 640px) {
     .menu-content {
-      padding-top: calc(var(--header-h, 80px) + 2rem);
+      /*
+        La hauteur de l'en-tête était comptée DEUX fois : ici, et dans
+        .menu-spacer-top juste au-dessus. Quatre-vingts pixels perdus en
+        haut du panneau — invisible tant que la liste comptait sept
+        entrées, fatal à la huitième : « À propos » passait sous la ligne
+        de flottaison dès que la fenêtre descendait sous 844 px de haut,
+        ce qui couvre la plupart des portables et l'Android en paysage.
+        Le dégagement sous l'en-tête reste assuré par le spacer, qui est
+        le seul à devoir s'en charger.
+      */
+      padding-top: 2rem;
     }
 
     .menu-nav {
@@ -288,6 +318,38 @@ const liveHref = localizedPath(lang, "/live");
   .live-on-air {
     color: #e11d2e;
   }
+
+  /*
+   * Écran court, quelle que soit sa largeur.
+   *
+   * Les tailles ci-dessus se déclenchent sur la LARGEUR : un téléphone
+   * couché fait 844 px de large et 390 px de haut, donc il hérite du
+   * corps « grand écran » — dont le plancher de clamp() ignore la
+   * hauteur. Résultat mesuré : cinq entrées sur huit hors de l'écran en
+   * paysage. Cette règle passe après les précédentes et reprend la main
+   * sur la seule dimension qui manque, en réduisant aussi les marges qui
+   * coûtent le plus cher quand la hauteur est rare — le dégagement sous
+   * l'en-tête en premier.
+   */
+  @media (max-height: 680px) {
+    .menu-spacer-top {
+      height: calc(var(--header-h, 80px) + 0.5rem);
+    }
+
+    .menu-content {
+      padding-top: 0.75rem;
+    }
+
+    .menu-nav {
+      gap: clamp(0.125rem, 0.8svh, 0.375rem);
+    }
+
+    .menu-link {
+      font-size: clamp(1rem, 3.4svh, 1.5rem);
+      line-height: 1.2;
+    }
+  }
+
 
   .live-on-air-dot {
     display: inline-block;
