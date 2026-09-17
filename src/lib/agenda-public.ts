@@ -116,6 +116,24 @@ export function startsAfterPublication(event: AgendaEventData, today: string): b
   return event.startDate > today;
 }
 
+
+/**
+ * L'événement se tient-il EN CE MOMENT ?
+ *
+ * L'Agenda n'annonce que ce qui commence après la publication : c'est ce
+ * qui lui donne son sens d'annonce. Mais huit expositions vérifiées sont
+ * ouvertes aujourd'hui — Londres, Johannesburg, Tokyo — et tombaient donc
+ * dans un angle mort : trop tard pour être annoncées, trop vivantes pour
+ * être oubliées.
+ *
+ * C'est exactement la matière de WEBLACK NOW, et c'est pourquoi cette
+ * fonction existe séparément : « ce qui se passe » n'est pas « ce qui
+ * vient ». Les deux listes ne se recoupent jamais, par construction.
+ */
+export function isRunningNow(event: AgendaEventData, today: string): boolean {
+  return event.startDate <= today && (event.endDate || event.startDate) >= today;
+}
+
 /** Les valeurs réellement présentes dans la liste, pour ne proposer que des filtres qui filtrent quelque chose. */
 export function agendaFacets(events: AgendaEventData[]): { cities: string[]; countries: string[]; disciplines: string[] } {
   const collect = (pick: (event: AgendaEventData) => string | undefined) =>

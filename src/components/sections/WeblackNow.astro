@@ -1,0 +1,141 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { getOngoingEvents } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  /** Combien de rendez-vous en cours montrer. Au-delà de quatre, ce n'est plus un signal, c'est une liste. */
+  limit?: number;
+}
+
+const { lang, limit = 4 } = Astro.props;
+const t = useTranslations(lang);
+
+/**
+ * WEBLACK NOW — ce qui se tient en ce moment.
+ *
+ * Trois fonctions voisines devaient rester distinctes : le Journal dit ce
+ * que WEBLACK pense, l'Agenda ce qui vient, et ce bloc ce qui est ouvert
+ * aujourd'hui. La distinction n'est pas rhétorique — les données ne se
+ * recoupent jamais, l'Agenda n'annonçant que ce qui commence après la
+ * publication.
+ *
+ * Ces événements étaient jusqu'ici invisibles : trop tard pour être
+ * annoncés, trop vivants pour être oubliés. Huit expositions vérifiées
+ * dormaient dans cet angle mort.
+ *
+ * Deux décisions de forme, contre la proposition initiale.
+ *
+ * Le bloc ne défile pas. Une bande de marque glisse déjà sous le hero ;
+ * une seconde en mouvement aurait produit une répétition visuelle là où il
+ * fallait une différence de nature. Ce qui bouge dit « la marque » ; ce qui
+ * est posé dit « le réel ».
+ *
+ * Chaque entrée mène à la page de l'institution, pas à une page interne :
+ * ces événements n'ont pas de fiche sur le site, précisément parce que
+ * l'Agenda ne les annonce pas. Renvoyer à l'organisateur est la seule
+ * destination honnête — WEBLACK signale, l'institution accueille.
+ */
+/**
+ * Une ville par entrée, tant qu'il y a des villes.
+ *
+ * Trié par date, le bloc affichait quatre expositions tokyoïtes et
+ * écartait Londres et Johannesburg : une bande censée dire « voici les
+ * scènes créatives » ne disait plus que « voici Tokyo ». Le tri par
+ * pertinence d'abord, puis une ville par ligne, rétablit ce que le bloc
+ * prétend montrer. Si les villes manquent, on complète sans en inventer.
+ */
+const ongoing = (await getOngoingEvents(lang)).sort(
+  (a, b) => (b.editorialRelevance ?? 0) - (a.editorialRelevance ?? 0) || b.startDate.localeCompare(a.startDate),
+);
+
+const villes = new Set<string>();
+const events = ongoing.filter((event) => {
+  if (villes.has(event.city)) return false;
+  villes.add(event.city);
+  return true;
+});
+if (events.length < limit) {
+  for (const event of ongoing) {
+    if (events.length >= limit) break;
+    if (!events.includes(event)) events.push(event);
+  }
+}
+events.splice(limit);
+---
+
+{
+  events.length > 0 && (
+    <section class="bg-(--color-ink) px-6 md:px-10" aria-labelledby="weblack-now">
+      <div class="mx-auto max-w-(--container-content) border-y border-(--color-line) py-8">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+          <h2 id="weblack-now" class="label-tracked flex items-center gap-2.5 text-(--color-gold)">
+            <span class="now-dot" aria-hidden="true" />
+            {t("now.label")}
+          </h2>
+          <a
+            href={localizedPath(lang, "/agenda/")}
+            class="label-tracked text-(--color-paper)/45 transition-colors hover:text-(--color-gold)"
+          >
+            {t("now.toAgenda")} &rarr;
+          </a>
+        </div>
+
+        <ul class="m-0 mt-6 grid list-none grid-cols-1 gap-x-10 gap-y-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
+          {events.map((event) => (
+            <li class="min-w-0">
+              <a
+                href={event.officialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="group block"
+              >
+                <p class="label-tracked text-(--color-paper)/40">
+                  {event.city}
+                  {event.discipline ? ` · ${event.discipline}` : ""}
+                </p>
+                <p class="font-display mt-2 text-lg text-(--color-paper) transition-colors group-hover:text-(--color-gold)">
+                  {event.eventName}
+                </p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  /*
+    Un point qui respire — le seul mouvement du bloc, et il porte le sens :
+    ces événements sont ouverts à l'instant où la page est lue. Il s'arrête
+    si le visiteur refuse les animations ; l'information, elle, ne dépend
+    jamais du mouvement.
+  */
+  .now-dot {
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-gold);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .now-dot {
+      animation: now-pulse 2.4s ease-in-out infinite;
+    }
+  }
+
+  @keyframes now-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.8);
+    }
+  }
+</style>

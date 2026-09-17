@@ -265,6 +265,9 @@ const translations = {
     "agenda.hero.eyebrow": "Agenda",
 
 
+
+    "now.label": "WEBLACK Now",
+    "now.toAgenda": "Tout l'agenda",
     "territories.label": "Territoires créatifs",
     "territories.fashion": "Mode",
     "territories.luxury": "Luxe",
@@ -735,6 +738,9 @@ const translations = {
     "agenda.hero.eyebrow": "Agenda",
 
 
+
+    "now.label": "WEBLACK Now",
+    "now.toAgenda": "The full agenda",
     "territories.label": "Creative territories",
     "territories.fashion": "Fashion",
     "territories.luxury": "Luxury",

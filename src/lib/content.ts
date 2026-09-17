@@ -2,7 +2,7 @@ import { createClient, type SanityClient } from "@sanity/client";
 import { toHTML } from "@portabletext/to-html";
 import type { PortableTextBlock } from "@portabletext/types";
 import type { Lang } from "../i18n/utils";
-import { toPublicEvent, startsAfterPublication, type AgendaEventData } from "./agenda-public";
+import { toPublicEvent, startsAfterPublication, isRunningNow, type AgendaEventData } from "./agenda-public";
 
 export const sanityClient: SanityClient = createClient({
   projectId: import.meta.env.SANITY_PROJECT_ID,
@@ -774,6 +774,30 @@ export async function getAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
       country: country || undefined,
       description: description || undefined,
     });
+  }
+  return events;
+}
+
+
+/**
+ * Ce qui se tient en ce moment — la matière de WEBLACK NOW.
+ *
+ * Même porte d'entrée que l'Agenda : vérifié sur la page officielle,
+ * complet, en territoire. Seule la fenêtre temporelle change. Les deux
+ * listes sont disjointes : un événement est soit en cours, soit à venir.
+ */
+export async function getOngoingEvents(lang: Lang): Promise<AgendaEventData[]> {
+  const docs = await sanityClient.fetch(`*[_type == "event"] | order(startDate desc) ${AGENDA_PROJECTION}`);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const events: AgendaEventData[] = [];
+  for (const doc of docs as any[]) {
+    const event = toPublicEvent(doc);
+    if (!event || !isRunningNow(event, today)) continue;
+    const description = localized(lang, doc.descriptionFr, doc.descriptionEn);
+    const discipline = localized(lang, doc.discipline, doc.disciplineEn);
+    const country = localized(lang, doc.country, doc.countryEn);
+    events.push({ ...event, discipline: discipline || undefined, country: country || undefined, description: description || undefined });
   }
   return events;
 }

@@ -8,6 +8,7 @@ import PartnersPreview from "../components/sections/PartnersPreview.astro";
 import Perspective from "../components/sections/Perspective.astro";
 import TeamPreview from "../components/sections/TeamPreview.astro";
 import TerritoriesMarquee from "../components/sections/TerritoriesMarquee.astro";
+import WeblackNow from "../components/sections/WeblackNow.astro";
 import AgendaPreview from "../components/sections/AgendaPreview.astro";
 import JournalPreview from "../components/sections/JournalPreview.astro";
 import TalentNetworkPreview from "../components/sections/TalentNetworkPreview.astro";
@@ -128,6 +129,7 @@ const translations: TranslationMap = {
   {/* CULTURE — une seule fois : la bande de marque occupe déjà le rôle
       d attention en haut de page, et l Agenda mérite une section, pas une
       décoration qui répète ses propres dates. */}
+  <WeblackNow lang={lang} />
   <AgendaPreview lang={lang} />
 
   {/* HUMAIN, puis ALLIANCES — la crédibilité arrive après la preuve */}
