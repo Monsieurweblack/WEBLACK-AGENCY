@@ -84,6 +84,62 @@ const sameAs = [
 const ORG_ID = `${homeUrl}#organization`;
 const FOUNDER_ID = `${homeUrl}#founder`;
 
+/**
+ * Fil d'Ariane, déduit du chemin réel.
+ *
+ * Il dit à un moteur où la page se situe dans le site — un article n'est
+ * pas une page isolée, il appartient au Journal, qui appartient à WEBLACK.
+ * C'est ce qui permet à une recherche d'afficher « weblack.fr › Journal ›
+ * l'article » plutôt qu'une URL nue, et à un moteur génératif de citer la
+ * rubrique autant que la page.
+ *
+ * Les libellés viennent des traductions de la navigation : une section
+ * n'est jamais nommée deux fois différemment selon l'endroit. Le dernier
+ * maillon porte le titre de la page et non son slug, et la home n'a pas de
+ * fil — on n'annonce pas un chemin qui n'en est pas un.
+ */
+const SECTION_LABELS: Record<string, string> = {
+  journal: t("nav.journal"),
+  agenda: t("nav.agenda"),
+  "selected-work": t("nav.selectedwork"),
+  talent: t("nav.talent"),
+  creative: t("nav.creative"),
+  consulting: t("nav.consulting"),
+  partners: t("nav.partners"),
+  about: t("nav.about"),
+  responsibility: t("nav.responsibility"),
+  contact: t("nav.contact"),
+  live: t("nav.live"),
+};
+
+const pathSegments = Astro.url.pathname.split("/").filter(Boolean).filter((s) => s !== lang);
+
+const breadcrumb =
+  pathSegments.length > 0
+    ? {
+        "@type": "BreadcrumbList",
+        "@id": `${canonicalUrl.toString()}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "WEBLACK", item: homeUrl },
+          ...pathSegments.map((segment, index) => ({
+            "@type": "ListItem",
+            position: index + 2,
+            // Une rubrique garde toujours son nom de navigation, y compris
+            // en bout de chemin : sur /selected-work le fil doit dire
+            // « Projets », pas la phrase d'accroche de la page. Seul un
+            // segment qui n'est pas une rubrique — un slug d'article, un
+            // événement — prend le titre, qui est alors le seul libellé
+            // lisible dont on dispose.
+            name: SECTION_LABELS[segment] ?? (index === pathSegments.length - 1 ? (title ?? segment) : segment),
+            item: new URL(
+              `${lang === defaultLocale ? "" : `/${lang}`}/${pathSegments.slice(0, index + 1).join("/")}/`,
+              Astro.site,
+            ).toString(),
+          })),
+        ],
+      }
+    : undefined;
+
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
@@ -171,7 +227,11 @@ const structuredData = {
       description: pageDescription,
       isPartOf: { "@id": `${homeUrl}#website` },
       inLanguage: schemaLang,
+      ...(breadcrumb ? { breadcrumb: { "@id": breadcrumb["@id"] } } : {}),
     },
+    // Le fil n'apparaît que sur les pages qui en ont un : la home n'est pas
+    // au bout d'un chemin.
+    ...(breadcrumb ? [breadcrumb] : []),
   ],
 };
 ---
