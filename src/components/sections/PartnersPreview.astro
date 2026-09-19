@@ -20,16 +20,25 @@ const lead = section?.intro ?? t("home.partners.lead");
 ---
 
 {
+  /*
+    Poids délibérément réduit (bloc 04) : deux à trois logos ne justifient
+    pas le traitement pleine section (py-24/32, titre à l'échelle d'un
+    h2 de 4xl/5xl) que ce composant portait quand il était pensé pour un
+    plus grand nombre. Un titre plus modeste et une marge resserrée en
+    font une note de confiance en clôture de parcours (CONFIANCE, juste
+    après l'équipe) plutôt qu'une section qui promet une envergure que
+    l'inventaire réel ne tient pas encore.
+  */
   partners.length > 0 && (
-    <section class="bg-(--color-ink) py-24 md:py-32">
+    <section class="border-t border-(--color-line) bg-(--color-ink) pb-20 pt-16 md:pb-28 md:pt-20">
       <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
         <div class="max-w-2xl" data-reveal>
           <p class="label-tracked label-tracked-dot text-(--color-gold)">{eyebrow}</p>
-          <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{title}</h2>
-          <p class="mt-4 max-w-lg text-(--color-paper)/70">{lead}</p>
+          <h2 class="font-display mt-3 text-2xl text-(--color-paper) sm:text-3xl">{title}</h2>
+          <p class="mt-3 max-w-lg text-sm text-(--color-paper)/60">{lead}</p>
         </div>
 
-        <div class="mt-14 grid grid-cols-2 gap-x-8 gap-y-14 sm:grid-cols-3 md:grid-cols-4">
+        <div class="mt-10 grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 md:grid-cols-4">
           {partners.map((partner, i) => (
             <div class="group flex flex-col" data-reveal data-reveal-delay={String(Math.min(i * 0.06, 0.3))}>
               <div class="flex aspect-[4/3] items-center justify-center border-b border-(--color-line) pb-6">

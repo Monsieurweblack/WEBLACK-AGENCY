@@ -11,7 +11,6 @@ import TerritoriesMarquee from "../../components/sections/TerritoriesMarquee.ast
 import WeblackNow from "../../components/sections/WeblackNow.astro";
 import AgendaPreview from "../../components/sections/AgendaPreview.astro";
 import JournalPreview from "../../components/sections/JournalPreview.astro";
-import TalentNetworkPreview from "../../components/sections/TalentNetworkPreview.astro";
 import CtaContact from "../../components/sections/CtaContact.astro";
 import {
   getEntriesByLang,
@@ -28,7 +27,7 @@ import { localizedPath, type TranslationMap } from "../../i18n/utils";
 
 const lang = "en" as const;
 
-const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJournal, allWork, featuredWork, allTalent] =
+const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJournal, allWork, featuredWork] =
   await Promise.all([
     getHomepage(lang),
     getExpertises(lang),
@@ -38,7 +37,6 @@ const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJour
     getFeatured("journal", lang),
     getEntriesByLang("work", lang),
     getFeatured("work", lang),
-    getEntriesByLang("talent", lang),
   ]);
 
 const heroImage = homepage?.hero.image ?? {
@@ -90,15 +88,6 @@ const displayedWork = selectBySlug<WorkEntry>(
   3,
 );
 
-/**
- * The Talent collection also holds 14 demo/seed entries (stock portraits,
- * no verified WEBLACK talent) — they're marked status "archived" in Sanity
- * precisely so this filter excludes them without a hardcoded override.
- * Publishing a real profile in Studio with status "active" is what makes
- * it appear here.
- */
-const talent = allTalent.filter((t) => t.data.status === "active");
-
 const translations: TranslationMap = {
   fr: localizedPath("fr", "/"),
   nb: localizedPath("nb", "/"),
@@ -107,11 +96,34 @@ const translations: TranslationMap = {
 ---
 
 <BaseLayout lang={lang} translations={translations}>
+  {/*
+    Bloc 04 — architecture reconstruite autour d'un parcours, pas d'un
+    empilement de sections. Voir le rapport du bloc pour l'arbitrage
+    complet ; en résumé, dans l'ordre :
+
+    ATTENTION → IDENTIFICATION → POSITIONNEMENT → PREUVE → EXPERTISE →
+    DÉSIR → CONFIANCE → CONVERSION
+
+    Trois changements structurels par rapport à l'ordre précédent :
+    Manifesto remonte avant Work (une conviction avant la preuve, pas
+    après) ; Perspective redescend après Practice, où la méthode
+    synthétise ce qui vient d'être montré plutôt que de le précéder à
+    vide ; WEBLACK NOW précède désormais Journal (le coup d'œil avant la
+    lecture longue). TalentNetworkPreview est retiré — Talent a déjà sa
+    place, à parité avec Créatif et Consulting, dans Practice
+    (DivisionsGrid) ; dupliquer sa présence sur l'accueil via un second
+    bloc à l'état vide n'ajoutait rien que la page dédiée /talent (bloc
+    03) ne dise déjà mieux.
+  */}
+
   {/* ATTENTION */}
   <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
 
-  {/* MEMOIRE DE MARQUE — dans quel monde travaille WEBLACK */}
+  {/* IDENTIFICATION — dans quel monde travaille WEBLACK */}
   <TerritoriesMarquee lang={lang} />
+
+  {/* POSITIONNEMENT — une conviction, avant la preuve, pas après */}
+  <ManifestoQuote lang={lang} text={homepage?.manifesto.text} />
 
   {/* PREUVE — le travail avant le discours sur le travail */}
   <SelectedWorkPreview lang={lang} work={displayedWork} />
@@ -119,25 +131,21 @@ const translations: TranslationMap = {
   {/* EXPERTISE — comment WEBLACK intervient */}
   <DivisionsGrid lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
 
-  {/* POSITION puis METHODE — deux phrases, pas deux sections lourdes */}
-  <ManifestoQuote lang={lang} text={homepage?.manifesto.text} />
+  {/* SYNTHÈSE DE MÉTHODE — la preuve et l'expertise qui précèdent,
+      ramenées à une méthode unique (WEBLACK Perspective) */}
   <Perspective lang={lang} />
 
-  {/* AUTORITE EDITORIALE */}
-  <JournalPreview lang={lang} articles={latestJournal} />
-
-  {/* CULTURE — une seule fois : la bande de marque occupe déjà le rôle
-      d attention en haut de page, et l Agenda mérite une section, pas une
-      décoration qui répète ses propres dates. */}
+  {/* DÉSIR — le coup d'œil (NOW), puis la lecture longue (Journal),
+      puis l'action (Agenda) : du plus léger au plus engageant */}
   <WeblackNow lang={lang} />
+  <JournalPreview lang={lang} articles={latestJournal} />
   <AgendaPreview lang={lang} />
 
-  {/* HUMAIN, puis ALLIANCES — la crédibilité arrive après la preuve */}
-  <TalentNetworkPreview lang={lang} talent={talent} />
+  {/* CONFIANCE — la personne, puis les alliances qui la confirment */}
   <TeamPreview lang={lang} members={teamMembers} section={homepage?.teamSection} />
   <PartnersPreview lang={lang} partners={partnerLogos} section={homepage?.partnersSection} />
 
-  {/* ACTION */}
+  {/* CONVERSION */}
   <CtaContact
     lang={lang}
     title={homepage?.contactSection.title}

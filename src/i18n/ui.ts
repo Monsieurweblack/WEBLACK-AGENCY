@@ -327,6 +327,7 @@ const translations = {
 
 
     "now.label": "WEBLACK Now",
+    "now.description": "Ce qui bouge dans les scènes créatives que WEBLACK observe — vérifié, pas remonté brut.",
     "now.toAgenda": "Tout l'agenda",
     "territories.label": "Territoires créatifs",
     "territories.fashion": "Mode",
@@ -865,6 +866,7 @@ const translations = {
 
 
     "now.label": "WEBLACK Now",
+    "now.description": "What's moving across the creative scenes WEBLACK watches — verified, never a raw feed.",
     "now.toAgenda": "The full agenda",
     "territories.label": "Creative territories",
     "territories.fashion": "Fashion",
