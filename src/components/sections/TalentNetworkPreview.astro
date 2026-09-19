@@ -41,7 +41,12 @@ const t = useTranslations(lang);
       ) : (
         // No real talent roster is published yet — rather than an empty grid,
         // this is an honest editorial explanation of why (curated, not listed)
-        // plus a direct path to apply. Never fabricate profiles to fill this.
+        // plus a path onward. Since BLOC 03, that path is /talent itself —
+        // the page now makes a capability case (development, representation,
+        // direction, connection) before ever asking anyone to apply; sending
+        // a homepage visitor (who may well be a brand, not a talent) straight
+        // to the application form skipped that case entirely. Never fabricate
+        // profiles to fill this.
         <div class="max-w-2xl" data-reveal>
           <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("home.talentnetwork.eyebrow")}</p>
           <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
@@ -49,10 +54,10 @@ const t = useTranslations(lang);
           </h2>
           <p class="mt-5 text-lg text-(--color-paper)/70">{t("home.talentnetwork.body")}</p>
           <a
-            href={localizedPath(lang, "/talent/apply")}
+            href={localizedPath(lang, "/talent")}
             class="label-tracked mt-8 inline-flex items-center gap-2 text-(--color-gold) transition-colors hover:text-(--color-gold-bright)"
           >
-            {t("talent.cta.apply")} &rarr;
+            {t("home.talentnetwork.cta")} &rarr;
           </a>
         </div>
       )

@@ -1,0 +1,327 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import CardTalent from "../cards/CardTalent.astro";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import { getEntriesByLang, sortByDateDesc, type TalentEntry } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  talent: TalentEntry[];
+}
+
+const { lang, talent } = Astro.props;
+
+/**
+ * Les deux mêmes projets réels que Selected Work, référencés par leurs
+ * VRAIS slugs plutôt qu'écrits en dur — le slug NTA diffère entre FR et EN
+ * ("nuit-du-textile-africain-nta" vs "…-bamako"), malgré la convention
+ * énoncée qui les veut partagés. Un lien codé en dur pour une langue
+ * aurait été un lien mort dans l'autre — trouvé en testant, pas supposé.
+ * Même tri (date décroissante) que SelectedWorkPreview : le premier reste
+ * NTA, le plus récent.
+ */
+const projects = sortByDateDesc(await getEntriesByLang("work", lang));
+const zeDefile = projects.find((p) => p.data.slug.includes("ze-defile") || p.data.client.includes("ZÉ DÉFILÉ"));
+const nta = projects.find((p) => p.data.slug.includes("nuit-du-textile") || p.data.client.includes("Marie Kaba"));
+const t = useTranslations(lang);
+
+/**
+ * Talent, reconstruit autour d'une question : que dit-on quand il n'y a
+ * pas de roster à montrer ?
+ *
+ * L'ancienne page répondait en silence — une grille vide sous un filtre
+ * inutile, un « Aucun profil publié » en une ligne. Ce n'est pas un défaut
+ * technique à corriger, c'est une absence de décision éditoriale. Cette
+ * page en prend une : Talent se présente comme une capacité WEBLACK
+ * (développement, représentation, direction, connexion), démontrée par le
+ * terrain déjà réel de l'agence (ZÉ DÉFILÉ, NTA — les deux mêmes projets
+ * que Selected Work, jamais un troisième inventé), et l'absence de roster
+ * public est nommée pour ce qu'elle est plutôt que masquée par une grille
+ * vide.
+ *
+ * Quatre capacités, pas les six esquissées en amont : Casting/Talent
+ * Curation n'a aucune trace dans ce projet — CLAUDE.md documente
+ * management, représentation et développement, jamais de casting — et
+ * l'inventer aurait été la fabrication exacte que cette page doit éviter.
+ * Image & Personal Branding n'est pas une ligne séparée : c'est la
+ * direction créative de WEBLACK (réelle, déjà pratiquée pour ZÉ DÉFILÉ et
+ * la NTA) tournée vers une personne plutôt qu'un client institutionnel —
+ * une seule capacité, pas deux.
+ */
+const roster = talent.filter((entry) => entry.data.status === "active");
+const categories = [...new Set(roster.map((person) => person.data.category))];
+
+const applyHref = localizedPath(lang, "/talent/apply");
+const workHref = localizedPath(lang, "/selected-work");
+const contactHref = localizedPath(lang, "/contact");
+
+const capabilities = ["development", "representation", "direction", "connection"] as const;
+const journeySteps = [1, 2, 3, 4, 5] as const;
+const otherProfiles = ["brand", "media", "creative"] as const;
+---
+
+<article class="bg-(--color-ink)">
+  {/* 1 — HERO. Une photographie réelle (ZÉ DÉFILÉ, jamais utilisée ailleurs
+      sur le site), jamais un portrait de stock présenté comme un talent
+      WEBLACK. Une seule action forte : découvrir l'approche — postuler
+      reste accessible, mais en second, pas en premier geste. */}
+  <header class="relative flex min-h-[70vh] items-end overflow-hidden">
+    <div class="absolute inset-0" aria-hidden="true">
+      <RemoteImage
+        src="/photos/ze-defile-2026-cover.jpg"
+        alt=""
+        width={1600}
+        height={900}
+        loading="eager"
+        fetchpriority="high"
+        class="h-full w-full opacity-50"
+        sizes="100vw"
+      />
+      <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/50 to-(--color-ink)/10" />
+    </div>
+    <div class="relative z-10 mx-auto w-full max-w-(--container-content) px-6 pb-16 pt-40 md:px-10">
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.hero.eyebrow")}</p>
+      <h1 class="font-display mt-4 max-w-2xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("talent.hero.title")}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/80">{t("talent.hero.lead")}</p>
+      <div class="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+        <a
+          href="#positioning"
+          class="label-tracked inline-flex items-center gap-2 bg-(--color-gold) px-7 py-3.5 text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+        >
+          {t("talent.hero.scroll")} <span aria-hidden="true">&darr;</span>
+        </a>
+        <a
+          href={applyHref}
+          class="label-tracked text-(--color-paper)/70 transition-colors hover:text-(--color-gold)"
+        >
+          {t("talent.hero.applyLink")} &rarr;
+        </a>
+      </div>
+      <p class="mt-8 text-xs text-(--color-paper)/35">
+        {t("talent.industries.zedefile.caption")}
+      </p>
+    </div>
+  </header>
+
+  {/* 2 — POSITIONING */}
+  <section id="positioning" class="bg-(--color-ink) px-6 py-24 md:px-10 md:py-32">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.positioning.eyebrow")}</p>
+      <h2 class="font-display mt-4 max-w-2xl text-4xl text-(--color-paper) sm:text-5xl">
+        {t("talent.positioning.title")}
+      </h2>
+      <p class="mt-6 max-w-2xl text-lg text-(--color-paper)/75">{t("talent.positioning.body")}</p>
+    </div>
+  </section>
+
+  {/* 3 — CAPABILITIES. Une liste éditoriale numérotée, pas une grille de
+      cartes à icônes — le gabarit générique d'agence de mannequins que
+      cette page doit précisément éviter. Chaque capacité prend toute la
+      largeur, une à la fois : quatre affirmations, pas un menu. */}
+  <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+    <div class="mx-auto max-w-(--container-content)">
+      <div class="max-w-2xl" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.capabilities.eyebrow")}</p>
+        <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+          {t("talent.capabilities.title")}
+        </h2>
+      </div>
+
+      <ol class="mt-16 border-t border-(--color-line)">
+        {
+          capabilities.map((key, i) => (
+            <li class="grid grid-cols-1 gap-4 border-b border-(--color-line) py-10 md:grid-cols-[0.3fr_1fr_1.4fr] md:items-baseline md:gap-10" data-reveal data-reveal-delay={String(i * 0.08)}>
+              <span class="label-tracked text-(--color-paper)/30">0{i + 1}</span>
+              <h3 class="font-display text-2xl text-(--color-paper) sm:text-3xl">
+                {t(`talent.capabilities.${key}.name` as UiKey)}
+              </h3>
+              <p class="max-w-xl text-(--color-paper)/70">{t(`talent.capabilities.${key}.body` as UiKey)}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  {/* 4 — TALENT × CREATIVE INDUSTRIES. Les deux mêmes projets réels que
+      Selected Work — jamais un territoire promis sans preuve. Le
+      copy nomme explicitement qu'il s'agit du terrain de l'agence, pas
+      d'un catalogue de secteurs couverts par des talents représentés. */}
+  <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+    <div class="mx-auto max-w-(--container-content)">
+      <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+        <div class="max-w-2xl">
+          <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.industries.eyebrow")}</p>
+          <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{t("talent.industries.title")}</h2>
+          <p class="mt-4 max-w-lg text-(--color-paper)/70">{t("talent.industries.body")}</p>
+        </div>
+        <a href={workHref} class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)">
+          {t("talent.industries.cta")} &rarr;
+        </a>
+      </div>
+
+      <div class="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {zeDefile && (
+          <a href={localizedPath(lang, `/selected-work/${zeDefile.data.slug}`)} class="group block" data-reveal>
+            <div class="relative aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
+              <RemoteImage
+                src="/photos/ze-defile-2026-cover.jpg"
+                alt=""
+                width={900}
+                height={675}
+                class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
+                sizes="(min-width: 640px) 40vw, 100vw"
+              />
+            </div>
+            <p class="label-tracked mt-4 text-(--color-paper)/50 transition-colors group-hover:text-(--color-gold)">
+              {t("talent.industries.zedefile.caption")}
+            </p>
+          </a>
+        )}
+        {nta && (
+          <a href={localizedPath(lang, `/selected-work/${nta.data.slug}`)} class="group block" data-reveal data-reveal-delay="0.1">
+            <div class="relative aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
+              <RemoteImage
+                src="/photos/nta-scene-invites.jpg"
+                alt=""
+                width={900}
+                height={675}
+                class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
+                sizes="(min-width: 640px) 40vw, 100vw"
+              />
+            </div>
+            <p class="label-tracked mt-4 text-(--color-paper)/50 transition-colors group-hover:text-(--color-gold)">
+              {t("talent.industries.nta.caption")}
+            </p>
+          </a>
+        )}
+      </div>
+    </div>
+  </section>
+
+  {/* 5 — TALENT JOURNEY. La méthode WEBLACK Perspective, réutilisée à
+      l'identique (mêmes 5 étapes, mêmes libellés) — jamais un pipeline
+      opérationnel inventé pour l'occasion. Le fond clair reprend le rythme
+      déjà établi ailleurs sur le site (Perspective.astro, JournalPreview)
+      plutôt que d'inventer une nouvelle rupture visuelle. */}
+  <section class="bg-(--color-paper) py-24 md:py-32">
+    <div class="on-light-panel mx-auto max-w-(--container-content) px-6 md:px-10">
+      <div class="max-w-2xl" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.journey.eyebrow")}</p>
+        <h2 class="font-display mt-4 text-4xl text-(--color-ink) sm:text-5xl">{t("talent.journey.title")}</h2>
+        <p class="mt-4 max-w-xl text-(--color-ink)/70">{t("talent.journey.body")}</p>
+      </div>
+
+      <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+        {
+          journeySteps.map((step, i) => (
+            <li data-reveal data-reveal-delay={String(i * 0.08)}>
+              <span class="label-tracked text-(--color-ink)/35">0{step}</span>
+              <h3 class="font-display mt-4 text-2xl text-(--color-ink)">
+                {t(`perspective.step${step}.name` as UiKey)}
+              </h3>
+              <p class="mt-2 text-sm text-(--color-ink)/60">{t(`perspective.step${step}.desc` as UiKey)}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  {/* 6 — CURRENT TALENT STATUS. Le vide traité comme une décision, jamais
+      masqué. Si un roster réel existe un jour (roster.length > 0), cette
+      même section bascule vers la grille — sans qu'aucune autre partie de
+      la page n'ait besoin de changer : le gabarit était déjà prêt à
+      grandir, voir CardTalent.astro et le filtre déjà en place. */}
+  <section class="bg-(--color-ink) px-6 py-24 md:px-10 md:py-32">
+    <div class="mx-auto max-w-(--container-content)">
+      {
+        roster.length > 0 ? (
+          <>
+            <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+              <div class="max-w-2xl">
+                <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.status.roster.title")}</p>
+                <p class="mt-4 max-w-lg text-(--color-paper)/70">{t("talent.status.roster.body")}</p>
+              </div>
+            </div>
+
+            {categories.length > 1 && (
+              <div id="talent-filter" class="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-y border-(--color-line) py-6">
+                <button type="button" data-filter="all" class="label-tracked text-(--color-gold)">
+                  {t("talent.filter.all")}
+                </button>
+                {categories.map((category) => (
+                  <button type="button" data-filter={category} class="label-tracked text-(--color-paper)/50">
+                    {t(`talent.category.${category}` as UiKey)}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div id="talent-grid" class="mt-14 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+              {roster.map((person, i) => (
+                <div data-category={person.data.category} class="min-w-0">
+                  <CardTalent lang={lang} talent={person} index={i} />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div class="max-w-2xl border-t border-(--color-line) pt-12" data-reveal>
+            <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.status.eyebrow")}</p>
+            <h2 class="font-display mt-4 text-3xl text-(--color-paper) sm:text-4xl">{t("talent.status.title")}</h2>
+            <p class="mt-5 text-lg text-(--color-paper)/70">{t("talent.status.body")}</p>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  {/* 7 — CTA. Deux chemins, pas un seul bouton générique : un talent qui
+      postule (le formulaire dédié déjà existant, TalentApplyForm — jamais
+      un second), et une marque/média/créatif qui rejoint directement son
+      profil sur /contact — la même segmentation à six profils que le
+      sélecteur du header (BLOC 02), jamais une seconde segmentation. */}
+  <section class="border-t border-(--color-line) bg-(--color-ink) py-20 md:py-28">
+    <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("talent.finalCta.eyebrow")}</p>
+      <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{t("talent.finalCta.title")}</h2>
+
+      <div class="mt-14 grid grid-cols-1 gap-12 border-t border-(--color-line) pt-12 md:grid-cols-2">
+        <div>
+          <h3 class="font-display text-2xl text-(--color-paper)">{t("talent.finalCta.talent.title")}</h3>
+          <p class="mt-3 max-w-sm text-(--color-paper)/70">{t("talent.finalCta.talent.body")}</p>
+          <a
+            href={applyHref}
+            class="label-tracked mt-6 inline-flex items-center gap-2 bg-(--color-gold) px-7 py-3.5 text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+          >
+            {t("talent.finalCta.talent.cta")} &rarr;
+          </a>
+        </div>
+
+        <div class="border-t border-(--color-line) pt-12 md:border-t-0 md:border-l md:pl-12 md:pt-0">
+          <h3 class="font-display text-2xl text-(--color-paper)">{t("talent.finalCta.other.title")}</h3>
+          <p class="mt-3 max-w-sm text-(--color-paper)/70">{t("talent.finalCta.other.body")}</p>
+          <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
+            {otherProfiles.map((profile) => (
+              <a
+                href={`${contactHref}?profile=${profile}`}
+                class="label-tracked text-(--color-paper) transition-colors hover:text-(--color-gold)"
+              >
+                {t(`talent.finalCta.other.${profile}` as UiKey)} &rarr;
+              </a>
+            ))}
+          </div>
+          <p class="mt-6 text-sm text-(--color-paper)/40">{t("talent.finalCta.other.hint")}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</article>
+
+<script>
+  import { initTalentFilter } from "../../scripts/filters/talent-filter";
+  initTalentFilter();
+</script>

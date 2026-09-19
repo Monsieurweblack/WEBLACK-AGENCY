@@ -186,6 +186,61 @@ const translations = {
     "talent.highlights": "Parcours",
     "talent.empty": "Aucun profil publié dans cette catégorie pour le moment.",
 
+    "talent.hero.scroll": "Découvrir notre approche",
+    "talent.hero.applyLink": "Vous êtes un talent ? Postuler",
+
+    "talent.positioning.eyebrow": "Notre rôle",
+    "talent.positioning.title": "Une structure, pas un catalogue.",
+    "talent.positioning.body":
+      "WEBLACK n'expose pas un roster à parcourir. L'agence agit comme la structure entre un potentiel identifié et une opportunité réelle — développement de carrière, représentation, direction de l'image, mise en relation. La même méthode qui guide chaque division WEBLACK (WEBLACK Perspective), appliquée ici aux personnes plutôt qu'aux marques.",
+
+    "talent.capabilities.eyebrow": "Ce que fait WEBLACK",
+    "talent.capabilities.title": "Quatre façons d'intervenir, pas un menu de prestations.",
+    "talent.capabilities.development.name": "Développement",
+    "talent.capabilities.development.body":
+      "Construire une carrière dans la durée plutôt qu'un coup ponctuel — au rythme de la personne, pas du calendrier d'un client.",
+    "talent.capabilities.representation.name": "Représentation",
+    "talent.capabilities.representation.body":
+      "Porter la voix d'un talent auprès de marques, d'institutions et de médias — une structure, pas un intermédiaire de plus.",
+    "talent.capabilities.direction.name": "Direction & image",
+    "talent.capabilities.direction.body":
+      "La même exigence de mise en scène et de communication que WEBLACK applique à ses clients institutionnels, tournée vers une personne : comment elle se présente, se raconte, se positionne.",
+    "talent.capabilities.connection.name": "Connexion & opportunités",
+    "talent.capabilities.connection.body":
+      "Relier un potentiel identifié à une opportunité réelle, en France, en Afrique de l'Ouest et au-delà — sans frontière géographique.",
+
+    "talent.industries.eyebrow": "Terrains vérifiés",
+    "talent.industries.title": "Là où WEBLACK a déjà mis en scène du réel.",
+    "talent.industries.body":
+      "Pas une liste de secteurs promis — deux rendez-vous mode et culture réels, dont WEBLACK a orchestré la communication et la présentation. C'est ce terrain-là, pas un autre, qui accueillerait un talent représenté par l'agence.",
+    "talent.industries.cta": "Voir ces projets",
+    "talent.industries.zedefile.caption": "ZÉ DÉFILÉ by WAXFASHION — Paris, 2023.",
+    "talent.industries.nta.caption": "Nuit du Textile Africain — Bamako, 2024.",
+
+    "talent.journey.eyebrow": "La méthode, appliquée aux personnes",
+    "talent.journey.title": "WEBLACK Perspective, pour un talent.",
+    "talent.journey.body":
+      "La méthode qui structure chaque intervention WEBLACK ne change pas selon qu'elle s'applique à une marque ou à une personne — seul le sujet change.",
+
+    "talent.status.eyebrow": "Aujourd'hui",
+    "talent.status.title": "Aucun roster public, par choix autant que par étape.",
+    "talent.status.body":
+      "Les profils que WEBLACK représente ne sont pas mis en vitrine ici. Cette page grandira avec l'activité réelle — jamais avec des profils ajoutés pour la remplir. Vous êtes un talent en développement : le premier pas passe par une candidature, pas par une fiche déjà publiée.",
+    "talent.status.roster.title": "Talents publiés",
+    "talent.status.roster.body": "Les profils suivants sont représentés par WEBLACK et publiés avec leur accord.",
+
+    "talent.finalCta.eyebrow": "Prendre contact",
+    "talent.finalCta.title": "Deux façons d'avancer.",
+    "talent.finalCta.talent.title": "Vous êtes un talent",
+    "talent.finalCta.talent.body": "Présentez-vous à l'équipe WEBLACK — mannequin, créateur·rice, artiste ou autre profil créatif.",
+    "talent.finalCta.talent.cta": "Postuler",
+    "talent.finalCta.other.title": "Vous représentez une marque, un média, un projet",
+    "talent.finalCta.other.body": "Dites-nous qui vous êtes — WEBLACK vous oriente vers le bon contact.",
+    "talent.finalCta.other.brand": "Une marque",
+    "talent.finalCta.other.media": "Un média",
+    "talent.finalCta.other.creative": "Un·e créatif·ve",
+    "talent.finalCta.other.hint": "Un autre profil ? Le sélecteur « Travailler avec WEBLACK » en haut de page couvre les six.",
+
     "talent.apply.title": "Postuler chez WEBLACK",
     "talent.apply.lead":
       "Mannequin, créateur·rice, artiste ou autre professionnel·le créatif·ve : présentez-vous à l’équipe WEBLACK.",
@@ -670,6 +725,61 @@ const translations = {
     "talent.back": "All talent",
     "talent.highlights": "Track record",
     "talent.empty": "No profiles published in this category yet.",
+
+    "talent.hero.scroll": "Discover our approach",
+    "talent.hero.applyLink": "Are you a talent? Apply",
+
+    "talent.positioning.eyebrow": "Our role",
+    "talent.positioning.title": "A structure, not a catalogue.",
+    "talent.positioning.body":
+      "WEBLACK doesn't display a roster to scroll through. The agency acts as the structure between an identified potential and a real opportunity — career development, representation, image direction, connection. The same method that guides every WEBLACK division (WEBLACK Perspective), applied here to people rather than brands.",
+
+    "talent.capabilities.eyebrow": "What WEBLACK does",
+    "talent.capabilities.title": "Four ways of working, not a menu of services.",
+    "talent.capabilities.development.name": "Development",
+    "talent.capabilities.development.body":
+      "Building a career over time rather than a one-off moment — at the person's pace, not a client's calendar.",
+    "talent.capabilities.representation.name": "Representation",
+    "talent.capabilities.representation.body":
+      "Carrying a talent's voice to brands, institutions and media — a structure, not one more intermediary.",
+    "talent.capabilities.direction.name": "Direction & image",
+    "talent.capabilities.direction.body":
+      "The same staging and communication rigor WEBLACK applies for institutional clients, turned toward a person: how they present, narrate and position themselves.",
+    "talent.capabilities.connection.name": "Connection & opportunities",
+    "talent.capabilities.connection.body":
+      "Linking an identified potential to a real opportunity, across France, West Africa and beyond — no geographic border.",
+
+    "talent.industries.eyebrow": "Proven ground",
+    "talent.industries.title": "Where WEBLACK has already staged something real.",
+    "talent.industries.body":
+      "Not a list of promised sectors — two real fashion and culture events, whose communication and staging WEBLACK led. That ground, and no other, is what a talent represented by the agency would step into.",
+    "talent.industries.cta": "See these projects",
+    "talent.industries.zedefile.caption": "ZÉ DÉFILÉ by WAXFASHION — Paris, 2023.",
+    "talent.industries.nta.caption": "Nuit du Textile Africain — Bamako, 2024.",
+
+    "talent.journey.eyebrow": "The method, applied to people",
+    "talent.journey.title": "WEBLACK Perspective, for a talent.",
+    "talent.journey.body":
+      "The method that structures every WEBLACK engagement doesn't change whether it applies to a brand or a person — only the subject does.",
+
+    "talent.status.eyebrow": "Today",
+    "talent.status.title": "No public roster, by choice as much as by stage.",
+    "talent.status.body":
+      "The profiles WEBLACK represents aren't put on display here. This page will grow with real activity — never with profiles added to fill it. A talent in development: the first step is an application, not an already-published profile.",
+    "talent.status.roster.title": "Published talent",
+    "talent.status.roster.body": "The following profiles are represented by WEBLACK and published with their consent.",
+
+    "talent.finalCta.eyebrow": "Get in touch",
+    "talent.finalCta.title": "Two ways forward.",
+    "talent.finalCta.talent.title": "You are a talent",
+    "talent.finalCta.talent.body": "Introduce yourself to the WEBLACK team — model, creator, artist or another creative profile.",
+    "talent.finalCta.talent.cta": "Apply",
+    "talent.finalCta.other.title": "You represent a brand, a media outlet, a project",
+    "talent.finalCta.other.body": "Tell us who you are — WEBLACK will route you to the right contact.",
+    "talent.finalCta.other.brand": "A brand",
+    "talent.finalCta.other.media": "A media outlet",
+    "talent.finalCta.other.creative": "A creative",
+    "talent.finalCta.other.hint": "Another profile? The \"Work With WEBLACK\" selector at the top of the page covers all six.",
 
     "talent.apply.title": "Apply to WEBLACK",
     "talent.apply.lead":
