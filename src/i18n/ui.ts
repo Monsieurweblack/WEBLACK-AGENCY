@@ -39,7 +39,6 @@ const translations = {
     "nav.workWith": "Travailler avec WEBLACK",
     "nav.workWith.eyebrow": "Vous êtes…",
 
-    "common.switchTo": "Passer en",
     "common.language": "Langue",
 
     "theme.toggle.toLight": "Activer le mode clair",
@@ -105,8 +104,6 @@ const translations = {
     "partners.category.other": "Autre",
     "partners.status.current": "En cours",
     "partners.status.past": "Collaboration passée",
-    "partners.logoAlt.prefix": "Logo de",
-    "partners.logoAlt.suffix": "",
 
     "home.perspective.eyebrow": "WEBLACK Perspective",
     "home.perspective.title": "Du potentiel à l’impact durable.",
@@ -179,11 +176,9 @@ const translations = {
     "talent.category.photographers": "Photographes",
     "talent.category.stylists": "Stylistes",
     "talent.category.other": "Autres",
-    "talent.cta.apply": "Postuler chez WEBLACK",
     "talent.cta.book": "Réserver / Collaborer",
     "talent.back": "Tous les talents",
     "talent.highlights": "Parcours",
-    "talent.empty": "Aucun profil publié dans cette catégorie pour le moment.",
 
     "talent.hero.scroll": "Découvrir notre approche",
     "talent.hero.applyLink": "Vous êtes un talent ? Postuler",
@@ -388,7 +383,6 @@ const translations = {
     "agenda.label.organizer": "Organisation",
     "agenda.label.time": "Horaire",
     "agenda.official": "Page officielle",
-    "agenda.detail": "Voir l'événement",
     "agenda.back": "Tout l'agenda",
     "agenda.verifiedOn": "Vérifié le",
     "agenda.sources": "Pages consultées",
@@ -556,15 +550,9 @@ const translations = {
       "WEBLACK est une agence créative indépendante — talent management, direction créative et conseil de marque, au-delà des frontières.",
     "seo.ogImage.alt": "WEBLACK — Agence créative indépendante. Talent · Créativité · Culture.",
 
-    "common.langSwitch": "English",
     "common.readMore": "En savoir plus",
     "common.discover": "Découvrir",
-    "common.backToTop": "Retour en haut",
     "common.skipToContent": "Aller au contenu",
-    "common.photoCredit": "Photo",
-    "common.year": "Année",
-    "common.location": "Lieu",
-    "common.client": "Client",
 
     "notFound.title": "Cette page n’existe pas.",
     "notFound.cta": "Retour à l’accueil",
@@ -586,7 +574,6 @@ const translations = {
     "nav.workWith": "Work With WEBLACK",
     "nav.workWith.eyebrow": "You are…",
 
-    "common.switchTo": "Switch to",
     "common.language": "Language",
 
     "theme.toggle.toLight": "Switch to light mode",
@@ -652,8 +639,6 @@ const translations = {
     "partners.category.other": "Other",
     "partners.status.current": "Current",
     "partners.status.past": "Past collaboration",
-    "partners.logoAlt.prefix": "",
-    "partners.logoAlt.suffix": "logo",
 
     "home.perspective.eyebrow": "WEBLACK Perspective",
     "home.perspective.title": "From potential to lasting impact.",
@@ -726,11 +711,9 @@ const translations = {
     "talent.category.photographers": "Photographers",
     "talent.category.stylists": "Stylists",
     "talent.category.other": "Other",
-    "talent.cta.apply": "Apply to WEBLACK",
     "talent.cta.book": "Book / Collaborate",
     "talent.back": "All talent",
     "talent.highlights": "Track record",
-    "talent.empty": "No profiles published in this category yet.",
 
     "talent.hero.scroll": "Discover our approach",
     "talent.hero.applyLink": "Are you a talent? Apply",
@@ -933,7 +916,6 @@ const translations = {
     "agenda.label.organizer": "Organiser",
     "agenda.label.time": "Time",
     "agenda.official": "Official page",
-    "agenda.detail": "View event",
     "agenda.back": "All events",
     "agenda.verifiedOn": "Verified on",
     "agenda.sources": "Pages consulted",
@@ -1097,15 +1079,9 @@ const translations = {
       "WEBLACK is an independent creative agency — talent management, creative direction and brand consulting, across borders.",
     "seo.ogImage.alt": "WEBLACK — Independent Creative Agency. Talent · Creativity · Culture.",
 
-    "common.langSwitch": "Français",
     "common.readMore": "Learn more",
     "common.discover": "Discover",
-    "common.backToTop": "Back to top",
     "common.skipToContent": "Skip to content",
-    "common.photoCredit": "Photo",
-    "common.year": "Year",
-    "common.location": "Location",
-    "common.client": "Client",
 
     "notFound.title": "This page doesn't exist.",
     "notFound.cta": "Back to homepage",
@@ -1138,7 +1114,6 @@ const nb: Partial<Record<UiKey, string>> = {
   "nav.close": "Lukk",
   "nav.ariaLabel": "Hovednavigasjon",
 
-  "common.switchTo": "Bytt til",
   "common.language": "Språk",
   "common.discover": "Utforsk",
   "common.skipToContent": "Gå til innhold",
@@ -1197,7 +1172,6 @@ const nb: Partial<Record<UiKey, string>> = {
   "home.talentnetwork.body":
     "WEBLACK publiserer ikke en katalog med profiler. Hvert talent tas opp i nettverket gjennom en grundig utvelgelse, i takt med pågående prosjekter og samarbeid. Modeller, designere, kunstnere, fotografer eller stylister: hvis arbeidet ditt hører hjemme hos WEBLACK, vil vi gjerne se det.",
   "home.talentnetwork.cta": "Møt våre talenter",
-  "talent.cta.apply": "Søk hos WEBLACK",
 
   "home.team.eyebrow": "Teamet",
   "home.team.title": "Menneskene bak WEBLACK.",
@@ -1297,7 +1271,6 @@ const zh: Partial<Record<UiKey, string>> = {
   "nav.close": "关闭",
   "nav.ariaLabel": "主导航",
 
-  "common.switchTo": "切换至",
   "common.language": "语言",
   "common.discover": "探索",
   "common.skipToContent": "跳至内容",
@@ -1354,7 +1327,6 @@ const zh: Partial<Record<UiKey, string>> = {
   "home.talentnetwork.body":
     "WEBLACK 不发布人才目录。每一位人才都通过严格的甄选加入我们的网络，并随着实际项目与合作持续演进。无论是模特、设计师、艺术家、摄影师还是造型师：如果您的作品与 WEBLACK 相契合，我们期待与您相识。",
   "home.talentnetwork.cta": "认识我们的人才",
-  "talent.cta.apply": "申请加入 WEBLACK",
 
   "home.team.eyebrow": "团队",
   "home.team.title": "WEBLACK 背后的团队。",

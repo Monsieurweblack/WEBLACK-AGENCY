@@ -24,26 +24,24 @@ const tagline = hero?.eyebrow ?? t("home.hero.tagline");
 const pillars = hero?.subtitle ?? t("home.hero.pillars");
 const ctaExploreLabel = hero?.ctaPrimaryLabel ?? t("home.hero.cta.explore");
 /**
- * Bloc 05 (audit CTA) : le repli par défaut n'est plus /about.
- *
- * Le Hero installe la marque ; la découverte qu'il promet, dans la
- * nouvelle architecture de l'accueil (bloc 04), c'est la page elle-même —
- * Preuve, Expertise, Méthode, Désir, Confiance, dans cet ordre. Renvoyer
- * vers /about court-circuitait ce parcours au premier clic. #work (voir
- * l'ancre ajoutée sur SelectedWorkPreview.astro) garde le visiteur dans
- * la page et l'amène directement à la preuve — la première chose que
- * l'architecture veut montrer après l'identité.
+ * Le repli par défaut n'est pas /about : le Hero installe la marque ;
+ * la découverte qu'il promet, dans l'architecture de l'accueil, c'est la
+ * page elle-même — Preuve, Expertise, Méthode, Désir, Confiance, dans cet
+ * ordre. Renvoyer vers /about court-circuiterait ce parcours au premier
+ * clic. #work (voir l'ancre ajoutée sur SelectedWorkPreview.astro) garde
+ * le visiteur dans la page et l'amène directement à la preuve — la
+ * première chose que l'architecture veut montrer après l'identité.
  */
 const ctaExploreHref = localizedPath(lang, hero?.ctaPrimaryUrl ?? "#work");
 
 /**
- * Le CTA secondaire n'a plus de repli i18n : « Travailler avec nous »
- * vers /contact, juste sous un en-tête qui porte déjà le sélecteur à six
- * profils (bloc 02), doublait la même intention par un chemin plus
- * pauvre — non segmenté, avant toute preuve. Il ne s'affiche donc que si
- * un contenu Sanity l'active explicitement (label ET destination) ;
- * aujourd'hui, aucun des deux n'est renseigné (bloc 05), donc rien ne
- * s'affiche. Le header reste l'unique entrée commerciale persistante.
+ * Le CTA secondaire n'a pas de repli i18n : « Travailler avec nous » vers
+ * /contact, juste sous un en-tête qui porte déjà le sélecteur à six
+ * profils, doublerait la même intention par un chemin plus pauvre — non
+ * segmenté, avant toute preuve. Il ne s'affiche donc que si un contenu
+ * Sanity l'active explicitement (label ET destination) ; aujourd'hui,
+ * aucun des deux n'est renseigné, donc rien ne s'affiche. Le header reste
+ * l'unique entrée commerciale persistante.
  */
 const hasSecondaryCta = Boolean(hero?.ctaSecondaryLabel && hero?.ctaSecondaryUrl);
 const ctaWorkLabel = hero?.ctaSecondaryLabel;

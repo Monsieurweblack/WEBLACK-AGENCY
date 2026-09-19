@@ -808,7 +808,7 @@ export async function getAgendaEvent(slug: string, lang: Lang): Promise<AgendaEv
   return events.find((event) => event.slug === slug);
 }
 
-// --- WEBLACK NOW — radar culturel curaté (bloc 06) ------------------------
+// --- WEBLACK NOW — radar culturel curaté -----------------------------------
 
 export interface NowSignalData {
   id: string;
@@ -844,8 +844,8 @@ function isNowSignalFresh(discoveredAt: string | undefined, eventDate: string | 
  * editorial-engine/now/types.ts) réellement publiés dans Sanity.
  *
  * Ne renvoie jamais d'erreur si le type `nowSignal` n'existe pas encore
- * dans le dataset (schéma pas encore déployé — voir le rapport du bloc 06) :
- * une requête GROQ sur un `_type` inconnu renvoie simplement un tableau
+ * dans le dataset (schéma pas encore déployé) : une requête GROQ sur un
+ * `_type` inconnu renvoie simplement un tableau
  * vide, comme n'importe quel filtre qui ne trouve rien. WeblackNow.astro
  * continue alors de fonctionner sur les seuls événements Agenda ONGOING,
  * exactement comme avant ce chantier.

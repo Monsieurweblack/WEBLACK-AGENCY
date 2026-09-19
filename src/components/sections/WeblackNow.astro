@@ -4,7 +4,7 @@ import { getOngoingEvents, getNowSignals } from "../../lib/content";
 
 interface Props {
   lang: Lang;
-  /** Combien de signaux montrer. Bloc 06 : 3 à 5, jamais plus — au-delà, ce n'est plus un signal, c'est une liste. */
+  /** Combien de signaux montrer. 3 à 5, jamais plus — au-delà, ce n'est plus un signal, c'est une liste. */
   limit?: number;
 }
 
@@ -12,7 +12,7 @@ const { lang, limit = 5 } = Astro.props;
 const t = useTranslations(lang);
 
 /**
- * WEBLACK NOW — radar culturel curaté (bloc 06).
+ * WEBLACK NOW — radar culturel curaté.
  *
  * Deux flux, une seule bande. Les événements Agenda actuellement ONGOING
  * (déjà vérifiés par ce pipeline, déjà en ligne comme documents `event` —
@@ -36,8 +36,8 @@ const t = useTranslations(lang);
  * Le bloc ne défile pas (une bande de marque glisse déjà sous le hero —
  * une seconde en mouvement produirait une répétition visuelle là où il
  * fallait une différence de nature) et ne porte pas de lien « Tout
- * l'agenda » (bloc 05 : doublon exact du lien qu'Agenda porte déjà, juste
- * en dessous dans l'architecture de l'accueil).
+ * l'agenda » (doublon exact du lien qu'Agenda porte déjà, juste en
+ * dessous dans l'architecture de l'accueil).
  */
 const [ongoing, signals] = await Promise.all([getOngoingEvents(lang), getNowSignals(lang)]);
 
@@ -134,8 +134,8 @@ if (items.length < limit) {
     Un point qui respire — le seul mouvement du bloc, et il porte le sens :
     ces événements sont ouverts à l'instant où la page est lue. Il s'arrête
     si le visiteur refuse les animations ; l'information, elle, ne dépend
-    jamais du mouvement. Pas de ticker (bloc 06, §15) : le mouvement reste
-    lent, discret, et n'affecte jamais la lecture du contenu lui-même.
+    jamais du mouvement. Pas de ticker : le mouvement reste lent, discret,
+    et n'affecte jamais la lecture du contenu lui-même.
   */
   .now-dot {
     display: inline-block;

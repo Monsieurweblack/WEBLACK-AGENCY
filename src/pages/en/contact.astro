@@ -2,12 +2,10 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ContactForm from "../../components/forms/ContactForm.astro";
 import { useTranslations, type UiKey } from "../../i18n/utils";
-import { CONTACT_EMAIL } from "../../lib/contact";
+import { CONTACT_EMAIL, CONTACT_SEGMENTS as segments } from "../../lib/contact";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
-
-const segments = ["talent", "brand", "creative", "partner", "media", "other"] as const;
 ---
 
 <BaseLayout lang={lang} title={t("nav.contact")} description={t("contact.seo.description")}>

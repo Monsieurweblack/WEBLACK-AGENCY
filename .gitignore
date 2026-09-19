@@ -31,3 +31,4 @@ editorial-engine/database/*.sqlite3
 editorial-engine/logs/*.log
 editorial-engine/logs/*.jsonl
 editorial-engine/tests/*.sqlite3
+editorial-engine/test-results/

@@ -1,5 +1,6 @@
 ---
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import { CONTACT_SEGMENTS as segments } from "../../lib/contact";
 
 interface Props {
   lang: Lang;
@@ -8,14 +9,6 @@ interface Props {
 
 const { lang, class: className } = Astro.props;
 const t = useTranslations(lang);
-
-/**
- * La segmentation à six profils de /contact — reprise ici telle quelle,
- * jamais redéfinie. Ce composant n'invente aucune taxonomie : il ouvre
- * seulement un accès plus tôt dans le parcours à celle qui existe déjà
- * (src/pages/contact.astro, src/scripts/forms/contact-segments.ts).
- */
-const segments = ["talent", "brand", "creative", "partner", "media", "other"] as const;
 
 const contactHref = localizedPath(lang, "/contact");
 const uid = `${lang}-${Math.random().toString(36).slice(2, 8)}`;
