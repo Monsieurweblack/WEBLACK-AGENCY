@@ -127,8 +127,15 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
         <div id="agenda-list" class="mt-4">
           {months.map((month) => (
             <section data-month={month.key}>
+              {/*
+                top-[--header-h] et non top-0 : l'en-tête fixe (z-[76]) couvre
+                toujours le haut du viewport, --header-h (mesuré en direct par
+                nav.ts) est la même variable qui positionne déjà le menu
+                plein écran — un titre collé à top-0 restait sous l'en-tête
+                en permanence, jamais visible.
+              */}
               <h2
-                class="label-tracked sticky top-0 z-10 bg-(--color-ink) py-6 text-(--color-gold)"
+                class="label-tracked sticky top-[var(--header-h)] z-10 bg-(--color-ink) py-6 text-(--color-gold)"
                 data-month-heading
               >
                 {month.label}
@@ -177,7 +184,15 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
                         )}
                       </div>
 
-                      <p class="label-tracked self-center whitespace-nowrap text-(--color-paper)/40 md:text-right">
+                      {/*
+                        min-w-0 + pas de whitespace-nowrap avant md : sous
+                        768px cette cellule n'a pas encore de colonne "auto"
+                        dédiée (grille à 2 colonnes seulement, ou 1 seule
+                        colonne sous sm) — une plage de dates réelle et longue
+                        y débordait, coupée silencieusement par overflow-x:clip
+                        sur html (mesuré avec du contenu réel, pas hypothétique).
+                      */}
+                      <p class="label-tracked min-w-0 self-center text-(--color-paper)/40 md:whitespace-nowrap md:text-right">
                         {event.status === "ONGOING" ? t("agenda.status.ONGOING") : dateRange(event, lang, t("agenda.dateTo"))}
                       </p>
                     </a>

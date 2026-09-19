@@ -3,7 +3,7 @@ import RemoteImage from "../media/RemoteImage.astro";
 import CardWork from "../cards/CardWork.astro";
 import CtaContact from "../sections/CtaContact.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
-import { getEntriesByLang, type WorkEntry } from "../../lib/content";
+import { getEntriesByLang, imageFit, type WorkEntry } from "../../lib/content";
 import { getRelatedProjects } from "../../lib/content-graph";
 
 interface Props {
@@ -27,8 +27,6 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
  * qui prolonge la page. Aucune liste de cas particuliers à tenir : c'est
  * l'image elle-même qui décide.
  */
-const coverRatio = work.data.coverImage.width / work.data.coverImage.height;
-const coverIsWide = coverRatio >= 1.5;
 ---
 
 <article class="bg-(--color-ink)">
@@ -41,7 +39,7 @@ const coverIsWide = coverRatio >= 1.5;
         height={1350}
         loading="eager"
         fetchpriority="high"
-        fit={coverIsWide ? "cover" : "contain"}
+        fit={imageFit(work.data.coverImage)}
         class="h-full w-full opacity-55"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/40 to-(--color-ink)/10"></div>

@@ -99,6 +99,11 @@
   html {
     color-scheme: dark;
     scroll-behavior: smooth;
+    /* Le menu plein écran verrouille le défilement du body à l'ouverture
+       (nav.ts) ; sans cette réserve, la disparition de la barre de
+       défilement décale toute la page de sa largeur à l'ouverture et à la
+       fermeture, sur tout navigateur qui réserve cet espace (Windows/Linux). */
+    scrollbar-gutter: stable;
 
     /* Le document ne défile jamais latéralement.
 

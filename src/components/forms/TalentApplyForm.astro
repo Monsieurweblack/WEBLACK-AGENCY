@@ -180,7 +180,7 @@ const categories = ["models", "creatives", "artists", "designers", "photographer
     ></textarea>
   </div>
 
-  <div class="flex items-start gap-3">
+  <label for="consent" class="-my-2 flex items-start gap-3 py-2">
     <input
       type="checkbox"
       id="consent"
@@ -188,8 +188,8 @@ const categories = ["models", "creatives", "artists", "designers", "photographer
       required
       class="mt-1 h-4 w-4 shrink-0 border border-(--color-line) bg-transparent accent-(--color-gold)"
     />
-    <label for="consent" class="text-sm text-(--color-paper)/60">{t("talent.apply.consent")}</label>
-  </div>
+    <span class="text-sm text-(--color-paper)/60">{t("talent.apply.consent")}</span>
+  </label>
 
   <div class="flex flex-wrap items-center gap-6 pt-2">
     <button
@@ -204,7 +204,7 @@ const categories = ["models", "creatives", "artists", "designers", "photographer
     id="form-status"
     role="status"
     aria-live="polite"
-    class="hidden text-sm"
+    class="min-h-[1.25em] text-sm"
     data-success-text={t("contact.form.success")}
     data-error-text={t("contact.form.error")}
     data-submitting-text={t("contact.form.submitting")}

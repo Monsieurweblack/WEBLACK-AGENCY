@@ -67,7 +67,8 @@ const translations: TranslationMap = {
         <h2 class="font-display mt-4 text-4xl text-(--color-ink) sm:text-5xl">{t("about.method.title")}</h2>
       </div>
 
-      <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+      {/* 1 → 5 colonnes directement, jamais 2 — même raison que Perspective.astro : cinq étapes isolent la 5e sur un palier à 2 colonnes. */}
+      <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 lg:grid-cols-5 lg:gap-6">
         {
           steps.map((step, i) => (
             <li data-reveal data-reveal-delay={String(i * 0.08)}>

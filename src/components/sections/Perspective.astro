@@ -20,7 +20,12 @@ const steps = [1, 2, 3, 4, 5] as const;
       </h2>
     </div>
 
-    <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+    {/*
+      1 → 5 colonnes directement, jamais 2 : cinq étapes ne se divisent pas
+      par deux, un palier intermédiaire à 2 colonnes isole la 5e sur sa
+      propre ligne, seule face à une colonne vide.
+    */}
+    <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 lg:grid-cols-5 lg:gap-6">
       {
         steps.map((step, i) => (
           <li data-reveal data-reveal-delay={String(i * 0.08)}>

@@ -1,7 +1,7 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
-import type { WorkEntry } from "../../lib/content";
+import { imageFit, type WorkEntry } from "../../lib/content";
 
 interface Props {
   lang: Lang;
@@ -32,9 +32,6 @@ const t = useTranslations(lang);
 const [lead, secondary] = work;
 const leadHref = lead ? localizedPath(lang, `/selected-work/${lead.data.slug}`) : undefined;
 const secondaryHref = secondary ? localizedPath(lang, `/selected-work/${secondary.data.slug}`) : undefined;
-
-/** Un logo ne se rogne pas — même logique que WorkDetail.astro : c'est l'image elle-même qui décide de son cadrage. */
-const fitFor = (image: { width: number; height: number }) => (image.width / image.height >= 1.5 ? "cover" : "contain");
 ---
 
 {
@@ -50,7 +47,7 @@ const fitFor = (image: { width: number; height: number }) => (image.width / imag
               width={1800}
               height={771}
               credit={lead.data.coverImage.credit}
-              fit={fitFor(lead.data.coverImage)}
+              fit={imageFit(lead.data.coverImage)}
               loading="eager"
               class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-[1.02]"
               sizes="(min-width: 1024px) 1200px, 100vw"
@@ -141,7 +138,7 @@ const fitFor = (image: { width: number; height: number }) => (image.width / imag
                 width={900}
                 height={675}
                 credit={secondary.data.coverImage.credit}
-                fit={fitFor(secondary.data.coverImage)}
+                fit={imageFit(secondary.data.coverImage)}
                 class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
                 sizes="(min-width: 640px) 40vw, 100vw"
               />

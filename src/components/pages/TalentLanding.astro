@@ -214,7 +214,8 @@ const otherProfiles = ["brand", "media", "creative"] as const;
         <p class="mt-4 max-w-xl text-(--color-ink)/70">{t("talent.journey.body")}</p>
       </div>
 
-      <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 sm:grid-cols-2 lg:grid-cols-5 lg:gap-6">
+      {/* 1 → 5 colonnes directement, jamais 2 — même raison que Perspective.astro : cinq étapes isolent la 5e sur un palier à 2 colonnes. */}
+      <ol class="mt-16 grid grid-cols-1 gap-10 border-t border-(--color-ink)/10 pt-12 lg:grid-cols-5 lg:gap-6">
         {
           journeySteps.map((step, i) => (
             <li data-reveal data-reveal-delay={String(i * 0.08)}>

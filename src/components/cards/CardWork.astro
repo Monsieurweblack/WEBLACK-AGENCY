@@ -1,7 +1,7 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
 import { localizedPath, useTranslations, type Lang } from "../../i18n/utils";
-import type { WorkEntry } from "../../lib/content";
+import { imageFit, type WorkEntry } from "../../lib/content";
 
 interface Props {
   lang: Lang;
@@ -24,6 +24,7 @@ const href = localizedPath(lang, `/selected-work/${work.data.slug}`);
       width={800}
       height={1000}
       credit={work.data.coverImage.credit}
+      fit={imageFit(work.data.coverImage)}
       class="h-full w-full opacity-90 grayscale-[20%] transition-[transform,filter] duration-700 ease-(--ease-signature) group-hover:scale-105 group-hover:grayscale-0 group-focus-visible:scale-105 group-focus-visible:grayscale-0"
       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
     />

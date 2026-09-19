@@ -26,7 +26,6 @@ export function initContactForm() {
 
   function setStatus(kind: "idle" | "submitting" | "success" | "error") {
     if (!status) return;
-    status.classList.remove("hidden");
     status.classList.toggle("text-(--color-gold)", kind === "success");
     status.classList.toggle("text-red-400", kind === "error");
     status.classList.toggle("text-(--color-paper)/60", kind === "submitting");

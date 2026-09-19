@@ -55,9 +55,16 @@ const uid = `${lang}-${Math.random().toString(36).slice(2, 8)}`;
     </svg>
   </button>
 
+  {/*
+    `fixed`, ancré au bord de l'en-tête (--header-h, mesuré en direct par
+    nav.ts) plutôt qu'`absolute` sous le déclencheur : ce dernier n'est pas
+    le dernier élément du cluster (Lang, Menu le suivent), donc un ancrage
+    `right-0` relatif au déclencheur laissait le menu déborder hors écran
+    sous ~455px de large — mesuré, pas supposé.
+  */}
   <div
     id={`workwith-menu-${uid}`}
-    class="workwith-menu absolute right-0 top-full z-[77] mt-2 w-64 border border-(--color-line) bg-(--color-ink) py-2 shadow-[0_16px_40px_rgba(0,0,0,0.4)]"
+    class="workwith-menu fixed right-6 top-[calc(var(--header-h)+0.5rem)] z-[77] w-64 border border-(--color-line) bg-(--color-ink) py-2 shadow-[0_16px_40px_rgba(0,0,0,0.4)] md:right-10"
     role="menu"
     aria-label={t("nav.workWith")}
     data-workwith-menu

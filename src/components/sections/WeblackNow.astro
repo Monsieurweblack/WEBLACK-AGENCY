@@ -112,7 +112,14 @@ if (items.length < limit) {
           <p class="mt-1.5 max-w-md text-sm text-(--color-paper)/50">{t("now.description")}</p>
         </div>
 
-        <ul class="m-0 mt-6 grid list-none grid-cols-1 gap-x-10 gap-y-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
+        {/*
+          1 → 5 colonnes directement : entre 3 et 5 signaux (NOW_POLICY),
+          jamais plus, jamais moins — une seule ligne possible à lg:, donc
+          aucun signal ne peut jamais se retrouver seul sur une ligne vide.
+          Un palier intermédiaire à 2 colonnes créait exactement ce
+          déséquilibre entre 640 et 1023px pour 5 signaux.
+        */}
+        <ul class="m-0 mt-6 grid list-none grid-cols-1 gap-x-10 gap-y-5 p-0 lg:grid-cols-5">
           {items.map((item) => (
             <li class="min-w-0">
               <a href={item.href} target="_blank" rel="noopener noreferrer" class="group block">

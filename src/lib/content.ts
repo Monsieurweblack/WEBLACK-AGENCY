@@ -256,6 +256,17 @@ export interface EditorialImageData {
   height: number;
 }
 
+/**
+ * Un logo ne se rogne pas ; une photographie se rogne pour remplir son
+ * cadre sans en souffrir. Plutôt qu'une liste de cas particuliers par
+ * projet, l'image décide elle-même de son cadrage à partir de ses
+ * proportions réelles — même seuil partout où ce choix se pose (fiche
+ * projet, composition éditoriale à 1-2 projets, carte CardWork).
+ */
+export function imageFit(image: { width: number; height: number }): "cover" | "contain" {
+  return image.width / image.height >= 1.5 ? "cover" : "contain";
+}
+
 function mapEditorialImage(raw: any): EditorialImageData | undefined {
   const ref: string | undefined = raw?.asset?._ref;
   const url = sanityImageUrl(ref);
