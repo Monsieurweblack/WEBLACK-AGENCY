@@ -807,3 +807,69 @@ export async function getAgendaEvent(slug: string, lang: Lang): Promise<AgendaEv
   const events = await getAgendaEvents(lang);
   return events.find((event) => event.slug === slug);
 }
+
+// --- WEBLACK NOW — radar culturel curaté (bloc 06) ------------------------
+
+export interface NowSignalData {
+  id: string;
+  title: string;
+  territory: string;
+  summary: string;
+  sourceName: string;
+  sourceUrl: string;
+  /** Absent pour un signal sans date propre (une nomination, par exemple) — jamais déduite. */
+  date?: string;
+}
+
+/**
+ * Second filtre, indépendant de celui du moteur — même philosophie que
+ * src/lib/agenda-public.ts : « le site ne doit pas dépendre de la prudence
+ * de qui a écrit le document ». Un signal `nowSignal` plus vieux que la
+ * fenêtre d'affichage (30 jours — même seuil que editorial-engine/now/
+ * freshness.ts HISTORICAL, reproduit ici plutôt qu'importé : ce module Node
+ * ne doit jamais entrer dans le bundle Vite, voir la note en tête de ce
+ * fichier sur sanityClient) ne s'affiche plus, même s'il reste dans Sanity.
+ */
+function isNowSignalFresh(discoveredAt: string | undefined, eventDate: string | undefined, now = new Date()): boolean {
+  const reference = eventDate || discoveredAt;
+  if (!reference) return false;
+  const date = new Date(reference);
+  if (Number.isNaN(date.getTime())) return false;
+  const ageDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+  return ageDays <= 30;
+}
+
+/**
+ * Les signaux éditoriaux WEBLACK NOW ("editorial-signal" — voir
+ * editorial-engine/now/types.ts) réellement publiés dans Sanity.
+ *
+ * Ne renvoie jamais d'erreur si le type `nowSignal` n'existe pas encore
+ * dans le dataset (schéma pas encore déployé — voir le rapport du bloc 06) :
+ * une requête GROQ sur un `_type` inconnu renvoie simplement un tableau
+ * vide, comme n'importe quel filtre qui ne trouve rien. WeblackNow.astro
+ * continue alors de fonctionner sur les seuls événements Agenda ONGOING,
+ * exactement comme avant ce chantier.
+ */
+export async function getNowSignals(lang: Lang): Promise<NowSignalData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "nowSignal"] | order(discoveredAt desc){
+      engineId, title, titleEn, territory, summary, summaryEn,
+      sourceName, sourceUrl, discoveredAt, eventDate
+    }`,
+  );
+  const signals: NowSignalData[] = [];
+  for (const doc of docs as any[]) {
+    if (!doc.engineId || !doc.title || !doc.territory || !doc.sourceUrl) continue;
+    if (!isNowSignalFresh(doc.discoveredAt, doc.eventDate)) continue;
+    signals.push({
+      id: doc.engineId,
+      title: localized(lang, doc.title, doc.titleEn) || doc.title,
+      territory: doc.territory,
+      summary: localized(lang, doc.summary, doc.summaryEn) || doc.summary,
+      sourceName: doc.sourceName ?? "",
+      sourceUrl: doc.sourceUrl,
+      date: doc.eventDate || undefined,
+    });
+  }
+  return signals;
+}

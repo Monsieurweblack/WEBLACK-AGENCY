@@ -1,82 +1,109 @@
 ---
-import { useTranslations, type Lang } from "../../i18n/utils";
-import { getOngoingEvents } from "../../lib/content";
+import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import { getOngoingEvents, getNowSignals } from "../../lib/content";
 
 interface Props {
   lang: Lang;
-  /** Combien de rendez-vous en cours montrer. Au-delà de quatre, ce n'est plus un signal, c'est une liste. */
+  /** Combien de signaux montrer. Bloc 06 : 3 à 5, jamais plus — au-delà, ce n'est plus un signal, c'est une liste. */
   limit?: number;
 }
 
-const { lang, limit = 4 } = Astro.props;
+const { lang, limit = 5 } = Astro.props;
 const t = useTranslations(lang);
 
 /**
- * WEBLACK NOW — ce qui se tient en ce moment.
+ * WEBLACK NOW — radar culturel curaté (bloc 06).
  *
- * Trois fonctions voisines devaient rester distinctes : le Journal dit ce
- * que WEBLACK pense, l'Agenda ce qui vient, et ce bloc ce qui est ouvert
- * aujourd'hui. La distinction n'est pas rhétorique — les données ne se
- * recoupent jamais, l'Agenda n'annonçant que ce qui commence après la
- * publication.
+ * Deux flux, une seule bande. Les événements Agenda actuellement ONGOING
+ * (déjà vérifiés par ce pipeline, déjà en ligne comme documents `event` —
+ * getOngoingEvents lit exactement ce que la page d'accueil affichait avant
+ * ce chantier). Et, depuis ce chantier, des signaux éditoriaux — une
+ * nomination, une collaboration, une collection, une distinction — issus du
+ * même degré d'exigence que le Journal (Evidence Pack, anti-fabrication,
+ * Quality Gate à huit conditions) mais réduits à une phrase, jamais un
+ * article : voir editorial-engine/now/.
  *
- * Ces événements étaient jusqu'ici invisibles : trop tard pour être
- * annoncés, trop vivants pour être oubliés. Huit expositions vérifiées
- * dormaient dans cet angle mort.
+ * getNowSignals() ne renvoie rien tant que le schéma `nowSignal` n'est pas
+ * déployé dans Sanity et qu'aucun cycle n'a été exécuté (npm run
+ * editorial:now -- run) — la bande continue alors de fonctionner
+ * exactement comme avant ce chantier, sur les seuls événements Agenda.
+ * Rien n'est fabriqué pour remplir l'écart.
  *
- * Deux décisions de forme, contre la proposition initiale.
+ * Trois fonctions voisines restent distinctes : le Journal dit ce que
+ * WEBLACK pense, l'Agenda ce qui vient, ce bloc ce qui bouge maintenant —
+ * vérifié, jamais un flux brut, jamais un second Agenda.
  *
- * Le bloc ne défile pas. Une bande de marque glisse déjà sous le hero ;
- * une seconde en mouvement aurait produit une répétition visuelle là où il
- * fallait une différence de nature. Ce qui bouge dit « la marque » ; ce qui
- * est posé dit « le réel ».
- *
- * Chaque entrée mène à la page de l'institution, pas à une page interne :
- * ces événements n'ont pas de fiche sur le site, précisément parce que
- * l'Agenda ne les annonce pas. Renvoyer à l'organisateur est la seule
- * destination honnête — WEBLACK signale, l'institution accueille.
+ * Le bloc ne défile pas (une bande de marque glisse déjà sous le hero —
+ * une seconde en mouvement produirait une répétition visuelle là où il
+ * fallait une différence de nature) et ne porte pas de lien « Tout
+ * l'agenda » (bloc 05 : doublon exact du lien qu'Agenda porte déjà, juste
+ * en dessous dans l'architecture de l'accueil).
  */
-/**
- * Une ville par entrée, tant qu'il y a des villes.
- *
- * Trié par date, le bloc affichait quatre expositions tokyoïtes et
- * écartait Londres et Johannesburg : une bande censée dire « voici les
- * scènes créatives » ne disait plus que « voici Tokyo ». Le tri par
- * pertinence d'abord, puis une ville par ligne, rétablit ce que le bloc
- * prétend montrer. Si les villes manquent, on complète sans en inventer.
- */
-const ongoing = (await getOngoingEvents(lang)).sort(
+const [ongoing, signals] = await Promise.all([getOngoingEvents(lang), getNowSignals(lang)]);
+
+const sortedOngoing = ongoing.sort(
   (a, b) => (b.editorialRelevance ?? 0) - (a.editorialRelevance ?? 0) || b.startDate.localeCompare(a.startDate),
 );
 
+interface NowItem {
+  key: string;
+  label: string;
+  title: string;
+  href: string;
+}
+
+/**
+ * Une ville par événement Agenda, tant qu'il y a des villes — sans cette
+ * règle, une même ville riche en expositions saturait la bande et
+ * masquait les autres scènes. Les signaux éditoriaux n'ont pas de ville :
+ * ils portent un territoire, déjà distinct par construction (dédoublonnés
+ * en amont par editorial-engine/now/dedupe.ts).
+ */
 const villes = new Set<string>();
-const events = ongoing.filter((event) => {
-  if (villes.has(event.city)) return false;
+const items: NowItem[] = [];
+
+for (const event of sortedOngoing) {
+  if (items.length >= limit) break;
+  if (villes.has(event.city)) continue;
   villes.add(event.city);
-  return true;
-});
-if (events.length < limit) {
-  for (const event of ongoing) {
-    if (events.length >= limit) break;
-    if (!events.includes(event)) events.push(event);
+  items.push({
+    key: `event-${event.id}`,
+    label: event.discipline ? `${event.city} · ${event.discipline}` : event.city,
+    title: event.eventName,
+    href: event.officialUrl,
+  });
+}
+for (const signal of signals) {
+  if (items.length >= limit) break;
+  items.push({
+    key: `signal-${signal.id}`,
+    label: t(`now.territory.${signal.territory}` as UiKey) || signal.territory,
+    title: signal.title,
+    href: signal.sourceUrl,
+  });
+}
+// Complète jusqu'à la limite en reprenant l'agenda (villes déjà vues
+// incluses) plutôt que de laisser la bande sous son minimum de trois — la
+// diversité de villes est une préférence, pas une règle qui viderait le bloc.
+if (items.length < limit) {
+  for (const event of sortedOngoing) {
+    if (items.length >= limit) break;
+    const key = `event-${event.id}`;
+    if (items.some((i) => i.key === key)) continue;
+    items.push({
+      key,
+      label: event.discipline ? `${event.city} · ${event.discipline}` : event.city,
+      title: event.eventName,
+      href: event.officialUrl,
+    });
   }
 }
-events.splice(limit);
 ---
 
 {
-  events.length > 0 && (
+  items.length > 0 && (
     <section class="bg-(--color-ink) px-6 md:px-10" aria-labelledby="weblack-now">
       <div class="mx-auto max-w-(--container-content) border-y border-(--color-line) py-8">
-        {/*
-          Pas de lien « Tout l'agenda » ici (bloc 05, audit CTA) : Agenda
-          suit NOW immédiatement dans l'architecture de l'accueil et porte
-          déjà ce lien exact, même libellé, même destination — le doublon
-          se lisait comme une erreur de copier-coller, pas comme un choix.
-          L'exploration propre à NOW reste ses propres entrées, chacune
-          déjà cliquable vers sa source — le signal que ce bloc doit
-          porter, sans répéter celui de la section suivante.
-        */}
         <div>
           <h2 id="weblack-now" class="label-tracked flex items-center gap-2.5 text-(--color-gold)">
             <span class="now-dot" aria-hidden="true" />
@@ -86,20 +113,12 @@ events.splice(limit);
         </div>
 
         <ul class="m-0 mt-6 grid list-none grid-cols-1 gap-x-10 gap-y-5 p-0 sm:grid-cols-2 lg:grid-cols-4">
-          {events.map((event) => (
+          {items.map((item) => (
             <li class="min-w-0">
-              <a
-                href={event.officialUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="group block"
-              >
-                <p class="label-tracked text-(--color-paper)/40">
-                  {event.city}
-                  {event.discipline ? ` · ${event.discipline}` : ""}
-                </p>
+              <a href={item.href} target="_blank" rel="noopener noreferrer" class="group block">
+                <p class="label-tracked text-(--color-paper)/40">{item.label}</p>
                 <p class="font-display mt-2 text-lg text-(--color-paper) transition-colors group-hover:text-(--color-gold)">
-                  {event.eventName}
+                  {item.title}
                 </p>
               </a>
             </li>
@@ -115,7 +134,8 @@ events.splice(limit);
     Un point qui respire — le seul mouvement du bloc, et il porte le sens :
     ces événements sont ouverts à l'instant où la page est lue. Il s'arrête
     si le visiteur refuse les animations ; l'information, elle, ne dépend
-    jamais du mouvement.
+    jamais du mouvement. Pas de ticker (bloc 06, §15) : le mouvement reste
+    lent, discret, et n'affecte jamais la lecture du contenu lui-même.
   */
   .now-dot {
     display: inline-block;

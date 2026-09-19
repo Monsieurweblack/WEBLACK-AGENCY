@@ -17,6 +17,8 @@ import { reviewQueue, readLedger } from "./logs/productionLedger.ts";
 import { currentQueue } from "./newsletter/queue.ts";
 import { upcomingEvents, reviewEvents, currentEvents } from "./agenda/store.ts";
 import { runAgendaCycle } from "./agenda/runAgendaCycle.ts";
+import { currentSignals, reviewSignals, publishedSignals } from "./now/store.ts";
+import { runNowCycle } from "./now/runNowCycle.ts";
 import { dispatchDue, buildDigest, providerProblem } from "./newsletter/dispatch.ts";
 import { parseArgs } from "./cliArgs.ts";
 
@@ -232,6 +234,29 @@ async function main() {
       break;
     }
 
+    case "now": {
+      if (positional[0] === "run") {
+        const result = await runNowCycle(dryRun);
+        console.log(JSON.stringify(result, null, 2));
+        break;
+      }
+      const published = publishedSignals();
+      const review = reviewSignals();
+      console.log(`== WEBLACK NOW — ${currentSignals().length} signal(aux) en stock ==`);
+      console.log(`${published.length} publiable(s) · ${review.length} en attente de décision humaine\n`);
+      for (const s of published) {
+        console.log(`[${s.origin}] ${s.territory} — ${s.title}`);
+        console.log(`  ${s.source.name} (${s.source.rank}) · pertinence ${s.relevance.composite} · ${s.discoveredAt.slice(0, 10)}`);
+        console.log(`  ${s.source.url}\n`);
+      }
+      if (review.length > 0) {
+        console.log("-- en attente de décision humaine --");
+        for (const s of review) console.log(`  ${s.title} — ${s.statusReason}`);
+      }
+      if (currentSignals().length === 0) console.log("Stock vide — aucun cycle exécuté (npm run editorial:now -- run).");
+      break;
+    }
+
     case "freshness": {
       const days = Number(positional[0] ?? 90);
       const flags = await detectStaleArticles(days);
@@ -255,6 +280,8 @@ async function main() {
       console.log("  npm run editorial:ledger                   — registre de production: cycles, décisions, coûts");
       console.log("  npm run editorial:agenda                    — événements culturels vérifiés en stock");
       console.log("  npm run editorial:agenda -- search          — un passage de recherche (--dry-run pour ne rien stocker)");
+      console.log("  npm run editorial:now                       — signaux WEBLACK NOW en stock");
+      console.log("  npm run editorial:now -- run                — un passage de découverte (--dry-run pour ne rien stocker/écrire)");
       console.log("  npm run editorial:newsletter -- [list|preview|digest|send] — file des numéros");
       console.log("  npm run editorial:publish -- <documentId> — publie un brouillon déjà validé par un humain");
       process.exitCode = 1;
