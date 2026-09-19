@@ -36,6 +36,8 @@ const translations = {
     "nav.menu": "Menu",
     "nav.close": "Fermer",
     "nav.ariaLabel": "Navigation principale",
+    "nav.workWith": "Travailler avec WEBLACK",
+    "nav.workWith.eyebrow": "Vous êtes…",
 
     "common.switchTo": "Passer en",
     "common.language": "Langue",
@@ -87,6 +89,9 @@ const translations = {
     "home.work.lead":
       "De Paris à Bamako, chaque collaboration WEBLACK est pensée comme un projet à part entière — jamais comme une simple prestation.",
     "home.work.cta": "Voir tous les projets",
+    "home.work.featured": "Projet phare",
+    "home.work.readCase": "Lire l'étude de cas",
+    "home.work.practiceLink": "Comment nous intervenons",
 
     "home.partners.eyebrow": "Nos partenaires",
     "home.partners.title": "Des collaborations qui accompagnent notre trajectoire.",
@@ -516,6 +521,8 @@ const translations = {
     "nav.menu": "Menu",
     "nav.close": "Close",
     "nav.ariaLabel": "Main navigation",
+    "nav.workWith": "Work With WEBLACK",
+    "nav.workWith.eyebrow": "You are…",
 
     "common.switchTo": "Switch to",
     "common.language": "Language",
@@ -567,6 +574,9 @@ const translations = {
     "home.work.lead":
       "From Paris to Bamako, every WEBLACK collaboration is treated as a project in its own right — never as a simple service.",
     "home.work.cta": "View all work",
+    "home.work.featured": "Featured project",
+    "home.work.readCase": "Read the case study",
+    "home.work.practiceLink": "How we work",
 
     "home.partners.eyebrow": "Our partners",
     "home.partners.title": "Collaborations that shape our journey.",

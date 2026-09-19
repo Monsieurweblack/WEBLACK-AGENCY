@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
 import LanguageSwitcher from "./LanguageSwitcher.astro";
+import WorkWithPicker from "./WorkWithPicker.astro";
 import ThemeToggle from "./ThemeToggle.astro";
 import SocialLinks from "./SocialLinks.astro";
 import SearchOverlay from "./SearchOverlay.astro";
@@ -45,7 +46,7 @@ const liveHref = localizedPath(lang, "/live");
   data-header
 >
   <div
-    class="site-header-row mx-auto flex max-w-(--container-content) items-center justify-between px-6 pb-5 md:px-10"
+    class="site-header-row mx-auto flex max-w-(--container-content) items-center justify-between gap-4 px-6 pb-5 md:px-10"
   >
     <a
       href={homeHref}
@@ -58,7 +59,7 @@ const liveHref = localizedPath(lang, "/live");
       <span class="font-display text-lg tracking-[0.05em] text-(--color-paper)">WEBLACK</span>
     </a>
 
-    <div class="flex items-center gap-3">
+    <div class="header-cluster flex items-center gap-3">
       <a
         href={liveHref}
         class:list={[
@@ -69,6 +70,7 @@ const liveHref = localizedPath(lang, "/live");
         {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
         {t("nav.live")}
       </a>
+      <WorkWithPicker lang={lang} />
       <LanguageSwitcher lang={lang} translations={translations} />
       <button
         type="button"
@@ -195,14 +197,42 @@ const liveHref = localizedPath(lang, "/live");
    * une navigation modale — tant qu'il est ouvert, il doit passer devant
    * tout ce qui est décoratif ou informatif.
    *
+   *   80  fenêtre de préférences (reste au-dessus de tout : c'est un choix
+   *       que le visiteur doit pouvoir faire sans obstacle)
+   *   78  fenêtre d'inscription à la lettre
+   *   77  sélecteur de profil du header (WorkWithPicker) — au-dessus de
+   *       l'en-tête qui le porte, jamais devant une fenêtre modale
    *   76  en-tête      (le bouton FERMER doit rester atteignable)
    *   75  menu
    *   70  bandeau de consentement
-   *   80  fenêtre de préférences (reste au-dessus de tout : c'est un choix
-   *       que le visiteur doit pouvoir faire sans obstacle)
    */
   .site-header-row {
     padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  }
+
+  /*
+   * Quatre commandes persistantes (Live, le sélecteur de profil, la langue,
+   * le menu) plus le logo ne tiennent pas sur une ligne en dessous du
+   * palier md: (768px) — y compris entre 640 et 767px, où le sélecteur de
+   * profil affiche déjà son texte complet (son propre seuil sm: à 640px) :
+   * mesuré, "Menu" y sortait du cadre à droite, ou son bouton se
+   * compressait au point de faire passer son propre texte à la ligne.
+   * Plutôt que de réduire chaque bouton sous une taille tactile confortable
+   * pour gagner quelques pixels, le groupe bascule sur sa propre ligne,
+   * aligné à droite sous le logo — chaque commande garde sa taille
+   * normale, et le ResizeObserver de nav.ts absorbe automatiquement la
+   * hauteur d'en-tête supplémentaire dans le calcul du menu.
+   */
+  @media (max-width: 767px) {
+    .site-header-row {
+      flex-wrap: wrap;
+      row-gap: 0.625rem;
+    }
+
+    .header-cluster {
+      flex: 1 1 100%;
+      justify-content: flex-end;
+    }
   }
 
   /*

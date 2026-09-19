@@ -1,5 +1,6 @@
 ---
 import CardWork from "../cards/CardWork.astro";
+import SelectedWorkEditorial from "./SelectedWorkEditorial.astro";
 import type { WorkEntry } from "../../lib/content";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 
@@ -10,6 +11,19 @@ interface Props {
 
 const { lang, work } = Astro.props;
 const t = useTranslations(lang);
+
+/**
+ * Deux traitements, un seul par appel — jamais un compromis entre les deux.
+ *
+ * En dessous de trois projets, la grille CardWork (conçue pour trois
+ * colonnes et plus) laisse un emplacement visiblement vide : elle rend la
+ * rareté de l'inventaire lisible comme un manque plutôt que comme un
+ * choix. SelectedWorkEditorial existe pour ce cas précis — voir son
+ * commentaire d'en-tête. Elle n'a jamais besoin d'être choisie « en plus » :
+ * dès qu'un troisième projet réel sera publié, cette condition bascule
+ * d'elle-même vers la grille, déjà conçue pour l'abondance.
+ */
+const isScarce = work.length > 0 && work.length <= 2;
 ---
 
 {
@@ -30,11 +44,29 @@ const t = useTranslations(lang);
           </a>
         </div>
 
-        <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {work.map((item, i) => (
-            <CardWork lang={lang} work={item} index={i} />
-          ))}
-        </div>
+        {isScarce ? (
+          <SelectedWorkEditorial lang={lang} work={work} />
+        ) : (
+          <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {work.map((item, i) => (
+              <CardWork lang={lang} work={item} index={i} />
+            ))}
+          </div>
+        )}
+
+        {/*
+          Transition vers Practice — la preuve qu'on vient de montrer appelle
+          la question suivante : comment WEBLACK opère. #practice ancre sur
+          la section Divisions (voir DivisionsGrid.astro), juste en dessous.
+        */}
+        <a
+          href="#practice"
+          class="label-tracked mt-16 flex items-center justify-center gap-2 border-t border-(--color-line) pt-10 text-(--color-paper)/50 transition-colors hover:text-(--color-gold)"
+          data-reveal
+        >
+          {t("home.work.practiceLink")}
+          <span aria-hidden="true">&darr;</span>
+        </a>
       </div>
     </section>
   )

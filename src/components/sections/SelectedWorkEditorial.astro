@@ -1,0 +1,169 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { WorkEntry } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  /** Un ou deux projets, déjà triés — le premier reçoit le traitement éditorial le plus lourd. */
+  work: WorkEntry[];
+}
+
+const { lang, work } = Astro.props;
+const t = useTranslations(lang);
+
+/**
+ * Traitement éditorial pour un inventaire rare (1 ou 2 projets réels),
+ * pensé pour cet inventaire plutôt que rempli malgré lui.
+ *
+ * L'alternative — la grille CardWork existante, conçue pour trois colonnes
+ * et plus — appliquée à deux entrées laisse un troisième emplacement vide :
+ * elle donne à voir un manque plutôt qu'un choix. Ici, chaque projet reçoit
+ * exactement l'espace que sa place dans la sélection justifie : le premier
+ * en pleine largeur, avec sa galerie quand elle existe ; le second en
+ * appui, jamais en vignette.
+ *
+ * Rien n'est ajouté qui ne soit pas déjà dans Sanity : context, challenge,
+ * role, disciplines, results viennent tous de WorkData (voir
+ * src/lib/content.ts) — les mêmes champs que la page de détail. Un champ
+ * absent (results non renseigné, pas de galerie) ne se remplace par rien ;
+ * il disparaît, comme partout ailleurs sur ce site.
+ */
+const [lead, secondary] = work;
+const leadHref = lead ? localizedPath(lang, `/selected-work/${lead.data.slug}`) : undefined;
+const secondaryHref = secondary ? localizedPath(lang, `/selected-work/${secondary.data.slug}`) : undefined;
+
+/** Un logo ne se rogne pas — même logique que WorkDetail.astro : c'est l'image elle-même qui décide de son cadrage. */
+const fitFor = (image: { width: number; height: number }) => (image.width / image.height >= 1.5 ? "cover" : "contain");
+---
+
+{
+  lead && (
+    <div class="mt-14 space-y-16">
+      {/* PROJET PHARE — pleine largeur, galerie quand elle existe */}
+      <article class="group" data-reveal>
+        <a href={leadHref} class="block focus-visible:outline-none">
+          <div class="relative aspect-[16/10] overflow-hidden bg-(--color-ink-soft) sm:aspect-[21/9]">
+            <RemoteImage
+              src={lead.data.coverImage.url}
+              alt={lead.data.coverImage.alt}
+              width={1800}
+              height={771}
+              credit={lead.data.coverImage.credit}
+              fit={fitFor(lead.data.coverImage)}
+              loading="eager"
+              class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-[1.02]"
+              sizes="(min-width: 1024px) 1200px, 100vw"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/10 to-transparent" />
+            <p class="label-tracked absolute left-6 top-6 bg-(--color-ink)/70 px-3 py-1.5 text-(--color-gold) backdrop-blur-sm md:left-8 md:top-8">
+              {t("home.work.featured")}
+            </p>
+          </div>
+        </a>
+
+        <div class="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1.3fr_1fr]">
+          <div>
+            <p class="label-tracked text-(--color-gold)">
+              {lead.data.client} · {lead.data.location.city}, {lead.data.location.country} · {lead.data.year}
+            </p>
+            <a href={leadHref} class="block focus-visible:outline-none">
+              <h3 class="font-display mt-3 text-3xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-4xl">
+                {lead.data.title}
+              </h3>
+            </a>
+            <p class="mt-4 max-w-xl text-(--color-paper)/75">{lead.data.context}</p>
+            <a
+              href={leadHref}
+              class="label-tracked mt-6 inline-flex items-center gap-2 text-(--color-gold) transition-colors hover:text-(--color-gold-bright)"
+            >
+              {t("home.work.readCase")} &rarr;
+            </a>
+          </div>
+
+          <div class="space-y-6 border-t border-(--color-line) pt-6 lg:border-t-0 lg:border-l lg:pl-8 lg:pt-0">
+            <div>
+              <p class="label-tracked text-(--color-paper)/40">{t("selectedwork.detail.role")}</p>
+              <p class="mt-1.5 text-(--color-paper)/80">{lead.data.role}</p>
+            </div>
+            <div>
+              <p class="label-tracked text-(--color-paper)/40">{t("selectedwork.detail.disciplines")}</p>
+              <p class="mt-1.5 text-(--color-paper)/80">{lead.data.disciplines.join(" · ")}</p>
+            </div>
+            {lead.data.results && lead.data.results.length > 0 && (
+              <div>
+                <p class="label-tracked text-(--color-paper)/40">{t("selectedwork.detail.results")}</p>
+                <ul class="mt-1.5 space-y-1.5">
+                  {lead.data.results.slice(0, 2).map((result) => (
+                    <li class="flex items-start gap-2.5 text-(--color-paper)/80">
+                      <span class="mt-2 h-1 w-1 shrink-0 rounded-full bg-(--color-gold)" />
+                      {result}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/*
+          La galerie n'existe que pour un projet aujourd'hui (NTA, 3 images
+          réelles) — c'est cette richesse-là, pas une mise en page qui la
+          présuppose, qui justifie sa place ici : elle n'apparaît que quand
+          elle existe vraiment.
+        */}
+        {lead.data.galleryImages && lead.data.galleryImages.length > 0 && (
+          <div class="mt-8 grid grid-cols-3 gap-3">
+            {lead.data.galleryImages.slice(0, 3).map((image) => (
+              <a href={leadHref} class="block aspect-[4/3] overflow-hidden bg-(--color-ink-soft)" tabindex="-1" aria-hidden="true">
+                <RemoteImage
+                  src={image.url}
+                  alt=""
+                  width={480}
+                  height={360}
+                  class="h-full w-full opacity-80 transition-opacity duration-500 hover:opacity-100"
+                  sizes="(min-width: 1024px) 25vw, 33vw"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+      </article>
+
+      {/* SECOND PROJET — en appui, pas en vignette */}
+      {secondary && (
+        <article class="group border-t border-(--color-line) pt-16" data-reveal>
+          <a href={secondaryHref} class="grid grid-cols-1 gap-8 focus-visible:outline-none sm:grid-cols-[1fr_1.4fr] sm:items-center">
+            <div class="relative aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
+              <RemoteImage
+                src={secondary.data.coverImage.url}
+                alt={secondary.data.coverImage.alt}
+                width={900}
+                height={675}
+                credit={secondary.data.coverImage.credit}
+                fit={fitFor(secondary.data.coverImage)}
+                class="h-full w-full transition-transform duration-700 ease-(--ease-signature) group-hover:scale-105"
+                sizes="(min-width: 640px) 40vw, 100vw"
+              />
+            </div>
+            <div>
+              <p class="label-tracked text-(--color-gold)">
+                {secondary.data.client} · {secondary.data.location.city}, {secondary.data.location.country} · {secondary.data.year}
+              </p>
+              <h3 class="font-display mt-3 text-2xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
+                {secondary.data.title}
+              </h3>
+              <p class="mt-3 max-w-lg text-(--color-paper)/70">{secondary.data.context}</p>
+              <p class="label-tracked mt-4 text-(--color-paper)/40">
+                {secondary.data.role} · {secondary.data.disciplines.join(" · ")}
+              </p>
+              <span class="label-tracked mt-5 inline-flex items-center gap-2 text-(--color-gold) transition-colors group-hover:text-(--color-gold-bright)">
+                {t("home.work.readCase")} &rarr;
+              </span>
+            </div>
+          </a>
+        </article>
+      )}
+    </div>
+  )
+}

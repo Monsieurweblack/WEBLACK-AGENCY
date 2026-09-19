@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import CardWork from "../../../components/cards/CardWork.astro";
+import SelectedWorkEditorial from "../../../components/sections/SelectedWorkEditorial.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
 import { useTranslations } from "../../../i18n/utils";
 import { getEntriesByLang, sortByDateDesc } from "../../../lib/content";
@@ -27,22 +28,22 @@ const work = sortByDateDesc(await getEntriesByLang("work", lang));
           La grille asymétrique ne s'enclenche qu’à partir de trois projets :
           son rythme se joue par tranches de trois, et appliqué à deux
           éléments il se lit comme une mise en page ratée plutôt que comme un
-          parti pris. En dessous, la grille régulière fait mieux le travail.
+          parti pris. En dessous, le traitement éditorial (le même qu'à
+          l'accueil — voir SelectedWorkEditorial.astro) donne à chaque
+          projet tout l'espace que sa place dans une sélection courte
+          justifie, plutôt qu'une grille qui présuppose une troisième entrée
+          absente.
         */
-        work.length > 0 ? (
-          <div
-            class:list={[
-              work.length >= 3
-                ? "work-grid-asymmetric"
-                : "grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3",
-            ]}
-          >
+        work.length === 0 ? (
+          <p class="text-(--color-paper)/60">{t("selectedwork.empty")}</p>
+        ) : work.length >= 3 ? (
+          <div class="work-grid-asymmetric">
             {work.map((item, i) => (
               <CardWork lang={lang} work={item} index={i} />
             ))}
           </div>
         ) : (
-          <p class="text-(--color-paper)/60">{t("selectedwork.empty")}</p>
+          <SelectedWorkEditorial lang={lang} work={work} />
         )
       }
     </div>
