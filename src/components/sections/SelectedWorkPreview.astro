@@ -27,8 +27,13 @@ const isScarce = work.length > 0 && work.length <= 2;
 ---
 
 {
+  /*
+    id="work" sur la section : cible du CTA principal du Hero (bloc 05,
+    audit CTA) — un ancrage additif, jamais une modification de Work
+    lui-même.
+  */
   work.length > 0 && (
-    <section class="bg-(--color-ink) py-24 md:py-32">
+    <section id="work" class="bg-(--color-ink) py-24 md:py-32">
       <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
         <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
           <div class="max-w-2xl">

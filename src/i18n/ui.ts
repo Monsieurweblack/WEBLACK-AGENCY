@@ -69,7 +69,6 @@ const translations = {
     "home.hero.tagline": "Agence créative indépendante",
     "home.hero.pillars": "Talent. Créativité. Culture.",
     "home.hero.cta.explore": "Découvrir WEBLACK",
-    "home.hero.cta.work": "Travailler avec nous",
     "home.hero.scroll": "Faire défiler",
 
     "home.manifesto":
@@ -328,7 +327,6 @@ const translations = {
 
     "now.label": "WEBLACK Now",
     "now.description": "Ce qui bouge dans les scènes créatives que WEBLACK observe — vérifié, pas remonté brut.",
-    "now.toAgenda": "Tout l'agenda",
     "territories.label": "Territoires créatifs",
     "territories.fashion": "Mode",
     "territories.luxury": "Luxe",
@@ -610,7 +608,6 @@ const translations = {
     "home.hero.tagline": "Independent Creative Agency",
     "home.hero.pillars": "Talent. Creativity. Culture.",
     "home.hero.cta.explore": "Explore WEBLACK",
-    "home.hero.cta.work": "Work with us",
     "home.hero.scroll": "Scroll",
 
     "home.manifesto":
@@ -867,7 +864,6 @@ const translations = {
 
     "now.label": "WEBLACK Now",
     "now.description": "What's moving across the creative scenes WEBLACK watches — verified, never a raw feed.",
-    "now.toAgenda": "The full agenda",
     "territories.label": "Creative territories",
     "territories.fashion": "Fashion",
     "territories.luxury": "Luxury",
@@ -1147,7 +1143,6 @@ const nb: Partial<Record<UiKey, string>> = {
   "home.hero.tagline": "Uavhengig kreativt byrå",
   "home.hero.pillars": "Talent. Kreativitet. Kultur.",
   "home.hero.cta.explore": "Utforsk WEBLACK",
-  "home.hero.cta.work": "Samarbeid med oss",
   "home.hero.scroll": "Skroll",
 
   "home.manifesto":
@@ -1307,7 +1302,6 @@ const zh: Partial<Record<UiKey, string>> = {
   "home.hero.tagline": "独立创意机构",
   "home.hero.pillars": "人才、创意、文化。",
   "home.hero.cta.explore": "探索 WEBLACK",
-  "home.hero.cta.work": "与我们合作",
   "home.hero.scroll": "向下滚动",
 
   "home.manifesto": "WEBLACK 汇聚人才、创意愿景与文化洞察力，为品牌与个人构建真正有意义的机遇。",
