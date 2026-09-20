@@ -50,7 +50,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
 
 <section
   data-hero-section
-  class="relative flex min-h-[100svh] items-end overflow-hidden bg-(--color-ink)"
+  class="relative flex min-h-[100svh] items-start overflow-hidden bg-(--color-ink) lg:items-end"
 >
   <div class="absolute inset-0" aria-hidden="true">
     <RemoteImage
@@ -70,8 +70,32 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <div class="absolute inset-0 bg-(--color-ink)/20"></div>
   </div>
 
+  {/*
+    top calé sur --header-h (mesuré en direct par nav.ts) plutôt que sur un
+    pourcentage de la hauteur de la section : à 6%/10% de min-h-[100svh], le
+    symbole passait sous l'en-tête fixe — dont la hauteur réelle double en
+    dessous de 767px (l'en-tête bascule ses commandes sur une seconde ligne,
+    voir Header.astro). Le calcul reste le même jusqu'à lg: (le passage à la
+    composition desktop, inchangée) : un pourcentage de hauteur de viewport
+    ne peut pas rester sûr à la fois en portrait et en paysage large (812×375
+    mesuré : « 10% » d'un viewport court de 375px tombait à nouveau sous
+    l'en-tête, alors que ce même « 10% » était sûr sur les tailles portrait
+    plus hautes où il avait été validé à l'origine) — seul un calcul ancré à
+    la hauteur réelle de l'en-tête l'est dans les deux cas.
+
+    La largeur associe vw (comportement inchangé sur un téléphone standard)
+    et un plafond en svh : sur un écran court, le titre — ancré en bas via
+    items-end, donc indépendant de cette largeur — se retrouve mécaniquement
+    plus haut, et un symbole dimensionné en vw seul entrait dans son espace.
+    Le plafond svh le réduit alors juste assez pour tenir dans l'espace
+    réellement disponible. La largeur elle-même vit dans --hero-symbol-w
+    (défini plus bas) : le bloc de texte la réutilise pour calculer sa propre
+    hauteur minimale, plutôt que de deviner à quel point le symbole empiète —
+    les deux valeurs ne peuvent alors jamais diverger (mesuré à chaque taille
+    demandée, voir le rapport du bloc).
+  */}
   <div
-    class="pointer-events-none absolute inset-x-0 top-[6%] z-[4] mx-auto w-[52vw] max-w-[300px] opacity-80 sm:top-[10%] sm:w-[44vw] sm:max-w-[420px] sm:opacity-90 lg:inset-x-auto lg:right-[9%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] lg:-translate-y-1/2 lg:opacity-100"
+    class="pointer-events-none absolute inset-x-0 top-[calc(var(--header-h)+var(--hero-safe-gap))] z-[4] mx-auto w-(--hero-symbol-w) max-w-[300px] opacity-80 md:max-w-[420px] md:opacity-90 lg:inset-x-auto lg:right-[9%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] lg:-translate-y-1/2 lg:opacity-100"
     aria-hidden="true"
   >
     <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
@@ -84,19 +108,58 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     </div>
   </div>
 
+  {/*
+    Sur mobile/tablette, la section s'aligne désormais en haut
+    (items-start), pas en bas : ancrée en bas (comportement d'origine,
+    toujours vrai à lg:), le bloc de texte pouvait se retrouver très loin du
+    symbole sur un grand téléphone — le symbole reste près du Header, le
+    titre glissait vers le bas du viewport, avec un vide grandissant entre
+    les deux au lieu du "espacement court et maîtrisé" voulu. Symbole et
+    texte doivent former un seul bloc perçu comme une identité — items-start
+    fait commencer le titre exactement là où pt le place, plus jamais "ce
+    qu'il reste une fois le contenu poussé vers le bas".
+
+    pt n'a donc plus deux régimes à concilier : il place directement le
+    titre, toujours. La valeur empile ce qui doit réellement tenir avant lui
+    — Header, respiration, hauteur du symbole (--hero-symbol-h, dérivée de
+    la même largeur que le symbole affiche réellement), seconde respiration
+    — jamais moins, jamais plus. pb ferme le bloc par le bas avec sa propre
+    respiration, sensible à svh pour les écrans courts (paysage téléphone).
+  */}
   <div
-    class="relative z-10 mx-auto w-full max-w-(--container-content) px-6 pb-24 pt-40 md:px-10 md:pb-32"
+    class="relative z-10 mx-auto w-full max-w-(--container-content) px-6 pb-[clamp(0.25rem,3svh,6rem)] pt-[calc(var(--header-h)+var(--hero-safe-gap)+var(--hero-symbol-h)+var(--hero-safe-gap))] md:px-10 md:pb-32 lg:pt-40"
   >
+    {/*
+      text-6xl/text-8xl en clamp() svh, plafonnés à leur taille actuelle (le
+      régime normal ne bouge pas) : sur les deux cas de paysage court
+      restants (812×375, 740×430 — tous deux ≥ 640px de large, donc dans le
+      palier sm:text-8xl, pas le palier de base), le H1 à lui seul valait
+      91px, et le budget vertical restant (après Header, symbole, respiration,
+      texte, CTA) ne suffisait plus. Le sigle WEBLACK reste présent et lisible
+      — seule sa taille cède, en dernier, une fois le symbole et l'espacement
+      déjà réduits au minimum.
+    */}
     <h1
-      class="font-display text-balance text-6xl leading-[0.95] text-(--color-paper) sm:text-8xl lg:text-9xl"
+      class="font-display text-balance text-[clamp(2.25rem,10svh,3.75rem)] leading-[0.95] text-(--color-paper) sm:text-[clamp(1.875rem,10svh,6rem)] lg:text-9xl"
     >
       WEBLACK
     </h1>
-    <p class="label-tracked label-tracked-dot mt-6 text-(--color-gold)">{tagline}</p>
-    <p class="font-display mt-4 max-w-xl text-balance text-2xl text-(--color-paper)/85 sm:text-3xl">
+    <p class="label-tracked label-tracked-dot mt-[clamp(0.25rem,2svh,1.5rem)] text-(--color-gold) lg:mt-6">{tagline}</p>
+    {/*
+      max-w-xl vise un confort de lecture normal ; sur le paysage téléphone
+      le plus court et le plus étroit (667×375), cette même largeur forçait
+      un retour à la ligne de plus (3 lignes au lieu de 2) alors que la
+      largeur réelle du viewport, elle, en avait assez — desserré seulement
+      là où la hauteur manque vraiment (voir la règle @media plus bas),
+      jamais en hauteur normale.
+    */}
+    <p
+      data-hero-pillars
+      class="font-display mt-[clamp(0.25rem,1.5svh,1rem)] max-w-xl text-balance text-2xl text-(--color-paper)/85 sm:text-3xl lg:mt-4"
+    >
       {pillars}
     </p>
-    <div class="mt-10 flex flex-wrap items-center gap-4">
+    <div class="mt-[clamp(0.5rem,3svh,2.5rem)] flex flex-wrap items-center gap-4 lg:mt-10">
       <a
         href={ctaExploreHref}
         class="inline-flex items-center justify-center bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
@@ -123,6 +186,90 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
 </section>
 
 <style>
+  /*
+   * Source unique pour la largeur du symbole (mobile/tablette) et
+   * l'espacement de respiration, réutilisées telles quelles par le bloc de
+   * texte pour calculer sa propre position minimale — les deux ne peuvent
+   * alors jamais diverger, contrairement à une valeur répétée en dur à deux
+   * endroits (c'est exactement ce qui avait laissé le titre chevaucher le
+   * symbole après le premier correctif : les deux étaient ancrés au Header
+   * indépendamment, sans jamais tenir compte l'un de l'autre).
+   *
+   * --hero-symbol-h approxime la hauteur réellement rendue du symbole à
+   * partir de sa largeur : son fichier source fait 735×720px (mesuré), donc
+   * hauteur ≈ largeur × 720/735. C'est une approximation (arrondie dans le
+   * bon sens, légèrement généreuse) plutôt qu'une valeur exacte — largement
+   * suffisant pour garantir une respiration, pas pour un pixel-perfect.
+   *
+   * max() avec 300px/420px : Tailwind ne peut pas mélanger un plafond en px
+   * arbitraire dans une expression min()/max() imbriquée proprement en
+   * classe, donc le plafond reste porté par max-w-* sur l'élément lui-même,
+   * ces variables ne portant que le calcul fluide.
+   *
+   * Le plafond svh n'intervient que sous 750px de hauteur — un seul
+   * coefficient tentant de couvrir à la fois « laisser vw dominer sur un
+   * écran normal » et « protéger un écran très court » revenait toujours à
+   * sacrifier l'un des deux (mesuré : assez lâche pour un symbole présent
+   * en hauteur normale, il ne protégeait plus le CTA en paysage court ;
+   * assez serré pour protéger le CTA, il écrasait le symbole partout,
+   * y compris là où rien ne le justifiait). Une media query dédiée à la
+   * hauteur, distincte de celles déjà dédiées à la largeur, laisse vw
+   * gouverner sans réserve au-delà de 750px et ne resserre qu'en deçà.
+   */
+  [data-hero-section] {
+    --hero-symbol-w: 52vw;
+    --hero-symbol-h: calc(var(--hero-symbol-w) * 0.9796);
+    --hero-safe-gap: clamp(0.125rem, 1svh, 1.5rem);
+  }
+
+  @media (min-width: 768px) {
+    [data-hero-section] {
+      --hero-symbol-w: 44vw;
+    }
+  }
+
+  @media (max-height: 750px) {
+    [data-hero-section] {
+      --hero-symbol-w: min(52vw, 16svh);
+    }
+  }
+
+  @media (max-height: 750px) and (min-width: 768px) {
+    [data-hero-section] {
+      --hero-symbol-w: min(44vw, 16svh);
+    }
+  }
+
+  /*
+   * Palier supplémentaire pour le paysage téléphone le plus court
+   * (~375-430px de haut) : à 16svh, le symbole tient déjà sa place, mais le
+   * CTA passait encore sous le pli sur ces hauteurs précises — resserré
+   * uniquement ici, sans toucher au palier 750px qui fonctionne déjà bien
+   * pour 375×667/430×740.
+   */
+  @media (max-height: 450px) {
+    [data-hero-section] {
+      --hero-symbol-w: min(52vw, 10svh);
+    }
+  }
+
+  @media (max-height: 450px) and (min-width: 768px) {
+    [data-hero-section] {
+      --hero-symbol-w: min(44vw, 10svh);
+    }
+  }
+
+  @media (max-height: 450px) {
+    [data-hero-pillars] {
+      max-width: none;
+      /* sm:text-3xl (30px) exige plus de largeur par ligne que text-2xl (24px)
+         — un troisième retour à la ligne à 667×375 venait de là, pas d'un
+         manque d'espace en soi (mesuré : élargir le conteneur seul n'y
+         changeait rien). Toujours lisible, juste pas agrandi ici. */
+      font-size: 1.5rem;
+    }
+  }
+
   .hero-symbol {
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
