@@ -1,5 +1,6 @@
 ---
 import weblackMark from "../../assets/logo/weblack-mark-gold-64.png";
+import { isValidImageSrc, isRemoteImageSrc } from "../../lib/image-src";
 
 /**
  * Wrapper for two image sources: hotlinked Unsplash URLs (astro:assets can't
@@ -51,7 +52,22 @@ const {
   sizes = "100vw",
 } = Astro.props;
 
-const isRemote = src.startsWith("http://") || src.startsWith("https://");
+/**
+ * `src` is typed as a required string, but its actual value traces back to
+ * Sanity `externalImage.url` — a free-text field with no upload widget, no
+ * schema-level format constraint, and no guarantee it was ever set (see
+ * content-integrity.mjs's image checks, which exist precisely because this
+ * field has produced missing/empty/local-path values in production before).
+ * A crash here previously took down the whole page's build (and the
+ * Cloudflare deploy with it) for a data problem that content-integrity
+ * already reports on its own — this component must degrade to "no image"
+ * instead, independently of that check ever running.
+ */
+const isValidUrl = isValidImageSrc(src);
+const isRemote = isValidUrl && isRemoteImageSrc(src);
+if (!isValidUrl && import.meta.env.DEV) {
+  console.warn(`RemoteImage: ignoring invalid src (expected an http(s) URL or a root-relative path): ${JSON.stringify(src)}`);
+}
 
 function withWidth(url: string, w: number) {
   const u = new URL(url);
@@ -64,24 +80,28 @@ function withWidth(url: string, w: number) {
 
 const widths = [Math.round(width * 0.75), width, Math.min(width * 1.5, 3200)];
 const srcset = isRemote ? widths.map((w) => `${withWidth(src, w)} ${w}w`).join(", ") : undefined;
-const finalSrc = isRemote ? withWidth(src, width) : src;
+const finalSrc = isValidUrl ? (isRemote ? withWidth(src, width) : src) : undefined;
 ---
 
 <figure class:list={["relative m-0", className]}>
-  <img
-    src={finalSrc}
-    srcset={srcset}
-    sizes={sizes}
-    alt={alt}
-    width={width}
-    height={height}
-    loading={loading}
-    decoding="async"
-    fetchpriority={fetchpriority}
-    class:list={["block h-full w-full", fit === "contain" ? "object-contain" : "object-cover"]}
-    onerror="this.style.display='none';this.nextElementSibling?.removeAttribute('hidden')"
-  />
-  <div hidden class="absolute inset-0 flex items-center justify-center bg-(--color-ink-soft)">
+  {
+    isValidUrl ? (
+      <img
+        src={finalSrc}
+        srcset={srcset}
+        sizes={sizes}
+        alt={alt}
+        width={width}
+        height={height}
+        loading={loading}
+        decoding="async"
+        fetchpriority={fetchpriority}
+        class:list={["block h-full w-full", fit === "contain" ? "object-contain" : "object-cover"]}
+        onerror="this.style.display='none';this.nextElementSibling?.removeAttribute('hidden')"
+      />
+    ) : null
+  }
+  <div hidden={isValidUrl} class="absolute inset-0 flex items-center justify-center bg-(--color-ink-soft)">
     <img src={weblackMark.src} alt="" width="28" height="28" class="opacity-30" />
   </div>
   {

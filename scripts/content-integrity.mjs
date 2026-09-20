@@ -22,6 +22,7 @@ import { fileURLToPath } from "url";
 import { createClient } from "@sanity/client";
 import { LOCALE_CODES, ENABLED_LOCALE_CODES } from "../src/i18n/locales.ts";
 import { resolveContentId, CONTENT_ID_ALIASES } from "../src/lib/content-graph.ts";
+import { isEmpty, classifyImageUrl, isKnownWorkSlug, computeExitCode } from "./lib/content-checks.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -53,11 +54,16 @@ if (!env.SANITY_PROJECT_ID || !env.SANITY_DATASET) {
   process.exit(1);
 }
 
+// useCdn: false — same reasoning as src/lib/content.ts's own client: this
+// check now gates the build (see prebuild below), so it must see the
+// content a publish just produced, not a CDN edge that can lag ~30-60s
+// behind. A stale read here would let a build through on outdated bad data,
+// or block one on outdated data that's already been fixed.
 const client = createClient({
   projectId: env.SANITY_PROJECT_ID,
   dataset: env.SANITY_DATASET,
   apiVersion: "2025-01-01",
-  useCdn: true,
+  useCdn: false,
 });
 
 // Optional: with a write/read token available, drafts become visible too —
@@ -167,13 +173,6 @@ const REQUIRED_FIELDS = {
   partners: ["name", "description", "location", "coverImage"],
 };
 
-function isEmpty(value) {
-  if (value === null || value === undefined) return true;
-  if (typeof value === "string") return value.trim() === "";
-  if (Array.isArray(value)) return value.length === 0;
-  return false;
-}
-
 for (const [type, list] of Object.entries(byType)) {
   for (const d of list) {
     for (const field of REQUIRED_FIELDS[type]) {
@@ -222,8 +221,8 @@ for (const [key, bucket] of indexByTypeLangSlug) {
 // --- R3: broken relation detection ------------------------------------------
 function checkRelatedWork(d, slug) {
   if (isEmpty(slug)) return;
-  const target = findBySlug("work", d.lang, slug);
-  if (target) return;
+  const knownWorkSlugs = indexByTypeLangSlug.get(`work:${d.lang}`) ?? new Map();
+  if (isKnownWorkSlug(slug, knownWorkSlugs)) return;
   if (findDraftBySlug("work", d.lang, slug)) {
     report("WARNING", label(d), `relatedWorkSlug "${slug}" exists only as an unpublished draft`);
   } else {
@@ -240,8 +239,8 @@ for (const d of byType.work) {
       report("WARNING", label(d), "relatedWorkSlugs references itself");
       continue;
     }
-    const target = findBySlug("work", d.lang, slug);
-    if (!target) {
+    const knownWorkSlugs = indexByTypeLangSlug.get(`work:${d.lang}`) ?? new Map();
+    if (!isKnownWorkSlug(slug, knownWorkSlugs)) {
       if (findDraftBySlug("work", d.lang, slug)) {
         report("WARNING", label(d), `relatedWorkSlugs "${slug}" exists only as an unpublished draft`);
       } else {
@@ -459,29 +458,29 @@ function collectImages(d) {
   return images;
 }
 
+const IMAGE_URL_ERROR_MESSAGES = {
+  empty: (field) => `Image field "${field}" has an empty url`,
+  "not-a-string": (field) => `Image field "${field}" has a non-string url`,
+  "windows-path": (field, url) => `Image field "${field}" contains a local file system path, not a URL: "${url}"`,
+  "unix-absolute-path": (field, url) => `Image field "${field}" contains a local file system path, not a URL: "${url}"`,
+  "invalid-url": (field, url) => `Image field "${field}" is not a valid URL: "${url}"`,
+  "non-http-protocol": (field, url) => `Image field "${field}" is not a valid URL: "${url}"`,
+};
+
 async function checkImageUrl(d, field, url) {
-  if (isEmpty(url)) {
-    report("ERROR", label(d), `Image field "${field}" has an empty url`);
+  const classification = classifyImageUrl(url);
+  if (!classification.valid) {
+    report("ERROR", label(d), IMAGE_URL_ERROR_MESSAGES[classification.reason](field, url));
     return;
   }
-  if (/^[A-Za-z]:\\|\\Users\\|^\/[A-Za-z]:\\/.test(url) || url.includes("\\")) {
-    report("ERROR", label(d), `Image field "${field}" contains a local file system path, not a URL: "${url}"`);
-    return;
-  }
-  if (url.startsWith("/")) {
+  if (classification.kind === "local") {
     const localPath = path.join(ROOT, "public", url);
     if (!fs.existsSync(localPath)) {
       report("ERROR", label(d), `Image field "${field}" references a local file that does not exist: "${url}"`);
     }
     return;
   }
-  let parsed;
-  try {
-    parsed = new URL(url);
-  } catch {
-    report("ERROR", label(d), `Image field "${field}" is not a valid URL: "${url}"`);
-    return;
-  }
+  const parsed = new URL(url);
   if (!EXPECTED_EXTERNAL_IMAGE_HOSTS.has(parsed.hostname) && parsed.hostname !== "weblack.fr") {
     report(
       "WARNING",
@@ -562,4 +561,4 @@ if (!draftClient) {
   );
 }
 
-process.exit(errors.length > 0 ? 1 : 0);
+process.exit(computeExitCode(findings));

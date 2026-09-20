@@ -7,11 +7,12 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "prebuild": "npm run integrity || echo \"AVERTISSEMENT: controle de contenu en echec — build poursuivi, voir ci-dessus.\"",
+    "prebuild": "npm run integrity",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "integrity": "node --experimental-strip-types scripts/content-integrity.mjs",
+    "test": "node --experimental-strip-types --test \"src/lib/*.test.ts\" \"scripts/lib/*.test.mjs\"",
     "editorial:run": "node --experimental-strip-types editorial-engine/cli.ts run",
     "editorial:dry-run": "node --experimental-strip-types editorial-engine/cli.ts run --dry-run",
     "editorial:source": "node --experimental-strip-types editorial-engine/cli.ts source",
