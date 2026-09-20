@@ -6,6 +6,7 @@ import { eventIdentity, mergeEvent } from "../agenda/store.ts";
 import { rankSource, dateAppears, settleTerritory } from "../agenda/verify.ts";
 import { planSearches } from "../agenda/discover.ts";
 import { refersToSameEvent } from "../agenda/resolve.ts";
+import { resolveKnownEvent } from "../agenda/runAgendaCycle.ts";
 import { eventSlug, toEventDocument, preserveSlug } from "../sanity/events.ts";
 
 function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
@@ -78,6 +79,179 @@ test("la même exposition annoncée par plusieurs médias ne produit qu'une entr
 test("deux événements différents au même lieu gardent des identités distinctes", () => {
   const autre = event({ eventName: "Une toute autre exposition", startDate: "2026-11-02" });
   assert.notEqual(autre.id, event().id);
+});
+
+// --- resolveKnownEvent — identité résiliente à un venue absent -------------
+//
+// Cas réel observé en production : « Mariko Mori : All That Shines » publiée
+// à la fois par une reprise média (venue renseigné) et par le musée
+// lui-même (venue absent sur sa propre page). eventIdentity() hache
+// `venue || city` : les deux annonces produisent deux identités distinctes,
+// et le cycle suivant republie indéfiniment les deux — c'est la cause
+// racine de la réapparition. resolveKnownEvent() ajoute un repli sur
+// refersToSameEvent() (déjà écrit, déjà testé plus bas) pour les reconnaître
+// comme un seul événement sans changer eventIdentity() elle-même.
+
+function marikoMori(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
+  return event({
+    eventName: "Mariko Mori: All That Shines",
+    artistOrCreator: "Mariko Mori",
+    institution: "Mori Art Museum",
+    venue: "Mori Art Museum",
+    city: "Tokyo",
+    country: "Japon",
+    countryEn: "Japan",
+    startDate: "2026-10-31",
+    endDate: "2027-03-28",
+    officialUrl: "https://www.mori.art.museum/en/exhibitions/marikomori/index.html",
+    sourceRank: "OFFICIAL",
+    ...overrides,
+  });
+}
+
+test("1. Mariko Mori — doublon exact observé : venue absent d'un côté, présent de l'autre", () => {
+  const parLeMusee = marikoMori({ venue: "", verifiedFields: ["eventName", "city", "artistOrCreator", "institution", "startDate", "endDate"] });
+  const parLaReprise = marikoMori({
+    eventName: "Mariko Mori : All That Shines",
+    officialUrl: "https://hypebeast.com/2026/7/mariko-mori-all-that-shines-retrospective-exhibition-mori-art-museum-tokyo-info",
+    sourceRank: "MEDIA",
+  });
+
+  // La cause racine, démontrée : eventIdentity() seule les distingue.
+  assert.notEqual(parLeMusee.id, parLaReprise.id, "venue absent -> repli sur la ville -> hash différent, c'est le bug");
+
+  // Le correctif : resolveKnownEvent() les reconnaît malgré tout.
+  const trouve = resolveKnownEvent(parLaReprise, [parLeMusee]);
+  assert.equal(trouve?.id, parLeMusee.id, "même événement réel, reconnu malgré l'identité divergente");
+});
+
+test("2. même événement, URL différente — chemin rapide (eventIdentity suffit déjà)", () => {
+  const connu = event();
+  const reprise = event({ officialUrl: "https://www.lemonde.fr/culture/toguo", sourceRank: "MEDIA" });
+  const trouve = resolveKnownEvent(reprise, [connu]);
+  assert.equal(trouve?.id, connu.id);
+});
+
+test("3. même événement, libellé de ville différent — le lieu (identique) suffit", () => {
+  const connu = event({ city: "Paris" });
+  const variante = event({ city: "Paris, France", officialUrl: "https://media.example/toguo-2" });
+  const trouve = resolveKnownEvent(variante, [connu]);
+  assert.equal(trouve?.id, connu.id, "eventIdentity ne hache que venue||city : la ville seule ne bouge pas la clé tant que le venue concorde");
+});
+
+test("4. même événement, titre reformulé — repli sur refersToSameEvent", () => {
+  const connu = event();
+  const reformule = event({
+    eventName: "Barthélémy Toguo : The Nomadic Studio, une exposition personnelle",
+    officialUrl: "https://media.example/toguo-reformule",
+    sourceRank: "MEDIA",
+  });
+  assert.notEqual(connu.id, reformule.id, "le titre a changé, eventIdentity ne les fait plus concorder");
+  const trouve = resolveKnownEvent(reformule, [connu]);
+  assert.equal(trouve?.id, connu.id, "nom partiellement partagé + institution commune = même événement");
+});
+
+test("5. événements différents, même titre générique — ne doivent jamais fusionner", () => {
+  const premiere = event({ eventName: "Exposition", venue: "Galerie Lelong", artistOrCreator: "Barthélémy Toguo", startDate: "2026-09-10" });
+  const seconde = event({
+    eventName: "Exposition",
+    venue: "Palais de Tokyo",
+    artistOrCreator: "Une autre créatrice",
+    institution: "Palais de Tokyo",
+    startDate: "2026-11-20",
+    officialUrl: "https://www.palaisdetokyo.com/expo",
+  });
+  const trouve = resolveKnownEvent(seconde, [premiere]);
+  assert.equal(trouve, undefined, "un titre partagé seul ne suffit pas — aucun second identifiant ne concorde");
+});
+
+test("6. nouvel événement du même artiste — ne doit pas fusionner avec une exposition antérieure", () => {
+  const ancienne = event();
+  const nouvelle = event({
+    eventName: "Barthélémy Toguo — Sculptures récentes",
+    venue: "Centre Pompidou",
+    institution: "Centre Pompidou",
+    startDate: "2027-02-01",
+    endDate: "2027-04-01",
+    officialUrl: "https://www.centrepompidou.fr/toguo-2027",
+  });
+  const trouve = resolveKnownEvent(nouvelle, [ancienne]);
+  assert.equal(trouve, undefined, "même artiste ne veut pas dire même exposition — moins de deux racines de nom partagées");
+});
+
+test("7. événement retiré de Sanity mais toujours connu du moteur — redétecté comme mise à jour, jamais comme nouveau", () => {
+  // Le retrait ne vaut que côté Sanity (withdrawEvent) ; le stock local, lui,
+  // garde l'entrée. Une redécouverte doit donc s'y raccrocher — pas créer
+  // une seconde identité que le prochain cycle republierait comme neuve.
+  const connu = marikoMori({ venue: "" });
+  const redecouverte = marikoMori({ officialUrl: "https://another-outlet.example/mariko-mori", sourceRank: "MEDIA" });
+  const trouve = resolveKnownEvent(redecouverte, [connu]);
+  assert.equal(trouve?.id, connu.id);
+});
+
+test("8. mise à jour légitime — un report confirmé par une source mieux placée reste rattaché à l'événement existant", () => {
+  const connu = event({ startDate: "2026-09-10", endDate: "2026-10-10", sourceRank: "MEDIA", officialUrl: "https://media.example/toguo" });
+  const reporte = event({
+    startDate: "2026-10-15",
+    endDate: "2026-11-15",
+    officialUrl: "https://www.galerie-lelong.com/fr/expo/toguo",
+    sourceRank: "OFFICIAL",
+  });
+  const trouve = resolveKnownEvent(reporte, [connu]);
+  assert.equal(trouve?.id, connu.id, "institution et venue inchangés : un report reste le même événement, pas un nouveau");
+  const fusion = mergeEvent(connu, { ...reporte, id: connu.id });
+  assert.equal(fusion.startDate, "2026-10-15", "la source mieux placée fait foi, la mise à jour est acceptée — pas de blocage éternel");
+  assert.equal(fusion.verificationStatus, "VERIFIED", "un report légitime n'est pas une contradiction");
+});
+
+test("9. une redécouverte ne se rattache jamais à une identité déjà fusionnée (MERGED) — observé en test réel", () => {
+  // Reproduit exactement ce que le cycle réel a révélé après la première
+  // version du correctif : le stock append-only garde l'ancienne identité
+  // MEDIA (désormais MERGED) *avant* la canonique dans son ordre naturel —
+  // Array.find renvoyait donc l'entrée retirée, pas celle qui fait foi.
+  const media = marikoMori({ id: "media-id", venue: "Mori Art Museum", sourceRank: "MEDIA" });
+  const officielle = marikoMori({ id: "official-id", venue: "", sourceRank: "OFFICIAL" });
+  const mediaFusionnee: AgendaEvent = { ...media, verificationStatus: "MERGED", mergedInto: officielle.id };
+  const stock = [mediaFusionnee, officielle]; // ordre du stock : la fusionnée en premier
+
+  // Redécouverte de la page officielle, à l'identique : passe par le chemin rapide (id exact).
+  const trouveParId = resolveKnownEvent(officielle, stock);
+  assert.equal(trouveParId?.id, officielle.id, "l'identité exacte pointe déjà sur la canonique");
+
+  // Redécouverte de la page média, à l'identique : id exact = l'entrée MERGED, doit rediriger.
+  const trouveMediaRedecouvert = resolveKnownEvent(media, stock);
+  assert.equal(trouveMediaRedecouvert?.id, officielle.id, "une identité MERGED redirige vers ce qui fait foi, jamais elle-même");
+
+  // Redécouverte par une TROISIÈME page (id différent des deux), rattachable seulement par repli flou.
+  const troisiemeSource = marikoMori({ id: "troisieme-id", officialUrl: "https://autre-media.example/mariko-mori", sourceRank: "SECONDARY" });
+  const trouveParRepli = resolveKnownEvent(troisiemeSource, stock);
+  assert.equal(trouveParRepli?.id, officielle.id, "le repli flou ignore les entrées MERGED et converge sur la canonique");
+});
+
+test("10. relecture de la même page, titre tronqué par l'extraction — l'URL suffit là où le nom ne suffit plus", () => {
+  // Observé en test réel : la même page hypebeast relue plus tard a produit
+  // eventName="All That Shines" (sans « Mariko Mori »), sous le seuil de deux
+  // racines de nom que refersToSameEvent exige. L'URL, elle, n'a pas bougé.
+  const connu = marikoMori({
+    id: "official-id",
+    venue: "",
+    sourceRank: "OFFICIAL",
+    officialUrl: "https://www.mori.art.museum/en/exhibitions/marikomori/index.html",
+    sourceUrls: [
+      "https://www.mori.art.museum/en/exhibitions/marikomori/index.html",
+      "https://hypebeast.com/2026/7/mariko-mori-all-that-shines-retrospective-exhibition-mori-art-museum-tokyo-info",
+    ],
+  });
+  const relectureTronquee = marikoMori({
+    id: "nouvelle-id-a-cause-du-titre-tronque",
+    eventName: "All That Shines",
+    officialUrl: "https://hypebeast.com/2026/7/mariko-mori-all-that-shines-retrospective-exhibition-mori-art-museum-tokyo-info",
+    sourceRank: "MEDIA",
+  });
+
+  assert.equal(refersToSameEvent(connu, relectureTronquee), false, "moins de deux racines de nom partagées — le repli flou seul ne suffit plus");
+  const trouve = resolveKnownEvent(relectureTronquee, [connu]);
+  assert.equal(trouve?.id, connu.id, "même URL déjà tracée dans sourceUrls : reconnu sans dépendre du texte extrait");
 });
 
 // --- Priorité des sources --------------------------------------------------

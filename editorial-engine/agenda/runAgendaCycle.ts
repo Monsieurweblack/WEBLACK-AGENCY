@@ -1,11 +1,91 @@
 import { newRunId } from "../logs/runId.ts";
 import { log } from "../logs/logger.ts";
+import { stems } from "../validation/equivalences.ts";
 import { planSearches, discoverPages } from "./discover.ts";
 import { verifyEventPage, revalidateEvent } from "./verify.ts";
-import { resolveMissingFields } from "./resolve.ts";
-import { currentEvents, findEvent, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents } from "./store.ts";
-import { isAgendaEligible } from "./types.ts";
+import { resolveMissingFields, refersToSameEvent } from "./resolve.ts";
+import { currentEvents, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents } from "./store.ts";
+import { isAgendaEligible, type AgendaEvent } from "./types.ts";
 import { publishEvent, reflectStatusChange, listPublishedEvents, withdrawEvent } from "../sanity/events.ts";
+
+/** Deux valeurs partagent-elles au moins une racine de mot ? Même définition que `agrees()` dans resolve.ts, non exportée de là. */
+function shareStem(a: string, b: string): boolean {
+  if (!a.trim() || !b.trim()) return false;
+  const setA = new Set(stems(a));
+  return stems(b).some((s) => setA.has(s));
+}
+
+/**
+ * Retrouve, parmi ce qui est déjà connu, l'événement dont ce candidat est une
+ * nouvelle annonce — si un existe.
+ *
+ * L'identité déterministe du candidat (event.id, calculée par eventIdentity
+ * dans verify.ts) est le chemin rapide et suffit au cas courant. Mais cette
+ * identité hache `venue || city` : une page qui ne redit pas le lieu — la
+ * page officielle d'un musée ne nomme pas toujours son propre nom — fait
+ * retomber la clé sur la seule ville, et l'identité change entièrement pour
+ * le même événement réel. Observé sur « Mariko Mori : All That Shines »,
+ * publiée à la fois par une reprise média (venue renseigné : « Mori Art
+ * Museum ») et par le musée lui-même (venue absent, retombé sur « Tokyo ») —
+ * deux identités distinctes pour un seul événement, chacune republiée à
+ * chaque cycle puisque ni l'une ni l'autre n'était jamais reconnue.
+ *
+ * Le repli s'appuie sur refersToSameEvent() (resolve.ts, conçu pour
+ * reconnaître le même événement entre une page et sa voisine) plutôt que de
+ * dupliquer sa logique — mais fusionner deux entrées du stock est une
+ * décision plus lourde que compléter un champ manquant, son usage habituel :
+ * là, le nom d'un artiste cité dans les deux titres suffit à la fois à
+ * faire concorder le nom ET artistOrCreator, ce qui fusionnerait à tort
+ * deux expositions réellement différentes du même artiste (« Toguo — The
+ * Nomadic Studio » et « Toguo — Sculptures récentes » partagent déjà deux
+ * racines de nom rien qu'avec « Toguo »). On exige donc ici, en plus, qu'un
+ * identifiant INDÉPENDANT de l'artiste concorde aussi — institution, lieu ou
+ * date — avant de fusionner deux identités.
+ *
+ * Toujours résolu jusqu'à l'entrée canonique. Le stock étant append-only,
+ * une identité déjà fusionnée (MERGED) reste dans `known` pour l'historique
+ * — sans ce suivi, une redécouverte pourrait s'y rattacher plutôt qu'à
+ * l'identité qui fait foi (observé : `Array.find` renvoie la première
+ * entrée qui concorde dans l'ordre du stock, indépendamment de son statut).
+ *
+ * Un troisième repli, avant le rapprochement flou : l'URL exacte. Vérifié en
+ * conditions réelles sur la page hypebeast de Mariko Mori — une relecture du
+ * modèle en a parfois extrait un eventName tronqué (« All That Shines » sans
+ * le nom de l'artiste), sous le seuil de deux racines de nom que
+ * refersToSameEvent exige à raison (voir le test 6 : l'assouplir rouvrirait
+ * le risque de fusionner deux événements distincts). Mais l'URL, elle, ne
+ * varie jamais d'une lecture à l'autre de la même page, et mergeEvent()
+ * additionne déjà sourceUrls à chaque fusion : la retrouver dans une entrée
+ * connue est une preuve aussi sûre qu'un identifiant exact, sans dépendre
+ * d'aucune extraction de texte.
+ */
+export function resolveKnownEvent(candidate: AgendaEvent, known: AgendaEvent[]): AgendaEvent | undefined {
+  const canonical = (e: AgendaEvent): AgendaEvent => {
+    if (e.verificationStatus !== "MERGED" || !e.mergedInto) return e;
+    const target = known.find((k) => k.id === e.mergedInto);
+    return target ? canonical(target) : e;
+  };
+
+  const byId = known.find((e) => e.id === candidate.id);
+  if (byId) return canonical(byId);
+
+  const candidateUrls = new Set([candidate.officialUrl, ...candidate.sourceUrls].filter(Boolean));
+  const byUrl = known.find(
+    (e) => e.verificationStatus !== "MERGED" && [e.officialUrl, ...e.sourceUrls].some((u) => candidateUrls.has(u)),
+  );
+  if (byUrl) return canonical(byUrl);
+
+  const fuzzy = known.find((e) => {
+    if (e.verificationStatus === "MERGED") return false;
+    if (!refersToSameEvent(e, candidate)) return false;
+    return (
+      shareStem(e.institution, candidate.institution) ||
+      shareStem(e.venue, candidate.venue) ||
+      (e.startDate !== "" && e.startDate === candidate.startDate)
+    );
+  });
+  return fuzzy ? canonical(fuzzy) : undefined;
+}
 
 export interface AgendaCycleResult {
   searches: number;
@@ -93,10 +173,14 @@ export async function runAgendaCycle(dryRun: boolean, searchSeed?: number): Prom
       if (event.verificationStatus === "REVIEW") result.inReview++;
       if (event.verificationStatus === "CANCELLED" || event.verificationStatus === "GONE") result.cancelledOrGone++;
 
-      const existing = findEvent(event.id);
+      const existing = resolveKnownEvent(event, currentEvents());
       if (existing) {
         // Même exposition annoncée ailleurs : une seule entrée, la meilleure source fait foi.
-        if (!dryRun) saveEvent(mergeEvent(existing, event));
+        // Le candidat reprend l'identité déjà connue — y compris quand il n'a
+        // été reconnu que par refersToSameEvent(), pour que le stock
+        // converge sur une seule entrée au lieu d'empiler une deuxième
+        // identité à chaque cycle qui redécouvre la même page incomplète.
+        if (!dryRun) saveEvent(mergeEvent(existing, { ...event, id: existing.id }));
         result.eventsMerged++;
       } else {
         if (!dryRun) saveEvent(event);

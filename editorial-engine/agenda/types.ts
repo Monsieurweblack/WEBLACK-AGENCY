@@ -19,8 +19,12 @@ export type EventStatus = "UPCOMING" | "ONGOING" | "EXPIRED";
  * UNVERIFIED — la page n'a pas pu être lue, ou ne confirme pas ce qui était annoncé.
  * CANCELLED — la page indique explicitement une annulation.
  * GONE — la page a disparu depuis la dernière vérification.
+ * MERGED — cette entrée décrit le même événement qu'une autre, identifiée après coup (voir
+ * `resolveKnownEvent` dans store.ts) ; son contenu vit désormais sous l'identité de l'autre.
+ * Ne dit rien de l'événement lui-même — jamais confondu avec CANCELLED/GONE, qui portent un fait
+ * lu sur la page. Volontairement exclue d'`isAgendaEligible` par le même filtre que REVIEW.
  */
-export type EventVerification = "VERIFIED" | "REVIEW" | "UNVERIFIED" | "CANCELLED" | "GONE";
+export type EventVerification = "VERIFIED" | "REVIEW" | "UNVERIFIED" | "CANCELLED" | "GONE" | "MERGED";
 
 /**
  * Le rang de la source, dans l'ordre de priorité de la mission. Il est
@@ -67,6 +71,13 @@ export interface AgendaEvent {
   fieldSources: Record<string, string>;
   /** Pourquoi l'événement est en revue ou non vérifié. */
   note: string;
+  /**
+   * Renseigné uniquement quand verificationStatus === "MERGED" : l'id de
+   * l'entrée qui fait foi désormais. Un pointeur structuré plutôt qu'une
+   * mention dans `note` — resolveKnownEvent (runAgendaCycle.ts) le suit
+   * pour ne jamais rattacher une redécouverte à une identité déjà retirée.
+   */
+  mergedInto?: string;
   lastVerifiedAt: string;
   status: EventStatus;
   /** Le territoire WEBLACK que l'événement occupe réellement, jugé sur la page lue. */
