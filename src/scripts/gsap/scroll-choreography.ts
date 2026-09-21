@@ -45,7 +45,22 @@ export async function initScrollChoreography() {
   const ScrollTrigger = ScrollTriggerModule.ScrollTrigger;
   gsap.registerPlugin(ScrollTrigger);
 
+  /**
+   * gsap.fromTo()'s "from" state (opacity: 0) renders immediately on
+   * creation (immediateRender defaults to true for .fromTo, unlike .to) —
+   * confirmed via real Playwright measurement: an element already visible
+   * and painted at page load was observed dropping to opacity ~0.2 right
+   * when this idle-deferred script ran, then fading back in over ~800ms.
+   * ScrollTrigger's own "start: top 85%" would fire onEnter immediately for
+   * these same already-in-view elements anyway, so this isn't a difference
+   * in *what* gets revealed — only in whether already-visible content is
+   * allowed to flash invisible first. Elements still below that threshold
+   * keep the exact same scroll-triggered fade-in as before.
+   */
   reveals.forEach((el) => {
+    const alreadyInView = el.getBoundingClientRect().top < window.innerHeight * 0.85;
+    if (alreadyInView) return;
+
     const delay = Number(el.dataset.revealDelay || 0);
     gsap.fromTo(
       el,

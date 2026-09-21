@@ -68,7 +68,7 @@ const translations = {
     "home.hero.tagline": "Agence créative indépendante",
     "home.hero.pillars": "Talent. Créativité. Culture.",
     "home.hero.cta.explore": "Découvrir WEBLACK",
-    "home.hero.scroll": "Faire défiler",
+    "home.hero.scroll": "Défiler",
 
     "home.manifesto":
       "WEBLACK relie talents, vision créative et pertinence culturelle pour construire des opportunités qui comptent, pour les marques comme pour les personnes.",

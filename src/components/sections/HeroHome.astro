@@ -177,12 +177,13 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     </div>
   </div>
 
-  <div
-    class="pointer-events-none absolute bottom-8 left-6 z-10 hidden items-center gap-3 text-(--color-paper)/50 md:left-10 md:flex"
+  <a
+    href="#work"
+    class="group absolute bottom-8 left-6 z-10 hidden items-center gap-3 text-(--color-paper)/50 transition-opacity duration-300 hover:text-(--color-paper)/70 focus-visible:text-(--color-paper) md:left-10 md:flex lg:bottom-12"
   >
-    <span class="h-10 w-px bg-(--color-paper)/30"></span>
+    <span class="h-10 w-px bg-(--color-paper)/30 transition-[background-color] duration-300 group-hover:bg-(--color-paper)/50 group-focus-visible:bg-(--color-paper)"></span>
     <span class="label-tracked">{t("home.hero.scroll")}</span>
-  </div>
+  </a>
 </section>
 
 <style>
