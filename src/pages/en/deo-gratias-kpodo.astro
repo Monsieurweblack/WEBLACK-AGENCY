@@ -1,0 +1,157 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import RemoteImage from "../../components/media/RemoteImage.astro";
+import { useTranslations, localizedPath, type TranslationMap } from "../../i18n/utils";
+import { getSiteSettings } from "../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+const siteSettings = await getSiteSettings(lang);
+
+const translations: TranslationMap = {
+  fr: localizedPath("fr", "/deo-gratias-kpodo/"),
+};
+
+const founderName = "Deo-Gratias Kpodo";
+const founderTitle = "Communication Strategy Consultant, Editorial Direction & Art Direction";
+const founderPhotoUrl = "/photos/founder-deo-gratias-kpodo.png";
+const homeUrl = new URL("/en/", Astro.site).toString();
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ProfilePage",
+      "@id": canonicalUrl,
+      mainEntity: { "@id": `${canonicalUrl}#person` },
+      url: canonicalUrl,
+      isPartOf: { "@id": `${homeUrl}#website` },
+      inLanguage: "en",
+    },
+    {
+      "@type": "Person",
+      "@id": `${canonicalUrl}#person`,
+      name: founderName,
+      jobTitle: founderTitle,
+      description: "Founder of WEBLACK AFRICA. Communication strategy consultant, editorial director and art director for fashion, luxury and creative industries leaders. African and Afro-descendant perspective carried to the world stage.",
+      url: canonicalUrl,
+      image: {
+        "@type": "ImageObject",
+        url: founderPhotoUrl,
+        width: 600,
+        height: 750,
+        description: founderName,
+      },
+      founderOf: {
+        "@id": new URL("/", Astro.site).toString() + "#organization",
+      },
+      worksFor: {
+        "@id": new URL("/", Astro.site).toString() + "#organization",
+      },
+      knowsAbout: [
+        "Art direction",
+        "Editorial direction",
+        "Communication strategy",
+        "Talent management",
+        "Fashion",
+        "Luxury",
+        "Creative industries",
+        "Cultural intelligence",
+        "African and Afro-descendant creation",
+      ],
+      sameAs: [
+        siteSettings?.linkedinUrl || "https://www.linkedin.com/in/deo-gratias-kpodo/",
+      ].filter(Boolean),
+    },
+  ],
+};
+---
+
+<BaseLayout
+  lang={lang}
+  title={founderName}
+  description={founderTitle}
+  image={founderPhotoUrl}
+  imageAlt={founderName}
+  translations={translations}
+>
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">FOUNDER</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {founderName}
+      </h1>
+      <p class="mt-4 max-w-2xl text-lg text-(--color-paper)/85">{founderTitle}</p>
+    </div>
+  </section>
+
+  <section class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-12 bg-(--color-ink) px-6 py-20 md:gap-16 md:px-10 md:py-28 lg:grid-cols-[1fr_1.2fr]">
+    <div data-reveal>
+      <div class="aspect-[3/4] overflow-hidden bg-(--color-ink-soft)">
+        <RemoteImage
+          src={founderPhotoUrl}
+          alt={founderName}
+          width={600}
+          height={750}
+          loading="eager"
+          fetchpriority="high"
+          class="h-full w-full"
+        />
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-8">
+      <div data-reveal>
+        <h2 class="font-display text-2xl text-(--color-paper) sm:text-3xl">Positioning</h2>
+        <p class="mt-4 text-(--color-paper)/80">
+          Founder of WEBLACK AFRICA since 2010, Deo-Gratias Kpodo advises leaders in fashion, luxury and creative industries on communication strategy, editorial expression and artistic direction.
+        </p>
+        <p class="mt-3 text-(--color-paper)/80">
+          His approach combines an assumed African and Afro-descendant vision carried to an international stage, with operational expertise in talent management, content production and event design.
+        </p>
+      </div>
+
+      <div data-reveal data-reveal-delay="0.1">
+        <h3 class="font-display text-xl text-(--color-paper)">Expertise</h3>
+        <ul class="mt-4 space-y-2 text-(--color-paper)/80">
+          <li>Art direction & editorial direction</li>
+          <li>Communication strategy</li>
+          <li>Talent management</li>
+          <li>Content production</li>
+          <li>Cultural intelligence</li>
+          <li>Events & experiences</li>
+        </ul>
+      </div>
+
+      <div data-reveal data-reveal-delay="0.2">
+        <h3 class="font-display text-xl text-(--color-paper)">Industries</h3>
+        <p class="mt-3 space-y-1 text-(--color-paper)/80">
+          Fashion • Luxury • Creative industries • Talent • Cultural events
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-(--color-ink) px-6 py-20 md:px-10 md:py-28">
+    <div class="mx-auto max-w-(--container-content)">
+      <div data-reveal>
+        <h2 class="font-display text-2xl text-(--color-paper) sm:text-3xl">WEBLACK AFRICA</h2>
+        <p class="mt-4 max-w-2xl text-(--color-paper)/80">
+          Founded in 2010, WEBLACK AFRICA is an independent and international creative agency that connects talent, creative vision and cultural relevance to build opportunities that matter, for brands and people alike.
+        </p>
+        <p class="mt-4 max-w-2xl text-(--color-paper)/80">
+          The agency operates through three divisions: Talent (management and representation), Creative (art direction, campaigns, production) and Consulting (brand strategy, positioning, cultural intelligence).
+        </p>
+        <a href="/en/" class="mt-6 inline-flex items-center justify-center bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)">
+          Discover WEBLACK
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script type="application/ld+json" set:html={JSON.stringify(structuredData).replace(/</g, "\\u003c")} />
