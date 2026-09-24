@@ -4,7 +4,7 @@ import { stems } from "../validation/equivalences.ts";
 import { planSearches, discoverPages } from "./discover.ts";
 import { verifyEventPage, revalidateEvent } from "./verify.ts";
 import { resolveMissingFields, refersToSameEvent } from "./resolve.ts";
-import { currentEvents, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents } from "./store.ts";
+import { currentEvents, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents, promoteResolvedReviews } from "./store.ts";
 import { isAgendaEligible, type AgendaEvent } from "./types.ts";
 import { publishEvent, reflectStatusChange, listPublishedEvents, withdrawEvent } from "../sanity/events.ts";
 
@@ -87,6 +87,107 @@ export function resolveKnownEvent(candidate: AgendaEvent, known: AgendaEvent[]):
   return fuzzy ? canonical(fuzzy) : undefined;
 }
 
+/**
+ * Réconcilie les doublons déjà présents dans le stock — ce que
+ * `resolveKnownEvent` ne fait jamais de lui-même.
+ *
+ * `resolveKnownEvent` ne s'exécute qu'au moment où un candidat est
+ * découvert ou re-vérifié ; deux entrées déjà créées séparément ne sont
+ * plus jamais comparées entre elles ensuite, même quand le code de
+ * résolution — amélioré après coup — saurait désormais les reconnaître.
+ * Observé en conditions réelles : « DESIGNART TOKYO 2026 » publiée deux
+ * fois (deux pages du même site, deux libellés de venue qui ne se
+ * recouvrent que partiellement), et « Mariko Mori : All That Shines »
+ * dont le titre tronqué par une extraction antérieure ne partage plus
+ * assez de racines de nom avec le titre complet pour que la resolution
+ * au fil de l'eau les ait jamais rapprochées.
+ *
+ * Cette passe tourne sur l'ensemble du stock à chaque cycle et applique la
+ * même règle de fusion que la découverte — rien de plus permissif.
+ * Plusieurs tours sont nécessaires pour qu'une chaîne de plus de deux
+ * annonces (A confondu avec B, B avec C) converge entièrement en un seul
+ * passage.
+ */
+export interface ReconciliationResult {
+  merged: number;
+  pairs: { keptId: string; mergedId: string; eventName: string }[];
+}
+
+const RANK_ORDER = ["OFFICIAL", "INSTITUTION", "ORGANIZER", "ARTIST_BRAND", "MEDIA", "SECONDARY"];
+
+/**
+ * Le cœur pur de la réconciliation : prend un instantané du stock, renvoie
+ * la liste des entrées à réécrire (le gagnant fusionné, le perdant marqué
+ * MERGED) — jamais d'accès disque ici, pour que la logique reste testable
+ * sans toucher au journal réel. `reconcileDuplicates` ci-dessous est le seul
+ * point qui lit et écrit effectivement le stock.
+ */
+export function reconcileEventList(snapshot: AgendaEvent[]): { toSave: AgendaEvent[]; pairs: ReconciliationResult["pairs"] } {
+  const byId = new Map(snapshot.map((e) => [e.id, e]));
+  const toSave = new Map<string, AgendaEvent>();
+  const pairs: ReconciliationResult["pairs"] = [];
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    // La source la mieux placée passe en premier : à égalité de
+    // correspondance, c'est son identité qui survit — pas un effet de
+    // l'ordre d'écriture dans le journal.
+    const events = [...byId.values()]
+      .filter((e) => e.verificationStatus !== "MERGED")
+      .sort((a, b) => RANK_ORDER.indexOf(a.sourceRank) - RANK_ORDER.indexOf(b.sourceRank));
+
+    outer: for (let i = 0; i < events.length; i++) {
+      const anchor = byId.get(events[i]!.id);
+      if (!anchor || anchor.verificationStatus === "MERGED") continue;
+
+      for (let j = i + 1; j < events.length; j++) {
+        const candidate = byId.get(events[j]!.id);
+        if (!candidate || candidate.verificationStatus === "MERGED" || candidate.id === anchor.id) continue;
+
+        const match = resolveKnownEvent(candidate, [anchor]);
+        if (!match) continue;
+
+        let winner = mergeEvent(anchor, { ...candidate, id: anchor.id });
+        // La même règle que resolveMissingFields : si l'entrée était en
+        // revue FAUTE d'une donnée essentielle, et que la fusion vient de la
+        // combler, la cause a disparu — elle redevient VERIFIED. On ne
+        // touche pas aux autres raisons de mise en revue (page d'accueil,
+        // contradiction), reconnaissables à ce qu'elles ne partaient pas
+        // d'un missingFields non vide.
+        if (anchor.verificationStatus === "REVIEW" && anchor.missingFields.length > 0 && winner.missingFields.length === 0) {
+          winner = { ...winner, verificationStatus: "VERIFIED", note: "" };
+        }
+        const loser: AgendaEvent = { ...candidate, verificationStatus: "MERGED", mergedInto: anchor.id, lastVerifiedAt: new Date().toISOString() };
+        byId.set(winner.id, winner);
+        byId.set(loser.id, loser);
+        toSave.set(winner.id, winner);
+        toSave.set(loser.id, loser);
+        pairs.push({ keptId: anchor.id, mergedId: candidate.id, eventName: candidate.eventName });
+        changed = true;
+        // Le stock a bougé sous nos pieds : on repart du prochain tour
+        // plutôt que de continuer sur une liste `events` périmée.
+        break outer;
+      }
+    }
+  }
+
+  return { toSave: [...toSave.values()], pairs };
+}
+
+/**
+ * Rapproche les doublons déjà présents dans le stock — ce que
+ * `resolveKnownEvent` ne fait jamais de lui-même une fois deux entrées
+ * créées séparément (voir la note ci-dessus). Seule frontière d'I/O :
+ * lit le stock, délègue la décision à `reconcileEventList`, n'écrit que ce
+ * qui a effectivement changé.
+ */
+export function reconcileDuplicates(): ReconciliationResult {
+  const { toSave, pairs } = reconcileEventList(currentEvents());
+  for (const event of toSave) saveEvent(event);
+  return { merged: pairs.length, pairs };
+}
+
 export interface AgendaCycleResult {
   searches: number;
   pagesConsulted: number;
@@ -97,6 +198,10 @@ export interface AgendaCycleResult {
   expired: number;
   revalidated: number;
   cancelledOrGone: number;
+  /** Doublons déjà présents dans le stock, reconnus et fusionnés a posteriori (voir reconcileDuplicates). */
+  duplicatesReconciled: number;
+  /** Entrées en revue dont la cause a disparu depuis, repêchées (voir promoteResolvedReviews). */
+  reviewsPromoted: number;
   /** Pages voisines du domaine officiel ouvertes pour combler une donnée manquante. */
   complementaryPages: number;
   fieldsResolved: number;
@@ -129,6 +234,7 @@ export async function runAgendaCycle(dryRun: boolean, searchSeed?: number): Prom
   const result: AgendaCycleResult = {
     searches: 0, pagesConsulted: 0, eventsFound: 0, eventsNew: 0,
     eventsMerged: 0, inReview: 0, expired: 0, revalidated: 0, cancelledOrGone: 0,
+    duplicatesReconciled: 0, reviewsPromoted: 0,
     complementaryPages: 0, fieldsResolved: 0, resolvedToVerified: 0,
     published: 0, updated: 0, statusReflected: 0,
   };
@@ -218,6 +324,21 @@ export async function runAgendaCycle(dryRun: boolean, searchSeed?: number): Prom
     if (refreshed.verificationStatus === "CANCELLED" || refreshed.verificationStatus === "GONE") result.cancelledOrGone++;
   }
 
+  // Rapproche les doublons déjà dans le stock avant de décider quoi publier
+  // — sans cela, deux entrées reconnues comme le même événement seulement
+  // depuis un correctif passé continueraient de coexister indéfiniment.
+  if (!dryRun) {
+    const reconciliation = reconcileDuplicates();
+    result.duplicatesReconciled = reconciliation.merged;
+    for (const pair of reconciliation.pairs) {
+      log("SOURCE FOUND", `Agenda — doublon reconnu a posteriori : « ${pair.eventName} » (${pair.mergedId}) fusionné dans ${pair.keptId}`);
+    }
+
+    // Même logique de rattrapage pour une entrée en revue dont la cause a
+    // disparu sans que personne ne l'ait jamais repassée à VERIFIED.
+    result.reviewsPromoted = promoteResolvedReviews().promoted;
+  }
+
   // Publication : uniquement ce qui est éligible, c'est-à-dire vérifié sur
   // la page officielle, complet, en territoire, et porteur d'une raison
   // d'être annoncé. Rien n'est dégradé en brouillon pour remplir la page.
@@ -258,7 +379,7 @@ export async function runAgendaCycle(dryRun: boolean, searchSeed?: number): Prom
   }
   log(
     "SOURCE FOUND",
-    `Agenda — ${result.searches} recherche(s), ${result.pagesConsulted} page(s), ${result.eventsFound} événement(s) lu(s) : ${result.eventsNew} nouveau(x), ${result.eventsMerged} fusionné(s), ${result.inReview} en revue, ${result.expired} expiré(s), ${result.revalidated} re-vérifié(s)${dryRun ? " [dry-run, rien stocké]" : ""}`,
+    `Agenda — ${result.searches} recherche(s), ${result.pagesConsulted} page(s), ${result.eventsFound} événement(s) lu(s) : ${result.eventsNew} nouveau(x), ${result.eventsMerged} fusionné(s), ${result.inReview} en revue, ${result.expired} expiré(s), ${result.revalidated} re-vérifié(s), ${result.duplicatesReconciled} doublon(s) réconcilié(s) a posteriori, ${result.reviewsPromoted} revue(s) repêchée(s)${dryRun ? " [dry-run, rien stocké]" : ""}`,
   );
   log("SOURCE FOUND", `Agenda — stock : ${upcomingEvents().length} événement(s) vérifié(s) à venir, ${reviewEvents().length} en attente de décision humaine`);
   log("SANITY", `Agenda — Sanity : ${result.published} publié(s), ${result.updated} mis à jour, ${result.statusReflected} changement(s) d’état répercuté(s)${dryRun ? " [dry-run, rien écrit]" : ""}`);

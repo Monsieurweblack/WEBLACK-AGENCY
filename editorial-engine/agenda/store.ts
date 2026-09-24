@@ -84,17 +84,67 @@ export function mergeEvent(existing: AgendaEvent, candidate: AgendaEvent): Agend
     };
   }
 
+  // Une donnée absente chez la source qui fait foi peut être complétée par
+  // l'autre SI celle-ci l'a réellement vérifiée — jamais par inférence.
+  // La ville est de ce nombre : une page officielle qui ne la redit pas
+  // (observé sur la page du musée pour « Mariko Mori : All That Shines »)
+  // ne doit pas condamner l'événement à rester en revue alors qu'une reprise
+  // fiable l'a vérifiée noir sur blanc.
+  const fillEssential = (field: "city" | "venue") =>
+    authoritative[field] || (other.verifiedFields.includes(field) ? other[field] : "");
+  const city = fillEssential("city");
+  const venue = fillEssential("venue");
+  const filledFields = [
+    ...(city && !authoritative.city ? ["city"] : []),
+    ...(venue && !authoritative.venue ? ["venue"] : []),
+  ];
+
   return {
     ...authoritative,
     sourceUrls,
-    // Une donnée absente chez la source qui fait foi peut être complétée par
-    // l'autre SI celle-ci l'a réellement vérifiée — jamais par inférence.
+    city,
+    venue,
     endDate: authoritative.endDate || (other.verifiedFields.includes("endDate") ? other.endDate : ""),
     time: authoritative.time || (other.verifiedFields.includes("time") ? other.time : ""),
     organizer: authoritative.organizer || other.organizer,
+    verifiedFields: [...new Set([...authoritative.verifiedFields, ...filledFields])],
+    missingFields: authoritative.missingFields.filter((f) => !filledFields.includes(f)),
+    fieldSources: {
+      ...authoritative.fieldSources,
+      ...(filledFields.includes("city") ? { city: other.fieldSources.city ?? other.officialUrl } : {}),
+      ...(filledFields.includes("venue") ? { venue: other.fieldSources.venue ?? other.officialUrl } : {}),
+    },
     status: computeStatus(authoritative.startDate, authoritative.endDate || other.endDate),
     lastVerifiedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Repêche les entrées restées en revue pour une cause qui a depuis disparu.
+ *
+ * Deux façons dont l'écart apparaît : un durcissement passé des champs
+ * essentiels (« venue » exigé, puis retiré — commit 5156005) laisse des
+ * notes qui citent un champ qui ne bloque plus rien ; une fusion antérieure
+ * à l'ajout de la propagation de champ (voir mergeEvent) a pu combler la
+ * donnée manquante sans jamais repasser le statut à VERIFIED. Dans les deux
+ * cas, le signal est le même et sans ambiguïté : `missingFields` vide, note
+ * qui dit encore l'inverse. On ne touche à rien d'autre — une revue tenant à
+ * une contradiction ou à une page d'accueil garde `missingFields` vide DÈS
+ * le départ, donc n'a jamais porté cette note et n'est jamais concernée.
+ */
+/** Le test lui-même, séparé de la lecture/écriture pour rester vérifiable sans toucher au stock réel. */
+export function isStaleMissingFieldReview(event: AgendaEvent): boolean {
+  return event.verificationStatus === "REVIEW" && event.missingFields.length === 0 && /essentielle/.test(event.note ?? "");
+}
+
+export function promoteResolvedReviews(): { promoted: number } {
+  let promoted = 0;
+  for (const event of currentEvents()) {
+    if (!isStaleMissingFieldReview(event)) continue;
+    saveEvent({ ...event, verificationStatus: "VERIFIED", note: "", lastVerifiedAt: new Date().toISOString() });
+    promoted++;
+  }
+  return { promoted };
 }
 
 /** Repasse les événements stockés au calendrier du jour : ce qui est fini cesse d'être annoncé comme à venir. */

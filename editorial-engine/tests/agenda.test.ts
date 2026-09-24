@@ -2,11 +2,11 @@ import "./setup.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeStatus, effectiveStatus, isAgendaEligible, ESSENTIAL_FIELDS, type AgendaEvent } from "../agenda/types.ts";
-import { eventIdentity, mergeEvent } from "../agenda/store.ts";
+import { eventIdentity, mergeEvent, isStaleMissingFieldReview } from "../agenda/store.ts";
 import { rankSource, dateAppears, settleTerritory } from "../agenda/verify.ts";
 import { planSearches } from "../agenda/discover.ts";
 import { refersToSameEvent } from "../agenda/resolve.ts";
-import { resolveKnownEvent } from "../agenda/runAgendaCycle.ts";
+import { resolveKnownEvent, reconcileEventList } from "../agenda/runAgendaCycle.ts";
 import { eventSlug, toEventDocument, preserveSlug } from "../sanity/events.ts";
 
 function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
@@ -252,6 +252,176 @@ test("10. relecture de la même page, titre tronqué par l'extraction — l'URL 
   assert.equal(refersToSameEvent(connu, relectureTronquee), false, "moins de deux racines de nom partagées — le repli flou seul ne suffit plus");
   const trouve = resolveKnownEvent(relectureTronquee, [connu]);
   assert.equal(trouve?.id, connu.id, "même URL déjà tracée dans sourceUrls : reconnu sans dépendre du texte extrait");
+});
+
+// --- Propagation des champs essentiels à la fusion --------------------------
+
+test("mergeEvent complète la ville manquante côté autoritaire depuis l'autre source, si elle l'a vérifiée", () => {
+  // Cas réel : la page du Mori Art Museum ne redit pas « Tokyo », une
+  // reprise média fiable si. Avant ce correctif, mergeEvent ne recopiait que
+  // endDate/time/organizer — jamais un champ essentiel — et l'événement
+  // restait bloqué en REVIEW malgré une ville pourtant vérifiée ailleurs.
+  const officielSansVille = event({ city: "", venue: "", sourceRank: "OFFICIAL", verifiedFields: ["eventName", "startDate"], missingFields: ["city"] });
+  const repriseAvecVille = event({ city: "Tokyo", venue: "Mori Art Museum", sourceRank: "MEDIA", officialUrl: "https://media.example/mori" });
+
+  const fusion = mergeEvent(officielSansVille, repriseAvecVille);
+  assert.equal(fusion.sourceRank, "OFFICIAL", "la source officielle reste autoritaire");
+  assert.equal(fusion.city, "Tokyo", "la ville vérifiée ailleurs est reprise");
+  assert.equal(fusion.missingFields.includes("city"), false, "la ville comblée ne bloque plus l'éligibilité");
+  assert.equal(fusion.fieldSources.city, repriseAvecVille.officialUrl, "la provenance de la ville pointe vers qui l'a réellement établie");
+});
+
+test("mergeEvent ne comble jamais une ville que l'autre source n'a pas elle-même vérifiée", () => {
+  const officielSansVille = event({ city: "", sourceRank: "OFFICIAL", verifiedFields: ["eventName", "startDate"], missingFields: ["city"] });
+  const autreNonVerifiee = event({ city: "Tokyo", sourceRank: "MEDIA", verifiedFields: ["eventName", "startDate"] }); // "city" absent de verifiedFields
+  const fusion = mergeEvent(officielSansVille, autreNonVerifiee);
+  assert.equal(fusion.city, "", "une valeur non vérifiée par sa propre source ne se propage pas");
+});
+
+// --- Repêchage des revues dont la cause a disparu ---------------------------
+//
+// Cas réel observé dans le stock de production : cinq entrées restées en
+// REVIEW avec missingFields désormais vide — un durcissement passé exigeait
+// « venue » comme champ essentiel (retiré depuis, commit 5156005), ou une
+// fusion antérieure au correctif de mergeEvent avait comblé la donnée sans
+// jamais repasser le statut. « Mariko Mori : All That Shines » en fait
+// partie : missingFields vide, note encore « city manquant ».
+
+test("isStaleMissingFieldReview reconnaît une revue dont la cause a disparu", () => {
+  const perime = event({ verificationStatus: "REVIEW", missingFields: [], note: "Donnée(s) essentielle(s) absente(s) de la page : city." });
+  assert.equal(isStaleMissingFieldReview(perime), true);
+});
+
+test("isStaleMissingFieldReview ignore une revue encore justifiée", () => {
+  const encoreIncomplet = event({ verificationStatus: "REVIEW", missingFields: ["city"], note: "Donnée(s) essentielle(s) absente(s) de la page : city." });
+  assert.equal(isStaleMissingFieldReview(encoreIncomplet), false, "le champ manque toujours");
+});
+
+test("isStaleMissingFieldReview ignore une revue dont la cause n'est pas un champ manquant", () => {
+  const pageAccueil = event({ verificationStatus: "REVIEW", missingFields: [], note: "L'événement n'a été lu que sur une page d'accueil, qui ne peut pas faire foi." });
+  assert.equal(isStaleMissingFieldReview(pageAccueil), false, "cette revue n'a jamais eu de champ manquant pour cause");
+});
+
+test("isStaleMissingFieldReview ne touche jamais à ce qui n'est pas en revue", () => {
+  assert.equal(isStaleMissingFieldReview(event({ verificationStatus: "VERIFIED", missingFields: [] })), false);
+  assert.equal(isStaleMissingFieldReview(event({ verificationStatus: "CANCELLED", missingFields: [], note: "essentielle" })), false);
+});
+
+// --- reconcileEventList — doublons déjà divergents dans le stock -----------
+//
+// resolveKnownEvent protège la découverte de NOUVEAUX candidats, mais une
+// fois deux entrées créées séparément, rien ne les rapproche plus jamais.
+// Observé en production sur deux cas réels : « DESIGNART TOKYO 2026 »
+// publiée deux fois (deux pages du même site, venues formulées différemment)
+// et « Mariko Mori : All That Shines » dont le titre tronqué ne partage plus
+// assez de racines de nom avec le titre complet.
+
+test("reconcileEventList fusionne deux entrées déjà divergentes du même événement (cas réel DESIGNART TOKYO)", () => {
+  const a = event({
+    eventName: "DESIGNART TOKYO 2026",
+    venue: "Omotesando, Gaienmae/ Harajuku/ Shibuya/ Roppongi/ Ginza",
+    city: "Tokyo",
+    organizer: "DESIGNART TOKYO COMMITTEE",
+    sourceRank: "ORGANIZER",
+    officialUrl: "https://www.designart.jp/en/entry2026/",
+    startDate: "2026-10-30",
+  });
+  const b = event({
+    eventName: "DESIGNART TOKYO 2026",
+    venue: "Ginza / Tokyo / Roppongi / Gaienmae / Omotesando / Harajuku / Shibuya / Daikanyama / Ikejiri",
+    city: "Tokyo",
+    institution: "DESIGNART TOKYO 実行委員会",
+    organizer: "DESIGNART TOKYO COMMITTEE",
+    sourceRank: "OFFICIAL",
+    officialUrl: "https://www.designart.jp/designarttokyo2026/",
+    startDate: "2026-10-30",
+  });
+  assert.notEqual(a.id, b.id, "deux venues différemment formulées produisent bien deux identités distinctes — c'est la cause du doublon");
+
+  const { toSave, pairs } = reconcileEventList([a, b]);
+  assert.equal(pairs.length, 1);
+  assert.equal(toSave.length, 2, "le gagnant mis à jour et le perdant marqué MERGED");
+  const survivor = toSave.find((e) => e.verificationStatus !== "MERGED")!;
+  const merged = toSave.find((e) => e.verificationStatus === "MERGED")!;
+  assert.equal(survivor.id, b.id, "la source OFFICIAL l'emporte sur ORGANIZER");
+  assert.equal(merged.mergedInto, survivor.id);
+});
+
+test("reconcileEventList fusionne le cas réel Mariko Mori et comble la ville manquante au passage", () => {
+  const hypebeastUrl = "https://hypebeast.com/2026/7/mariko-mori-all-that-shines-retrospective-exhibition-mori-art-museum-tokyo-info";
+  const officielSansVille = marikoMori({
+    id: "official-id",
+    venue: "",
+    city: "",
+    sourceRank: "OFFICIAL",
+    verifiedFields: ["eventName", "startDate", "endDate", "artistOrCreator", "institution"],
+    missingFields: ["city"],
+    verificationStatus: "REVIEW",
+    officialUrl: "https://www.mori.art.museum/en/exhibitions/marikomori/index.html",
+    // Réel : une tentative antérieure de resolveMissingFields a déjà essayé
+    // la page hypebeast comme voisine, sans en tirer la ville — mais l'URL
+    // est restée tracée dans sourceUrls. C'est elle qui permet au repli par
+    // URL de reconnaître la reprise, là où le nom seul ne suffit plus.
+    sourceUrls: ["https://www.mori.art.museum/en/exhibitions/marikomori/index.html", hypebeastUrl],
+  });
+  const repriseTitreTronque = event({
+    id: "media-id",
+    eventName: "All That Shines",
+    artistOrCreator: "Mariko Mori",
+    institution: "Mori Art Museum",
+    venue: "Mori Art Museum",
+    city: "Tokyo",
+    startDate: "2026-10-31",
+    endDate: "2027-03-28",
+    sourceRank: "MEDIA",
+    officialUrl: hypebeastUrl,
+  });
+
+  const { toSave, pairs } = reconcileEventList([officielSansVille, repriseTitreTronque]);
+  assert.equal(pairs.length, 1, "reconnu malgré un titre tronqué qui ne partage plus assez de racines de nom");
+  const survivor = toSave.find((e) => e.verificationStatus !== "MERGED")!;
+  assert.equal(survivor.id, officielSansVille.id, "la source OFFICIAL reste l'identité qui survit");
+  assert.equal(survivor.city, "Tokyo", "la ville vérifiée par la reprise comble le vide de la page officielle");
+  assert.equal(survivor.missingFields.includes("city"), false);
+  assert.equal(survivor.verificationStatus, "VERIFIED", "la cause de la revue — ville manquante — a disparu, l'événement redevient publiable");
+});
+
+test("reconcileEventList ne promeut jamais une revue dont la cause n'était pas une donnée manquante", () => {
+  // Une entrée en revue pour une autre raison (ici une contradiction déjà
+  // tranchée par mergeEvent) ne doit pas être promue simplement parce que
+  // missingFields est vide — ce n'est pas de là que venait le problème.
+  const enRevuePourAutreRaison = event({
+    id: "site-root-id",
+    verificationStatus: "REVIEW",
+    missingFields: [], // pas de champ manquant : la revue vient d'ailleurs
+    note: "L'événement n'a été lu que sur une page d'accueil.",
+  });
+  const reprise = event({ id: "reprise-id", officialUrl: "https://media.example/reprise", sourceRank: "MEDIA" });
+  const { toSave } = reconcileEventList([enRevuePourAutreRaison, reprise]);
+  const survivor = toSave.find((e) => e.verificationStatus !== "MERGED");
+  assert.equal(survivor?.verificationStatus, "REVIEW", "la revue persiste : sa cause réelle n'a pas été traitée par la fusion");
+});
+
+test("reconcileEventList est idempotent — un second passage sur son propre résultat ne fusionne plus rien", () => {
+  const a = event({ eventName: "DESIGNART TOKYO 2026", venue: "A B C", city: "Tokyo", sourceRank: "ORGANIZER", officialUrl: "https://a.example/1" });
+  const b = event({ eventName: "DESIGNART TOKYO 2026", venue: "B C D", city: "Tokyo", sourceRank: "OFFICIAL", officialUrl: "https://b.example/2" });
+
+  const premierPassage = reconcileEventList([a, b]);
+  assert.equal(premierPassage.pairs.length, 1);
+
+  const survivor = premierPassage.toSave.find((e) => e.verificationStatus !== "MERGED")!;
+  const merged = premierPassage.toSave.find((e) => e.verificationStatus === "MERGED")!;
+  const secondPassage = reconcileEventList([survivor, merged]);
+  assert.equal(secondPassage.pairs.length, 0, "l'entrée déjà MERGED n'est jamais reconsidérée");
+  assert.equal(secondPassage.toSave.length, 0, "rien à réécrire une deuxième fois");
+});
+
+test("reconcileEventList ne fusionne jamais deux événements réellement distincts", () => {
+  const a = event({ eventName: "Exposition A", venue: "Galerie Un", city: "Paris", startDate: "2026-09-10" });
+  const b = event({ eventName: "Exposition B", venue: "Galerie Deux", city: "Lyon", startDate: "2026-11-20", officialUrl: "https://b.example/2" });
+  const { toSave, pairs } = reconcileEventList([a, b]);
+  assert.equal(pairs.length, 0);
+  assert.equal(toSave.length, 0);
 });
 
 // --- Priorité des sources --------------------------------------------------

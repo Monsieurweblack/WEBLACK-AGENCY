@@ -27,7 +27,8 @@
     "editorial:ledger": "node --experimental-strip-types editorial-engine/cli.ts ledger",
     "editorial:newsletter": "node --experimental-strip-types editorial-engine/cli.ts newsletter",
     "editorial:agenda": "node --experimental-strip-types editorial-engine/cli.ts agenda",
-    "editorial:now": "node --experimental-strip-types editorial-engine/cli.ts now"
+    "editorial:now": "node --experimental-strip-types editorial-engine/cli.ts now",
+    "editorial:agenda-audit": "node --experimental-strip-types editorial-engine/agenda/audit.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
