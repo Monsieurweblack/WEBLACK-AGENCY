@@ -1,5 +1,5 @@
 ---
-import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 import { getAgendaEvents, agendaFacets, type AgendaEventData } from "../../lib/content";
 import { dayNumber, shortMonth, monthKey, monthLabel, dateRange, placeLine, withinDays, whoOf } from "../../lib/agenda-format";
 
@@ -63,6 +63,21 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
                 <option value="90">{t("agenda.filter.period.quarter")}</option>
               </select>
             </label>
+
+            {facets.regions.length > 1 && (
+              <label class="flex min-w-0 flex-col gap-2">
+                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.region")}</span>
+                <select
+                  name="region"
+                  class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+                >
+                  <option value="all">{t("agenda.filter.all")}</option>
+                  {facets.regions.map((value) => (
+                    <option value={value}>{t(`agenda.region.${value}` as UiKey)}</option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             {facets.disciplines.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
@@ -149,6 +164,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
                     data-city={event.city}
                     data-country={event.country ?? ""}
                     data-discipline={event.discipline ?? ""}
+                    data-region={event.geographicPriority ?? ""}
                     data-start={event.startDate}
                     data-within-30={String(withinDays(event, 30))}
                     data-within-90={String(withinDays(event, 90))}

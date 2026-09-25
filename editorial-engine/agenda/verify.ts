@@ -3,9 +3,10 @@ import { structuredCompletion } from "../intelligence/openaiClient.ts";
 import { normalizeDateString } from "../validation/claimRegistry.ts";
 import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
-import { eventIdentity } from "./store.ts";
+import { eventIdentity, applyControlMode } from "./store.ts";
 import { computeStatus, ESSENTIAL_FIELDS, type AgendaEvent, type EventVerification, type SourceRank } from "./types.ts";
 import { WEBLACK_TERRITORIES, type WeblackTerritory } from "../generation/types.ts";
+import { GEOGRAPHIC_PRIORITIES, timezoneForCity, type GeographicPriority } from "./geography.ts";
 
 const SCHEMA = {
   type: "object",
@@ -27,16 +28,20 @@ const SCHEMA = {
     countryEn: { type: "string" },
     organizer: { type: "string" },
     cancelled: { type: "boolean" },
+    postponed: { type: "boolean" },
     territory: { type: "string", enum: [...WEBLACK_TERRITORIES] },
     editorialValue: { type: "string" },
     descriptionFr: { type: "string" },
     descriptionEn: { type: "string" },
     editorialRelevance: { type: "integer", minimum: 0, maximum: 100 },
+    geographicPriority: { type: "string", enum: [...GEOGRAPHIC_PRIORITIES] },
+    geographicJustification: { type: "string" },
   },
   required: [
     "isEvent", "eventName", "eventType", "discipline", "artistOrCreator", "institution",
-    "startDate", "endDate", "time", "venue", "city", "country", "organizer", "cancelled", "disciplineEn", "countryEn",
+    "startDate", "endDate", "time", "venue", "city", "country", "organizer", "cancelled", "postponed", "disciplineEn", "countryEn",
     "territory", "editorialValue", "descriptionFr", "descriptionEn", "editorialRelevance",
+    "geographicPriority", "geographicJustification",
   ],
 };
 
@@ -46,9 +51,17 @@ Interdiction absolue : ne rien écrire qui ne soit pas dans le texte fourni. Auc
 
 - "isEvent" : false si la page n'annonce pas un événement précis (page d'accueil, liste, article d'actualité sans événement identifiable).
 - "startDate"/"endDate" : au format AAAA-MM-JJ si la page permet de les écrire ainsi, sinon la date telle qu'écrite. Vide si absente.
-- "cancelled" : true seulement si la page dit explicitement que l'événement est annulé ou reporté.
+- "cancelled" : true seulement si la page dit explicitement que l'événement est annulé — pas simplement reporté.
+- "postponed" : true seulement si la page dit explicitement que l'événement est reporté ET qu'aucune nouvelle date confirmée n'est donnée. Si une nouvelle date EST donnée, ce n'est pas un report en attente — remplis startDate/endDate avec cette nouvelle date et laisse "postponed" à false : c'est un événement normal, juste déplacé.
 - "country" / "countryEn" : le pays, en français pour le premier et en anglais pour le second — « Allemagne » / « Germany ». Vides si la page ne permet pas de l'établir.
 - "discipline" / "disciplineEn" : la discipline, en français pour la première et en anglais pour la seconde — « photographie » / « photography », « art contemporain » / « contemporary art ». Un même libellé doit toujours être écrit de la même façon, en minuscules, pour que deux événements de la même discipline se retrouvent ensemble.
+
+WEBLACK AGENDA est un radar culturel africain et afro-diasporique avant d'être un agenda culturel généraliste. Chaque événement reçoit un palier géographique :
+
+- "geographicPriority" : AFRICA si l'événement se tient sur le continent africain (quel que soit son sujet). AFRO_DIASPORA si l'événement, où qu'il se tienne dans le monde, a un lien DOCUMENTÉ avec l'Afrique ou ses diasporas — un artiste africain ou afro-descendant exposé, une culture africaine ou afro-descendante au centre du propos (afro-brésilienne, afro-caribéenne, afro-américaine…), un patrimoine ou une histoire africaine, une communauté de diaspora, la création contemporaine ou les industries créatives africaines. INTERNATIONAL pour tout le reste.
+- "geographicJustification" : la phrase ou l'élément précis de la page qui établit ce lien — le nom de l'artiste et sa nationalité si la page la donne, le nom de la culture ou de la communauté concernée, l'institution africaine impliquée. Chaîne vide pour INTERNATIONAL, où il n'y a rien à justifier.
+- Interdiction absolue : ne JAMAIS classer AFRO_DIASPORA sur la seule apparence physique d'une personne visible sur une photo, un nom à consonance africaine sans confirmation, ou une supposition. Le lien doit être écrit noir sur blanc dans le texte de la page — sinon geographicPriority reste INTERNATIONAL, même pour un événement qui "a l'air" de concerner l'Afrique.
+- Un événement qui se tient en Afrique reste AFRICA même sans aucun rapport thématique avec une culture africaine — c'est la géographie qui tranche ce premier cas, pas le sujet.
 
 Le Journal WEBLACK est un média international de mode, luxe, art, culture, design et industries créatives. Ce n'est pas un guide des sorties.
 
@@ -83,11 +96,27 @@ interface ExtractedEvent {
   countryEn: string;
   organizer: string;
   cancelled: boolean;
+  postponed: boolean;
   territory: WeblackTerritory;
   editorialValue: string;
   descriptionFr: string;
   descriptionEn: string;
   editorialRelevance: number;
+  geographicPriority: GeographicPriority;
+  geographicJustification: string;
+}
+
+/**
+ * Le repli de sécurité qui rend la règle "jamais déduit de l'apparence"
+ * vérifiable en code, pas seulement en consigne de prompt : une
+ * classification AFRO_DIASPORA sans justification écrite n'est pas
+ * vérifiée — elle retombe sur INTERNATIONAL plutôt que d'être prise au mot.
+ * AFRICA n'a pas besoin de ce filet : la géographie de la ville la prouve
+ * déjà, indépendamment de ce que le modèle en dit.
+ */
+export function resolveGeographicPriority(extracted: Pick<ExtractedEvent, "geographicPriority" | "geographicJustification">): GeographicPriority {
+  if (extracted.geographicPriority === "AFRO_DIASPORA" && !extracted.geographicJustification.trim()) return "INTERNATIONAL";
+  return extracted.geographicPriority;
 }
 
 /**
@@ -139,9 +168,14 @@ export async function verifyEventPage(url: string, runId: string): Promise<Agend
   let verificationStatus: EventVerification = "VERIFIED";
   let note = "";
 
+  const geographicPriority = resolveGeographicPriority(extracted);
+
   if (extracted.cancelled) {
     verificationStatus = "CANCELLED";
-    note = "La page indique explicitement une annulation ou un report.";
+    note = "La page indique explicitement une annulation.";
+  } else if (extracted.postponed) {
+    verificationStatus = "POSTPONED";
+    note = "La page indique un report, sans nouvelle date confirmée.";
   } else if (isSiteRoot(url)) {
     // Une page d'accueil peut annoncer un événement aujourd'hui et tout
     // autre chose demain. Elle ne peut donc pas servir de page de
@@ -195,6 +229,16 @@ export async function verifyEventPage(url: string, runId: string): Promise<Agend
     descriptionEn: extracted.descriptionEn.trim(),
     territoryHistory: [extracted.territory],
     editorialRelevance: extracted.editorialRelevance,
+    geographicPriority,
+    geographicJustification: geographicPriority === "INTERNATIONAL" ? "" : extracted.geographicJustification.trim(),
+    // Déduite déterministiquement de la ville, jamais du modèle : voir
+    // geography.ts. Vide si la ville n'est pas répertoriée.
+    timezone: timezoneForCity(extracted.city.trim()),
+    // Toute entrée nouvellement découverte part sous contrôle automatisé ;
+    // seule une modification dans le Studio la fait passer en EDITORIAL ou
+    // HYBRID (voir sanity/events.ts, qui lit le document existant avant
+    // d'écrire).
+    controlMode: "AUTOMATED",
   };
 
   return event;
@@ -214,13 +258,33 @@ function isSiteRoot(url: string): boolean {
 export async function revalidateEvent(event: AgendaEvent, runId: string): Promise<AgendaEvent> {
   const fresh = await verifyEventPage(event.officialUrl, runId);
   if (!fresh) {
+    // Sous contrôle éditorial, une page devenue illisible ne retire pas
+    // l'événement de son propre chef : ce n'est pas le cas d'exception
+    // absolu qu'est l'expiration par la date (§17), c'est une proposition
+    // que l'automatisation ne doit pas imposer à une décision éditoriale.
+    if (event.controlMode === "EDITORIAL") {
+      return { ...event, status: computeStatus(event.startDate, event.endDate), lastVerifiedAt: new Date().toISOString() };
+    }
     return { ...event, verificationStatus: "GONE", note: "La page n'est plus lisible.", lastVerifiedAt: new Date().toISOString() };
   }
-  return settleTerritory(event, {
+  const settled = settleTerritory(event, {
     ...fresh,
     id: event.id,
     sourceUrls: [...new Set([...event.sourceUrls, ...fresh.sourceUrls])],
   });
+
+  // Sous contrôle éditorial, l'automatisation PROPOSE un changement matériel
+  // qu'elle vient de lire — elle ne l'applique pas. Sans ce log, un éditeur
+  // n'aurait aucun moyen de savoir qu'une page qu'il a reprise en main a
+  // depuis changé de statut.
+  if (event.controlMode === "EDITORIAL" && (fresh.verificationStatus === "CANCELLED" || fresh.verificationStatus === "POSTPONED" || fresh.startDate !== event.startDate)) {
+    log(
+      "SANITY",
+      `Agenda — « ${event.eventName} » (contrôle éditorial) : la page indique désormais ${fresh.verificationStatus === "CANCELLED" ? "une annulation" : fresh.verificationStatus === "POSTPONED" ? "un report" : `une date différente (${fresh.startDate})`} — non appliqué, décision humaine requise.`,
+    );
+  }
+
+  return applyControlMode(event, settled);
 }
 
 /**

@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { loadConfig } from "../config/env.ts";
 import { log } from "../logs/logger.ts";
 import { recordTrace } from "../logs/observability.ts";
+import { AFRICA_CITIES, AFRO_DIASPORA_CITIES, INTERNATIONAL_CITIES, type GeographicPriority } from "./geography.ts";
 
 /**
  * Découverte d'événements par recherche web.
@@ -17,31 +18,37 @@ import { recordTrace } from "../logs/observability.ts";
  */
 
 /**
- * Les villes interrogées, dans l'ordre où la rotation les balaie.
+ * Les villes interrogées, par palier de priorité géographique — Afrique
+ * d'abord, diaspora afro-descendante ensuite, reste du monde pertinent
+ * enfin. WEBLACK AGENDA est un radar culturel africain et afro-diasporique
+ * avant d'être un agenda culturel généraliste : cette priorité doit être
+ * structurelle, pas le fruit d'un tirage qui la respecterait "en moyenne".
  *
- * L'Europe et l'Afrique ouvrent la liste et y occupent le plus de place :
- * ce sont les deux scènes que le Journal suit de près, et c'est une
- * décision éditoriale assumée, pas un hasard de tirage. Le reste du monde
- * reste présent — le positionnement est international — mais y revient
- * moins souvent.
+ * Chaque liste couvre volontairement plus que les six métropoles les plus
+ * documentées en ligne (Lagos, Johannesburg, Dakar, Accra, Nairobi, Le Cap) :
+ * s'y limiter reproduirait, à l'échelle du continent, le même biais que la
+ * rotation qui s'était arrêtée sur Tokyo six cycles de suite avant que la
+ * graine n'avance déterministiquement (voir plus bas) — la diversité
+ * géographique vient de la liste, jamais du hasard.
  *
- * Ce choix pèse sur ce qui est CHERCHÉ, jamais sur ce qui est retenu :
- * un événement lagosien passe exactement la même vérification qu'un
- * événement tokyoïte, et aucun quota ne garantit à une région d'être
- * publiée.
+ * Ce choix pèse sur ce qui est CHERCHÉ, jamais sur ce qui est retenu : un
+ * événement lagosien passe exactement la même vérification qu'un événement
+ * tokyoïte, et aucun quota ne garantit à une région d'être publiée.
  */
-const CITIES = [
-  // Europe
-  "Paris", "Londres", "Milan", "Berlin", "Madrid", "Bruxelles", "Amsterdam",
-  "Anvers", "Copenhague", "Vienne", "Lisbonne", "Rome", "Stockholm", "Zurich",
-  // Afrique
-  "Lomé", "Accra", "Lagos", "Dakar", "Abidjan", "Bamako", "Cotonou", "Kinshasa",
-  "Johannesburg", "Le Cap", "Nairobi", "Marrakech", "Casablanca", "Le Caire", "Tunis", "Addis-Abeba",
-  // Amériques
-  "New York", "Montréal", "São Paulo",
-  // Moyen-Orient / Asie
-  "Dubaï", "Tokyo", "Séoul",
-];
+const AFRICA_CITY_LIST = Object.keys(AFRICA_CITIES);
+const DIASPORA_CITY_LIST = Object.keys(AFRO_DIASPORA_CITIES);
+const INTERNATIONAL_CITY_LIST = Object.keys(INTERNATIONAL_CITIES);
+
+/**
+ * Palier interrogé à chaque emplacement de recherche, répété sur toute la
+ * longueur de la rotation : deux tiers Afrique, un sixième diaspora, un
+ * sixième international. Fixe la priorité éditoriale de façon structurelle
+ * — un cycle de trois recherches (SEARCHES_PER_CYCLE) n'échantillonne pas
+ * forcément les trois paliers d'un coup, mais la couverture converge vers ce
+ * ratio au fil des cycles, exactement comme la couverture des villes
+ * elles-mêmes émerge sur plusieurs cycles et non sur un seul.
+ */
+const TIER_SEQUENCE: readonly GeographicPriority[] = ["AFRICA", "AFRICA", "AFRO_DIASPORA", "AFRICA", "AFRICA", "INTERNATIONAL"];
 
 /**
  * Les angles de recherche sont ancrés sur les institutions, pas sur le
@@ -61,6 +68,24 @@ const EVENT_TYPES = [
   "prix, distinctions et remises de récompenses en création",
   "festivals de design, d'architecture et de photographie",
   "performances, scénographies et créations dans les institutions culturelles",
+];
+
+/**
+ * Angles dédiés aux villes de diaspora (Paris, New York, Rio, Londres…).
+ *
+ * Une requête générique — « expositions dans les musées à New York » — n'y
+ * ramène que de l'art contemporain sans rapport avec l'Afrique ou ses
+ * diasporas : la ville seule n'oriente pas la recherche. Il faut nommer le
+ * lien recherché dans la requête elle-même, à charge ensuite pour verify.ts
+ * de confirmer ou d'infirmer ce lien sur la page réellement lue — jamais
+ * déduit de l'apparence de qui que ce soit (voir classifyGeographicPriority).
+ */
+const DIASPORA_EVENT_TYPES = [
+  "expositions d'artistes africains ou afro-descendants dans les musées et galeries",
+  "événements culturels de la diaspora africaine et afro-caribéenne",
+  "expositions et festivals sur la culture afro-brésilienne ou afro-caribéenne",
+  "défilés et présentations de créateurs de mode africains ou afro-descendants",
+  "conférences, talks et rencontres sur la création africaine contemporaine à l'international",
 ];
 
 export interface DiscoveredPage {
@@ -85,8 +110,11 @@ export interface DiscoveredPage {
 export function planSearches(count: number, seed = Math.floor(Date.now() / 3_600_000)): string[] {
   const plans: string[] = [];
   for (let i = 0; i < count; i++) {
-    const city = CITIES[(seed + i * 7) % CITIES.length]!;
-    const type = EVENT_TYPES[(seed + i * 3) % EVENT_TYPES.length]!;
+    const tier = TIER_SEQUENCE[(seed + i) % TIER_SEQUENCE.length]!;
+    const cities = tier === "AFRICA" ? AFRICA_CITY_LIST : tier === "AFRO_DIASPORA" ? DIASPORA_CITY_LIST : INTERNATIONAL_CITY_LIST;
+    const types = tier === "AFRO_DIASPORA" ? DIASPORA_EVENT_TYPES : EVENT_TYPES;
+    const city = cities[(seed + i * 7) % cities.length]!;
+    const type = types[(seed + i * 3) % types.length]!;
     plans.push(`${type} à ${city}`);
   }
   return plans;

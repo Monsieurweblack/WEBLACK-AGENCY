@@ -762,12 +762,22 @@ const AGENDA_PROJECTION = `{
   _id, slug, eventName, eventType, discipline, artistOrCreator, institution,
   startDate, endDate, time, venue, city, country, organizer,
   disciplineEn, countryEn, descriptionFr, descriptionEn, officialUrl, sourceUrls,
-  status, verificationStatus, lastVerifiedAt, editorialRelevance
+  status, verificationStatus, lastVerifiedAt, editorialRelevance, geographicPriority
 }`;
+
+/**
+ * Le filtre qui exclut structurellement ce qui n'a pas à être annoncé —
+ * expiré, annulé, reporté, en revue, non vérifié. `toPublicEvent`
+ * (agenda-public.ts) applique la même règle et reste la barrière qui fait
+ * foi ; celle-ci n'est qu'une seconde ligne, au niveau de la requête, pour
+ * qu'une erreur de ce module ne soit jamais la seule chose qui empêche un
+ * événement non éligible d'atteindre le site.
+ */
+const AGENDA_PUBLIC_FILTER = `_type == "event" && status in ["UPCOMING", "ONGOING"] && verificationStatus == "VERIFIED"`;
 
 /** Les événements à annoncer, du plus proche au plus lointain. */
 export async function getAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
-  const docs = await sanityClient.fetch(`*[_type == "event"] | order(startDate asc) ${AGENDA_PROJECTION}`);
+  const docs = await sanityClient.fetch(`*[${AGENDA_PUBLIC_FILTER}] | order(startDate asc) ${AGENDA_PROJECTION}`);
   const today = new Date().toISOString().slice(0, 10);
 
   const events: AgendaEventData[] = [];
@@ -798,7 +808,7 @@ export async function getAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
  * listes sont disjointes : un événement est soit en cours, soit à venir.
  */
 export async function getOngoingEvents(lang: Lang): Promise<AgendaEventData[]> {
-  const docs = await sanityClient.fetch(`*[_type == "event"] | order(startDate desc) ${AGENDA_PROJECTION}`);
+  const docs = await sanityClient.fetch(`*[${AGENDA_PUBLIC_FILTER}] | order(startDate desc) ${AGENDA_PROJECTION}`);
   const today = new Date().toISOString().slice(0, 10);
 
   const events: AgendaEventData[] = [];

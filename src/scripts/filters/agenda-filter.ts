@@ -36,6 +36,7 @@ export function initAgendaFilter() {
       ["discipline", "discipline"],
       ["city", "city"],
       ["country", "country"],
+      ["region", "region"],
     ] as const) {
       const selected = valueOf(name);
       if (selected !== "all" && event.dataset[key] !== selected) return false;

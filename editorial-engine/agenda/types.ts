@@ -1,4 +1,7 @@
 import type { WeblackTerritory } from "../generation/types.ts";
+import type { GeographicPriority } from "./geography.ts";
+
+export type { GeographicPriority } from "./geography.ts";
 
 /**
  * Structure interne de l'Agenda culturel.
@@ -23,8 +26,13 @@ export type EventStatus = "UPCOMING" | "ONGOING" | "EXPIRED";
  * `resolveKnownEvent` dans store.ts) ; son contenu vit désormais sous l'identité de l'autre.
  * Ne dit rien de l'événement lui-même — jamais confondu avec CANCELLED/GONE, qui portent un fait
  * lu sur la page. Volontairement exclue d'`isAgendaEligible` par le même filtre que REVIEW.
+ * POSTPONED — la page indique explicitement un report, sans (encore) de nouvelle date confirmée.
+ * Distincte de CANCELLED : l'événement aura lieu, juste pas quand annoncé. Distincte d'une simple
+ * mise à jour de date (voir mergeEvent) : ici la nouvelle date n'est PAS connue, seul le report
+ * l'est. Dès qu'une nouvelle date est confirmée sur la même page, l'événement redevient VERIFIED
+ * avec sa date à jour — la même entrée, jamais une seconde (voir §18 de la mission).
  */
-export type EventVerification = "VERIFIED" | "REVIEW" | "UNVERIFIED" | "CANCELLED" | "GONE" | "MERGED";
+export type EventVerification = "VERIFIED" | "REVIEW" | "UNVERIFIED" | "CANCELLED" | "GONE" | "MERGED" | "POSTPONED";
 
 /**
  * Le rang de la source, dans l'ordre de priorité de la mission. Il est
@@ -33,6 +41,26 @@ export type EventVerification = "VERIFIED" | "REVIEW" | "UNVERIFIED" | "CANCELLE
  * médias tenue à la main, qui vieillirait mal.
  */
 export type SourceRank = "OFFICIAL" | "INSTITUTION" | "ORGANIZER" | "ARTIST_BRAND" | "MEDIA" | "SECONDARY";
+
+/**
+ * Qui a la main sur cette entrée.
+ *
+ * AUTOMATED — le moteur écrit librement : découverte, re-vérification,
+ * fusion, expiration s'appliquent sans restriction (comportement historique,
+ * et valeur par défaut).
+ * EDITORIAL — un éditeur a explicitement repris la main dans le Studio. Le
+ * moteur continue de RECALCULER le statut temporel (un événement passé doit
+ * toujours sortir de l'Agenda, même sous contrôle éditorial — §17 de la
+ * mission ne souffre aucune exception) mais n'écrase plus aucun champ de
+ * contenu. Il peut proposer une mise à jour dans son log ; il ne l'applique
+ * pas.
+ * HYBRID — le moteur peut continuer à corriger les champs factuels qu'il
+ * vérifie (dates, statut, annulation, report) mais ne touche plus aux champs
+ * éditoriaux qu'un humain a corrigés (description, valeur éditoriale,
+ * territoire) : les deux responsabilités coexistent sur la même entrée sans
+ * que l'une écrase l'autre.
+ */
+export type ControlMode = "AUTOMATED" | "EDITORIAL" | "HYBRID";
 
 export interface AgendaEvent {
   /** Clé d'identité déterministe — deux annonces du même événement produisent la même. */
@@ -97,6 +125,28 @@ export interface AgendaEvent {
   descriptionFr: string;
   descriptionEn: string;
   editorialRelevance: number;
+  /**
+   * Le palier géographique de l'Agenda : Afrique, diaspora afro-descendante,
+   * ou reste du monde pertinent. Jugé sur ce que la page dit réellement d'un
+   * lien documenté avec l'Afrique ou ses diasporas — jamais déduit de la
+   * seule ville, et jamais de l'apparence physique de qui que ce soit (voir
+   * verify.ts, classifyGeographicPriority).
+   */
+  geographicPriority: GeographicPriority;
+  /** La phrase de la page qui établit ce lien — vide pour INTERNATIONAL, où aucun lien n'est à établir. */
+  geographicJustification: string;
+  /** Timezone IANA du lieu, déduite déterministiquement de la ville (voir geography.ts) — jamais d'UTC ou de la timezone du serveur par défaut. Vide si la ville n'est pas répertoriée : l'événement reste "date-only". */
+  timezone: string;
+  /** Qui a la main sur cette entrée — voir ControlMode. Par défaut AUTOMATED : comportement historique, inchangé pour toute entrée qu'un éditeur n'a jamais touchée. */
+  controlMode: ControlMode;
+  /**
+   * Renseignés uniquement lors d'un report confirmé (voir revalidateEvent) :
+   * la date qui était annoncée avant, pour qu'un relecteur puisse expliquer
+   * pourquoi l'événement affiche aujourd'hui une date différente de celle
+   * qu'un lecteur ou une source plus ancienne a pu connaître.
+   */
+  previousStartDate?: string;
+  previousEndDate?: string;
 }
 
 /**
@@ -149,10 +199,15 @@ export function isAgendaEligible(event: AgendaEvent, minRelevance = 70): boolean
  * disparu ou une donnée qui manque aboutissent tous au même résultat, il
  * n'est pas annoncé. Seuls UPCOMING et ONGOING paraissent.
  */
-export type PublishedStatus = EventStatus | "CANCELLED" | "REVIEW";
+export type PublishedStatus = EventStatus | "CANCELLED" | "POSTPONED" | "REVIEW";
 
 export function effectiveStatus(event: AgendaEvent): PublishedStatus {
   if (event.verificationStatus === "CANCELLED") return "CANCELLED";
+  // Distinct de REVIEW pour l'éditeur dans le Studio — l'un dit "en attente
+  // de décision humaine", l'autre "la source dit elle-même que la date
+  // annoncée n'est plus valable". Ni l'un ni l'autre ne paraît sur le site
+  // public : seuls UPCOMING et ONGOING y figurent.
+  if (event.verificationStatus === "POSTPONED") return "POSTPONED";
   if (event.verificationStatus !== "VERIFIED") return "REVIEW";
   if (event.missingFields.length > 0) return "REVIEW";
   return computeStatus(event.startDate, event.endDate);
@@ -167,4 +222,27 @@ export function computeStatus(startDate: string, endDate: string, now = new Date
   if (end < today) return "EXPIRED";
   if (start > today) return "UPCOMING";
   return "ONGOING";
+}
+
+/**
+ * Les trois questions temporelles que toute surface du site doit poser de
+ * la même façon — homepage, /agenda, WEBLACK NOW, sitemap, JSON-LD.
+ *
+ * Chacune délègue à `computeStatus`, seule fonction qui calcule réellement
+ * une position dans le temps : il n'existe qu'un seul calcul, ces trois-là
+ * ne sont que des noms d'usage dessus, pour qu'aucune surface n'ait de
+ * raison d'écrire sa propre comparaison de dates.
+ */
+export function isAgendaEventExpired(event: Pick<AgendaEvent, "startDate" | "endDate">, now = new Date()): boolean {
+  return computeStatus(event.startDate, event.endDate, now) === "EXPIRED";
+}
+
+export function isAgendaEventUpcoming(event: Pick<AgendaEvent, "startDate" | "endDate">, now = new Date()): boolean {
+  return computeStatus(event.startDate, event.endDate, now) === "UPCOMING";
+}
+
+/** "Actif" = publiquement annonçable en ce moment : à venir ou en cours. Ne dit rien de la vérification — voir isAgendaEligible pour la décision de publication complète. */
+export function isAgendaEventActive(event: Pick<AgendaEvent, "startDate" | "endDate">, now = new Date()): boolean {
+  const status = computeStatus(event.startDate, event.endDate, now);
+  return status === "UPCOMING" || status === "ONGOING";
 }

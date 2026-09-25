@@ -1,13 +1,23 @@
 import "./setup.ts";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStatus, effectiveStatus, isAgendaEligible, ESSENTIAL_FIELDS, type AgendaEvent } from "../agenda/types.ts";
-import { eventIdentity, mergeEvent, isStaleMissingFieldReview } from "../agenda/store.ts";
-import { rankSource, dateAppears, settleTerritory } from "../agenda/verify.ts";
+import {
+  computeStatus,
+  effectiveStatus,
+  isAgendaEligible,
+  isAgendaEventActive,
+  isAgendaEventUpcoming,
+  isAgendaEventExpired,
+  ESSENTIAL_FIELDS,
+  type AgendaEvent,
+} from "../agenda/types.ts";
+import { eventIdentity, mergeEvent, isStaleMissingFieldReview, applyControlMode, normalizeLegacyEvent } from "../agenda/store.ts";
+import { rankSource, dateAppears, settleTerritory, resolveGeographicPriority } from "../agenda/verify.ts";
 import { planSearches } from "../agenda/discover.ts";
+import { AFRICA_CITIES, AFRO_DIASPORA_CITIES, INTERNATIONAL_CITIES, timezoneForCity, cityPriorityHint } from "../agenda/geography.ts";
 import { refersToSameEvent } from "../agenda/resolve.ts";
 import { resolveKnownEvent, reconcileEventList } from "../agenda/runAgendaCycle.ts";
-import { eventSlug, toEventDocument, preserveSlug } from "../sanity/events.ts";
+import { eventSlug, toEventDocument, preserveSlug, applySanityControlMode, type ExistingEventDocument } from "../sanity/events.ts";
 
 function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
   const base: AgendaEvent = {
@@ -41,6 +51,10 @@ function event(overrides: Partial<AgendaEvent> = {}): AgendaEvent {
     descriptionFr: "Une exposition personnelle de Barthélémy Toguo à la Galerie Lelong.",
     descriptionEn: "A solo exhibition by Barthélémy Toguo at Galerie Lelong.",
     fieldSources: {},
+    geographicPriority: "INTERNATIONAL",
+    geographicJustification: "",
+    timezone: "Europe/Paris",
+    controlMode: "AUTOMATED",
     ...overrides,
   };
   // Comme en production : verifyEventPage part de la page qu'il vient de lire.
@@ -678,12 +692,43 @@ test("un événement encore jamais publié reçoit le slug déduit de son nom", 
 
 // --- Couverture géographique ----------------------------------------------
 
-test("la rotation couvre l'international, l'Europe et l'Afrique en premier", () => {
-  const plans = planSearches(40, 0);
-  const villes = ["Lomé", "Lagos", "Dakar", "Paris", "Londres", "New York", "Tokyo", "Dubaï"];
-  const couvertes = villes.filter((v) => plans.some((p) => p.includes(v)));
-  assert.ok(couvertes.length >= 6, `couverture trop étroite : ${couvertes.join(", ")}`);
-  assert.ok(plans.some((p) => p.includes("exposition")) || plans.some((p) => p.includes("festival")));
+test("la rotation couvre l'Afrique, la diaspora et l'international", () => {
+  const plans = planSearches(60, 0);
+  const afrique = Object.keys(AFRICA_CITIES).filter((v) => plans.some((p) => p.includes(v)));
+  const diaspora = Object.keys(AFRO_DIASPORA_CITIES).filter((v) => plans.some((p) => p.includes(v)));
+  const international = Object.keys(INTERNATIONAL_CITIES).filter((v) => plans.some((p) => p.includes(v)));
+  assert.ok(afrique.length >= 6, `couverture Afrique trop étroite : ${afrique.join(", ")}`);
+  assert.ok(diaspora.length >= 1, `aucune ville de diaspora interrogée`);
+  assert.ok(international.length >= 1, `aucune ville internationale interrogée`);
+});
+
+test("la rotation ne se limite pas aux six métropoles africaines les plus documentées", () => {
+  // La mission le dit explicitement : Lagos, Johannesburg, Dakar, Accra,
+  // Nairobi, Le Cap ne doivent pas monopoliser la découverte africaine —
+  // la diversité doit couvrir aussi l'Afrique du Nord, centrale et les
+  // capitales moins souvent citées.
+  const grandesMetropoles = new Set(["Lagos", "Johannesburg", "Dakar", "Accra", "Nairobi", "Le Cap"]);
+  const villes = new Set<string>();
+  for (let cycle = 0; cycle < 40; cycle++) {
+    for (const plan of planSearches(6, cycle)) {
+      const ville = plan.split(" à ")[1]!;
+      if (ville in AFRICA_CITIES) villes.add(ville);
+    }
+  }
+  const horsGrandesMetropoles = [...villes].filter((v) => !grandesMetropoles.has(v));
+  assert.ok(horsGrandesMetropoles.length >= 8, `couverture africaine trop concentrée : ${[...villes].join(", ")}`);
+});
+
+test("une requête de diaspora nomme explicitement le lien africain — la ville seule n'oriente pas la recherche", () => {
+  // "expositions dans les musées à New York" ne remonterait que de l'art
+  // contemporain générique : sans l'angle diaspora dans la requête
+  // elle-même, la ville ne suffit à rien orienter.
+  const plans = planSearches(80, 0);
+  const requetesDiaspora = plans.filter((p) => Object.keys(AFRO_DIASPORA_CITIES).some((v) => p.endsWith(`à ${v}`)));
+  assert.ok(requetesDiaspora.length > 0, "aucune requête de diaspora dans cet échantillon");
+  for (const requete of requetesDiaspora) {
+    assert.match(requete, /africain|afro-|afro/i, `requête de diaspora sans angle africain explicite : « ${requete} »`);
+  }
 });
 
 test("la rotation avance d'un cycle à l'autre au lieu de tirer au hasard", () => {
@@ -701,19 +746,260 @@ test("la rotation avance d'un cycle à l'autre au lieu de tirer au hasard", () =
   assert.ok(villes.size >= 20, `douze cycles ne couvrent que ${villes.size} ville(s)`);
 });
 
-test("l'Europe et l'Afrique dominent la liste interrogée", () => {
-  // Un choix éditorial assumé, qui porte sur ce qui est CHERCHÉ : il ne
-  // garantit à aucune région d'être publiée, la vérification reste la même
-  // pour tous.
-  const europeAfrique = ["Paris", "Londres", "Milan", "Berlin", "Anvers", "Lisbonne", "Lomé", "Lagos", "Dakar", "Le Cap", "Tunis", "Casablanca"];
-  const ailleurs = ["Tokyo", "Séoul", "New York", "Dubaï", "Montréal", "São Paulo"];
-
-  const villes: string[] = [];
-  for (let cycle = 0; cycle < 24; cycle++) {
-    for (const plan of planSearches(3, cycle)) villes.push(plan.split(" à ")[1]!);
+test("l'Afrique domine structurellement la liste interrogée, la diaspora avant le reste du monde", () => {
+  // WEBLACK AGENDA est un radar culturel africain et afro-diasporique avant
+  // d'être un agenda généraliste : la priorité Afrique → diaspora →
+  // international doit se lire dans ce qui est CHERCHÉ, pas seulement
+  // espérée "en moyenne". Elle ne garantit à aucune région d'être publiée,
+  // la vérification reste la même pour tous.
+  const tiers = { AFRICA: 0, AFRO_DIASPORA: 0, INTERNATIONAL: 0 } as Record<string, number>;
+  for (let cycle = 0; cycle < 60; cycle++) {
+    for (const plan of planSearches(6, cycle)) {
+      const ville = plan.split(" à ")[1]!;
+      if (ville in AFRICA_CITIES) tiers.AFRICA++;
+      else if (ville in AFRO_DIASPORA_CITIES) tiers.AFRO_DIASPORA++;
+      else if (ville in INTERNATIONAL_CITIES) tiers.INTERNATIONAL++;
+    }
   }
-  const proches = villes.filter((v) => europeAfrique.includes(v)).length;
-  const lointaines = villes.filter((v) => ailleurs.includes(v)).length;
-  assert.ok(proches > lointaines * 2, `Europe+Afrique ${proches} vs ailleurs ${lointaines}`);
-  assert.ok(lointaines > 0, "le reste du monde ne disparaît pas pour autant");
+  assert.ok(tiers.AFRICA! > tiers.AFRO_DIASPORA! + tiers.INTERNATIONAL!, `Afrique ${tiers.AFRICA} devrait dominer diaspora+international ${tiers.AFRO_DIASPORA! + tiers.INTERNATIONAL!}`);
+  assert.ok(tiers.AFRO_DIASPORA! > 0, "la diaspora ne disparaît pas pour autant");
+  assert.ok(tiers.INTERNATIONAL! > 0, "le reste du monde ne disparaît pas pour autant");
+});
+
+// --- Géographie : timezone et classification -------------------------------
+
+test("timezoneForCity renvoie l'IANA connu pour une ville répertoriée, jamais UTC ni une timezone serveur par défaut", () => {
+  assert.equal(timezoneForCity("Lagos"), "Africa/Lagos");
+  assert.equal(timezoneForCity("Tokyo"), "Asia/Tokyo");
+  assert.equal(timezoneForCity("Paris"), "Europe/Paris");
+});
+
+test("timezoneForCity ne fabrique rien pour une ville non répertoriée", () => {
+  assert.equal(timezoneForCity("Trifouillis-les-Oies"), "");
+  assert.equal(timezoneForCity(""), "");
+});
+
+test("cityPriorityHint classe une ville dans son palier, sans jamais rien décider d'un événement précis", () => {
+  assert.equal(cityPriorityHint("Lagos"), "AFRICA");
+  assert.equal(cityPriorityHint("Paris"), "AFRO_DIASPORA");
+  assert.equal(cityPriorityHint("Tokyo"), "INTERNATIONAL");
+  assert.equal(cityPriorityHint("Trifouillis-les-Oies"), undefined);
+});
+
+test("resolveGeographicPriority — AFRO_DIASPORA sans justification retombe sur INTERNATIONAL", () => {
+  // §12 de la mission : jamais déduit de l'apparence physique. Une
+  // classification que le modèle n'a pas su rattacher à un fait écrit dans
+  // la page n'est pas une classification vérifiée.
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "" }), "INTERNATIONAL");
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "   " }), "INTERNATIONAL");
+});
+
+test("resolveGeographicPriority — AFRO_DIASPORA avec justification écrite est retenue", () => {
+  assert.equal(
+    resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "L'artiste, née à Dakar, expose ses œuvres sur l'héritage wolof." }),
+    "AFRO_DIASPORA",
+  );
+});
+
+test("resolveGeographicPriority — AFRICA n'a besoin d'aucune justification, la géographie suffit", () => {
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRICA", geographicJustification: "" }), "AFRICA");
+});
+
+test("resolveGeographicPriority — INTERNATIONAL n'est jamais rehaussé", () => {
+  assert.equal(resolveGeographicPriority({ geographicPriority: "INTERNATIONAL", geographicJustification: "" }), "INTERNATIONAL");
+});
+
+// --- Report (POSTPONED) -----------------------------------------------------
+
+test("un événement reporté sans nouvelle date passe en POSTPONED, distinct de CANCELLED et de REVIEW", () => {
+  const reporte = event({ verificationStatus: "POSTPONED", note: "La page indique un report, sans nouvelle date confirmée." });
+  assert.equal(effectiveStatus(reporte), "POSTPONED");
+  assert.equal(isAgendaEligible(reporte), false, "un report n'est jamais publiable tant qu'aucune nouvelle date n'est confirmée");
+});
+
+test("un report avec nouvelle date confirmée est une mise à jour normale, pas un POSTPONED", () => {
+  // Couvert par verify.ts : "postponed" ne se coche que si la page NE donne
+  // PAS de nouvelle date. Ici, côté types, on vérifie seulement qu'un
+  // événement VERIFIED avec une date à jour n'est pas traité comme reporté.
+  const reprogramme = event({ verificationStatus: "VERIFIED", startDate: "2026-11-15" });
+  assert.equal(effectiveStatus(reprogramme), computeStatus(reprogramme.startDate, reprogramme.endDate));
+});
+
+// --- Fonctions temporelles centrales ---------------------------------------
+//
+// isAgendaEventActive/Upcoming/Expired sont les noms d'usage que toute
+// surface du site (homepage, /agenda, WEBLACK NOW, sitemap, JSON-LD) doit
+// interroger — elles ne font que déléguer à computeStatus, seul calcul réel.
+
+test("isAgendaEventExpired / isAgendaEventUpcoming / isAgendaEventActive délèguent au même calcul que computeStatus", () => {
+  const now = new Date("2026-09-24T00:00:00.000Z");
+  const passe = { startDate: "2026-01-01", endDate: "2026-01-05" };
+  const futur = { startDate: "2026-12-01", endDate: "2026-12-05" };
+  const enCours = { startDate: "2026-09-20", endDate: "2026-09-30" };
+
+  assert.equal(isAgendaEventExpired(passe, now), true);
+  assert.equal(isAgendaEventUpcoming(passe, now), false);
+  assert.equal(isAgendaEventActive(passe, now), false);
+
+  assert.equal(isAgendaEventExpired(futur, now), false);
+  assert.equal(isAgendaEventUpcoming(futur, now), true);
+  assert.equal(isAgendaEventActive(futur, now), true);
+
+  assert.equal(isAgendaEventExpired(enCours, now), false);
+  assert.equal(isAgendaEventUpcoming(enCours, now), false);
+  assert.equal(isAgendaEventActive(enCours, now), true, "en cours = actif, même si pas 'à venir'");
+});
+
+// --- Contrôle manuel (AUTOMATED / EDITORIAL / HYBRID) -----------------------
+
+test("applyControlMode — AUTOMATED laisse passer le recalcul du moteur sans restriction", () => {
+  const existant = event({ controlMode: "AUTOMATED", eventName: "Ancien nom" });
+  const frais = event({ controlMode: "AUTOMATED", eventName: "Nom mis à jour par le moteur" });
+  const resultat = applyControlMode(existant, frais);
+  assert.equal(resultat.eventName, "Nom mis à jour par le moteur");
+});
+
+test("applyControlMode — EDITORIAL fige tout le contenu, ne recalcule que le statut temporel", () => {
+  const existant = event({
+    controlMode: "EDITORIAL",
+    eventName: "Titre corrigé à la main",
+    startDate: "2020-01-01",
+    endDate: "2020-01-05",
+    status: "UPCOMING", // volontairement périmé, pour vérifier que le recalcul a bien lieu
+  });
+  const frais = event({ controlMode: "AUTOMATED", eventName: "Le moteur voudrait réécrire ceci", startDate: "2020-01-01", endDate: "2020-01-05" });
+  const resultat = applyControlMode(existant, frais);
+  assert.equal(resultat.eventName, "Titre corrigé à la main", "le contenu éditorial n'est jamais écrasé");
+  assert.equal(resultat.controlMode, "EDITORIAL", "le mode lui-même reste sous contrôle éditorial");
+  assert.equal(resultat.status, "EXPIRED", "le statut temporel, lui, continue d'être recalculé — §17 ne souffre aucune exception");
+});
+
+test("applyControlMode — HYBRID reprend le factuel du moteur, garde l'éditorial de l'existant", () => {
+  const existant = event({
+    controlMode: "HYBRID",
+    eventName: "Titre corrigé à la main",
+    editorialValue: "Valeur éditoriale décidée par un humain",
+    startDate: "2026-09-10",
+    endDate: "2026-09-20",
+  });
+  const frais = event({
+    controlMode: "AUTOMATED",
+    eventName: "Nom lu sur la page",
+    editorialValue: "Valeur que le moteur proposerait",
+    startDate: "2026-10-15", // report confirmé par la page officielle
+    endDate: "2026-10-25",
+    verificationStatus: "VERIFIED",
+  });
+  const resultat = applyControlMode(existant, frais);
+  assert.equal(resultat.eventName, "Titre corrigé à la main", "l'éditorial reste celui de l'existant");
+  assert.equal(resultat.editorialValue, "Valeur éditoriale décidée par un humain");
+  assert.equal(resultat.startDate, "2026-10-15", "le factuel — ici un report confirmé — vient bien de la fraîche lecture");
+  assert.equal(resultat.controlMode, "HYBRID", "le mode ne redevient jamais AUTOMATED de son propre chef");
+});
+
+test("applyControlMode — une entrée sans controlMode (stock antérieur à ce champ) se comporte comme AUTOMATED", () => {
+  const existant = event({ eventName: "Ancien nom" });
+  delete (existant as Partial<AgendaEvent>).controlMode;
+  const frais = event({ eventName: "Nom mis à jour" });
+  const resultat = applyControlMode(existant, frais);
+  assert.equal(resultat.eventName, "Nom mis à jour");
+});
+
+// --- applySanityControlMode — la même protection côté document Sanity -----
+//
+// C'est le pendant réel d'applyControlMode : le stock local du moteur n'a
+// aucune vue sur une modification faite directement dans le Studio, donc
+// c'est CE module — celui qui écrit vraiment dans Sanity — qui doit lire le
+// controlMode déjà posé sur le document avant d'écraser quoi que ce soit.
+
+function existingDoc(overrides: Partial<ExistingEventDocument> = {}): ExistingEventDocument {
+  return {
+    _id: "event-editorial-engine-abc",
+    slug: { current: "un-evenement-2026-09-10" },
+    controlMode: "AUTOMATED",
+    startDate: "2026-09-10",
+    endDate: "2026-10-10",
+    eventName: "Nom déjà en ligne",
+    editorialValue: "Valeur déjà en ligne",
+    ...overrides,
+  };
+}
+
+test("applySanityControlMode — AUTOMATED ou absent (documents antérieurs au champ) écrit le frais tel quel", () => {
+  const fresh = { eventName: "Nom recalculé", status: "UPCOMING" };
+  assert.deepEqual(applySanityControlMode(existingDoc({ controlMode: "AUTOMATED" }), fresh), fresh);
+  assert.deepEqual(applySanityControlMode(existingDoc({ controlMode: undefined }), fresh), fresh);
+});
+
+test("applySanityControlMode — EDITORIAL n'écrit que le statut recalculé depuis les dates déjà dans Sanity", () => {
+  const fresh = { eventName: "Le moteur voudrait réécrire ceci", status: "REVIEW" };
+  const resultat = applySanityControlMode(existingDoc({ controlMode: "EDITORIAL", startDate: "2020-01-01", endDate: "2020-01-05" }), fresh);
+  assert.equal("eventName" in resultat, false, "aucun champ de contenu n'est écrit");
+  assert.equal(resultat.status, "EXPIRED", "le statut est bien recalculé, depuis les dates DANS SANITY");
+});
+
+test("applySanityControlMode — HYBRID reprend l'éditorial déjà dans Sanity, écrit le factuel du frais", () => {
+  const fresh = { eventName: "Nom lu sur la page", startDate: "2026-10-15", status: "UPCOMING", editorialValue: "Valeur que le moteur proposerait" };
+  const resultat = applySanityControlMode(existingDoc({ controlMode: "HYBRID", eventName: "Nom corrigé par un éditeur", editorialValue: "Valeur corrigée par un éditeur" }), fresh);
+  assert.equal(resultat.eventName, "Nom corrigé par un éditeur", "l'éditorial vient de ce qui est déjà dans Sanity");
+  assert.equal(resultat.editorialValue, "Valeur corrigée par un éditeur");
+  assert.equal(resultat.startDate, "2026-10-15", "le factuel vient bien de la fraîche écriture");
+  assert.equal(resultat.status, "UPCOMING");
+});
+
+test("applySanityControlMode — HYBRID ne fabrique pas un champ éditorial que Sanity n'a jamais eu", () => {
+  const fresh = { eventName: "Nom lu sur la page", institution: "Institution lue sur la page" };
+  const resultat = applySanityControlMode(existingDoc({ controlMode: "HYBRID", institution: undefined }), fresh);
+  assert.equal(resultat.institution, "Institution lue sur la page", "rien à préserver côté Sanity : le frais s'applique pour ce champ précis");
+});
+
+test("toEventDocument écrit la priorité géographique et le mode de contrôle", () => {
+  const doc = toEventDocument(event({ geographicPriority: "AFRICA", geographicJustification: "", timezone: "Africa/Lagos", controlMode: "AUTOMATED", city: "Lagos" }));
+  assert.equal(doc.geographicPriority, "AFRICA");
+  assert.equal(doc.controlMode, "AUTOMATED");
+  assert.equal(doc.timezone, "Africa/Lagos");
+  assert.equal("geographicJustification" in doc, false, "une justification vide ne s'écrit pas, comme les autres champs optionnels");
+});
+
+test("toEventDocument écrit la justification quand le palier en porte une", () => {
+  const doc = toEventDocument(event({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "Artiste sénégalaise exposée à Paris." }));
+  assert.equal(doc.geographicJustification, "Artiste sénégalaise exposée à Paris.");
+});
+
+// --- normalizeLegacyEvent — régression sur bug réel observé en cycle réel --
+//
+// Le journal est append-only : il contient des lignes écrites avant
+// l'introduction de geographicPriority/timezone/controlMode. Sans
+// normalisation à la lecture, toEventDocument plantait sur `.trim()` d'un
+// timezone undefined dès le premier cycle réel exécuté après ce correctif —
+// observé sur la quasi-totalité du stock existant.
+
+test("normalizeLegacyEvent comble les champs absents d'une entrée écrite avant leur existence", () => {
+  const legacy = event({ city: "Lagos" });
+  delete (legacy as Partial<AgendaEvent>).geographicPriority;
+  delete (legacy as Partial<AgendaEvent>).geographicJustification;
+  delete (legacy as Partial<AgendaEvent>).timezone;
+  delete (legacy as Partial<AgendaEvent>).controlMode;
+
+  const normalise = normalizeLegacyEvent(legacy);
+  assert.equal(normalise.geographicPriority, "AFRICA", "la géographie de la ville, déjà vérifiée, suffit à ce palier");
+  assert.equal(normalise.geographicJustification, "");
+  assert.equal(normalise.timezone, "Africa/Lagos");
+  assert.equal(normalise.controlMode, "AUTOMATED");
+
+  // Ce qui a fait planter toEventDocument en conditions réelles : un
+  // timezone manquant faisait échouer .trim().
+  assert.doesNotThrow(() => toEventDocument(normalise));
+});
+
+test("normalizeLegacyEvent ne suppose jamais AFRO_DIASPORA depuis la seule ville d'une entrée ancienne", () => {
+  const legacy = event({ city: "Paris" }); // ville de diaspora, mais sans justification écrite
+  delete (legacy as Partial<AgendaEvent>).geographicPriority;
+  const normalise = normalizeLegacyEvent(legacy);
+  assert.equal(normalise.geographicPriority, "INTERNATIONAL", "aucune justification héritée : jamais de lien africain supposé après coup");
+});
+
+test("normalizeLegacyEvent laisse une entrée déjà complète parfaitement intacte", () => {
+  const complet = event({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "Justification déjà établie.", timezone: "Europe/Paris", controlMode: "EDITORIAL" });
+  assert.deepEqual(normalizeLegacyEvent(complet), complet);
 });

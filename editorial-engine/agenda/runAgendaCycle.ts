@@ -4,7 +4,7 @@ import { stems } from "../validation/equivalences.ts";
 import { planSearches, discoverPages } from "./discover.ts";
 import { verifyEventPage, revalidateEvent } from "./verify.ts";
 import { resolveMissingFields, refersToSameEvent } from "./resolve.ts";
-import { currentEvents, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents, promoteResolvedReviews } from "./store.ts";
+import { currentEvents, mergeEvent, saveEvent, expirePastEvents, upcomingEvents, reviewEvents, promoteResolvedReviews, applyControlMode } from "./store.ts";
 import { isAgendaEligible, type AgendaEvent } from "./types.ts";
 import { publishEvent, reflectStatusChange, listPublishedEvents, withdrawEvent } from "../sanity/events.ts";
 
@@ -148,7 +148,7 @@ export function reconcileEventList(snapshot: AgendaEvent[]): { toSave: AgendaEve
         const match = resolveKnownEvent(candidate, [anchor]);
         if (!match) continue;
 
-        let winner = mergeEvent(anchor, { ...candidate, id: anchor.id });
+        let winner = applyControlMode(anchor, mergeEvent(anchor, { ...candidate, id: anchor.id }));
         // La même règle que resolveMissingFields : si l'entrée était en
         // revue FAUTE d'une donnée essentielle, et que la fusion vient de la
         // combler, la cause a disparu — elle redevient VERIFIED. On ne
@@ -286,7 +286,9 @@ export async function runAgendaCycle(dryRun: boolean, searchSeed?: number): Prom
         // été reconnu que par refersToSameEvent(), pour que le stock
         // converge sur une seule entrée au lieu d'empiler une deuxième
         // identité à chaque cycle qui redécouvre la même page incomplète.
-        if (!dryRun) saveEvent(mergeEvent(existing, { ...event, id: existing.id }));
+        // applyControlMode protège ce qu'un éditeur a repris en main : une
+        // redécouverte ne doit pas silencieusement écraser sa décision.
+        if (!dryRun) saveEvent(applyControlMode(existing, mergeEvent(existing, { ...event, id: existing.id })));
         result.eventsMerged++;
       } else {
         if (!dryRun) saveEvent(event);

@@ -3,8 +3,32 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { ENGINE_ROOT } from "../config/env.ts";
 import { computeStatus, type AgendaEvent } from "./types.ts";
+import { cityPriorityHint, timezoneForCity } from "./geography.ts";
 
 const STORE_FILE = path.join(ENGINE_ROOT, "logs", "agenda-events.jsonl");
+
+/**
+ * Complète les champs introduits après coup (geographicPriority, timezone,
+ * controlMode, geographicJustification) pour une ligne du journal écrite
+ * avant leur existence — le journal est append-only, il contient
+ * nécessairement de telles lignes.
+ *
+ * Même prudence que le backfill Sanity (voir backfill-geography.mjs) : la
+ * géographie de la ville est un fait déjà vérifié, AFRICA s'en déduit donc
+ * mécaniquement ; AFRO_DIASPORA exige une justification écrite qu'une
+ * entrée ancienne n'a jamais portée, elle retombe donc sur INTERNATIONAL
+ * plutôt que d'être supposée.
+ */
+export function normalizeLegacyEvent(raw: AgendaEvent): AgendaEvent {
+  if (raw.geographicPriority && raw.timezone !== undefined && raw.controlMode) return raw;
+  return {
+    ...raw,
+    geographicPriority: raw.geographicPriority ?? (cityPriorityHint(raw.city) === "AFRICA" ? "AFRICA" : "INTERNATIONAL"),
+    geographicJustification: raw.geographicJustification ?? "",
+    timezone: raw.timezone ?? timezoneForCity(raw.city),
+    controlMode: raw.controlMode ?? "AUTOMATED",
+  };
+}
 
 /**
  * Identité d'un événement, indépendante de qui l'annonce.
@@ -37,7 +61,7 @@ export function readAllEntries(): AgendaEvent[] {
     .readFileSync(STORE_FILE, "utf8")
     .split("\n")
     .filter(Boolean)
-    .map((line) => JSON.parse(line) as AgendaEvent);
+    .map((line) => normalizeLegacyEvent(JSON.parse(line) as AgendaEvent));
 }
 
 /** L'état courant de chaque événement, une fois les réécritures appliquées. */
@@ -117,6 +141,48 @@ export function mergeEvent(existing: AgendaEvent, candidate: AgendaEvent): Agend
     status: computeStatus(authoritative.startDate, authoritative.endDate || other.endDate),
     lastVerifiedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Champs qu'un éditeur peut corriger dans le Studio et que le moteur ne
+ * doit jamais réécrire silencieusement une fois l'entrée passée en HYBRID —
+ * en EDITORIAL, c'est la totalité du contenu qui est protégée (voir
+ * `applyControlMode`). Tout ce qui n'y figure pas est temporel ou tient à la
+ * vérification elle-même (dates, statut, sources, annulation) : c'est
+ * précisément ce que le moteur reste seul à établir, même sous contrôle
+ * éditorial, parce qu'un événement passé doit toujours cesser d'être
+ * annoncé (§17 — aucune exception).
+ */
+const EDITORIAL_PROTECTED_FIELDS = [
+  "eventName", "eventType", "discipline", "disciplineEn", "artistOrCreator", "institution",
+  "venue", "city", "country", "countryEn", "organizer",
+  "territory", "territoryHistory", "editorialValue", "descriptionFr", "descriptionEn", "editorialRelevance",
+  "geographicPriority", "geographicJustification", "timezone",
+] as const satisfies readonly (keyof AgendaEvent)[];
+
+/**
+ * Applique la protection éditoriale avant d'accepter ce que le moteur vient
+ * de recalculer pour une entrée déjà connue.
+ *
+ * AUTOMATED — comportement historique, `incoming` s'applique tel quel.
+ * EDITORIAL — rien du contenu ne bouge ; seul le statut temporel est
+ * recalculé, sur les dates telles qu'un éditeur a pu lui-même les corriger.
+ * HYBRID — le factuel et le temporel viennent de la fraîche lecture
+ * (`incoming`), l'éditorial reste celui que l'éditeur a arrêté.
+ *
+ * Dans les deux cas protégés, `controlMode` lui-même n'est jamais repris de
+ * `incoming` : une re-vérification ne remet jamais une entrée sous contrôle
+ * automatisé de son propre chef.
+ */
+export function applyControlMode(existing: AgendaEvent, incoming: AgendaEvent): AgendaEvent {
+  if (existing.controlMode === "AUTOMATED" || !existing.controlMode) return incoming;
+
+  if (existing.controlMode === "EDITORIAL") {
+    return { ...existing, status: computeStatus(existing.startDate, existing.endDate), lastVerifiedAt: new Date().toISOString() };
+  }
+
+  const preserved = Object.fromEntries(EDITORIAL_PROTECTED_FIELDS.map((field) => [field, existing[field]])) as Partial<AgendaEvent>;
+  return { ...incoming, ...preserved, controlMode: existing.controlMode };
 }
 
 /**

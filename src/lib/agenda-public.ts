@@ -13,7 +13,10 @@
  * de la prudence de qui l'a édité.
  */
 
-export type AgendaStatus = "UPCOMING" | "ONGOING" | "EXPIRED" | "CANCELLED" | "REVIEW";
+export type AgendaStatus = "UPCOMING" | "ONGOING" | "EXPIRED" | "CANCELLED" | "POSTPONED" | "REVIEW";
+
+/** Le palier géographique de l'Agenda — voir editorial-engine/agenda/geography.ts, seule source de la règle. */
+export type GeographicPriority = "AFRICA" | "AFRO_DIASPORA" | "INTERNATIONAL";
 
 /**
  * Les deux seuls statuts qu'un visiteur peut rencontrer.
@@ -47,6 +50,7 @@ export interface AgendaEventData {
   status: PublicAgendaStatus;
   lastVerifiedAt?: string;
   editorialRelevance?: number;
+  geographicPriority?: GeographicPriority;
 }
 
 const PUBLIC_STATUSES: PublicAgendaStatus[] = ["UPCOMING", "ONGOING"];
@@ -91,7 +95,14 @@ export function toPublicEvent(doc: Record<string, any>): AgendaEventData | undef
     status: doc.status,
     lastVerifiedAt: doc.lastVerifiedAt || undefined,
     editorialRelevance: typeof doc.editorialRelevance === "number" ? doc.editorialRelevance : undefined,
+    geographicPriority: isGeographicPriority(doc.geographicPriority) ? doc.geographicPriority : undefined,
   };
+}
+
+const GEOGRAPHIC_PRIORITIES: GeographicPriority[] = ["AFRICA", "AFRO_DIASPORA", "INTERNATIONAL"];
+
+function isGeographicPriority(value: unknown): value is GeographicPriority {
+  return typeof value === "string" && (GEOGRAPHIC_PRIORITIES as string[]).includes(value);
 }
 
 /**
@@ -135,15 +146,24 @@ export function isRunningNow(event: AgendaEventData, today: string): boolean {
 }
 
 /** Les valeurs réellement présentes dans la liste, pour ne proposer que des filtres qui filtrent quelque chose. */
-export function agendaFacets(events: AgendaEventData[]): { cities: string[]; countries: string[]; disciplines: string[] } {
+export function agendaFacets(
+  events: AgendaEventData[],
+): { cities: string[]; countries: string[]; disciplines: string[]; regions: GeographicPriority[] } {
   const collect = (pick: (event: AgendaEventData) => string | undefined) =>
     [...new Set(events.map(pick).filter((value): value is string => Boolean(value && value.trim())))].sort((a, b) =>
       a.localeCompare(b, "fr"),
     );
 
+  // Ordre de priorité éditoriale, pas alphabétique : Afrique d'abord,
+  // diaspora ensuite, international en dernier — le filtre reprend la
+  // hiérarchie du radar plutôt que de la dissoudre dans un tri neutre.
+  const present = new Set(events.map((event) => event.geographicPriority).filter(Boolean));
+  const regions = GEOGRAPHIC_PRIORITIES.filter((tier) => present.has(tier));
+
   return {
     cities: collect((event) => event.city),
     countries: collect((event) => event.country),
     disciplines: collect((event) => event.discipline),
+    regions,
   };
 }

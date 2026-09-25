@@ -1,6 +1,6 @@
 import { getSanityClient } from "./client.ts";
 import { log } from "../logs/logger.ts";
-import { isAgendaEligible, effectiveStatus, type AgendaEvent } from "../agenda/types.ts";
+import { isAgendaEligible, effectiveStatus, computeStatus, type AgendaEvent, type ControlMode } from "../agenda/types.ts";
 
 /**
  * Écrit l'Agenda vérifié dans Sanity, un document `event` par événement.
@@ -66,6 +66,10 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
     sources: Object.entries(event.fieldSources).map(([field, url]) => ({ _type: "object", _key: field, field, url })),
   };
 
+  doc.geographicPriority = event.geographicPriority ?? "INTERNATIONAL";
+  doc.controlMode = event.controlMode ?? "AUTOMATED";
+  if ((event.timezone ?? "").trim()) doc.timezone = event.timezone.trim();
+
   // Les champs que la source n'a pas donnés ne sont pas écrits : une chaîne
   // vide dans Sanity se lirait comme une donnée, alors qu'il n'y en a pas.
   const optional: [string, string][] = [
@@ -81,6 +85,7 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
     ["countryEn", event.countryEn ?? ""],
     ["descriptionFr", event.descriptionFr ?? ""],
     ["descriptionEn", event.descriptionEn ?? ""],
+    ["geographicJustification", event.geographicJustification ?? ""],
   ];
   for (const [key, value] of optional) {
     if (value.trim()) doc[key] = value.trim();
@@ -88,10 +93,65 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
   return doc;
 }
 
-/** Retrouve le document déjà écrit pour cet événement, s'il existe. */
-export async function findEventDocument(engineId: string): Promise<{ _id: string; slug?: { current?: string } } | null> {
+/**
+ * Champs qu'un éditeur peut corriger dans le Studio — mêmes noms, même
+ * portée que EDITORIAL_PROTECTED_FIELDS côté stock local (agenda/store.ts).
+ * Dupliqué plutôt qu'importé : ce module écrit des documents Sanity bruts
+ * (Record<string, unknown>), pas des AgendaEvent, et les deux listes n'ont
+ * aucune raison structurelle de rester le même objet TypeScript — seulement
+ * la même liste de noms, à maintenir en phase.
+ */
+const SANITY_EDITORIAL_PROTECTED_FIELDS = [
+  "eventName", "eventType", "discipline", "disciplineEn", "artistOrCreator", "institution",
+  "venue", "city", "country", "countryEn", "organizer",
+  "territory", "editorialValue", "descriptionFr", "descriptionEn", "editorialRelevance",
+  "geographicPriority", "geographicJustification", "timezone",
+] as const;
+
+export interface ExistingEventDocument {
+  _id: string;
+  slug?: { current?: string };
+  controlMode?: ControlMode;
+  startDate?: string;
+  endDate?: string;
+  [field: string]: unknown;
+}
+
+/** Retrouve le document déjà écrit pour cet événement, s'il existe — avec tout ce qu'il faut pour respecter un contrôle éditorial déjà posé dans le Studio. */
+export async function findEventDocument(engineId: string): Promise<ExistingEventDocument | null> {
   const client = getSanityClient();
-  return client.fetch(`*[_type == "event" && engineId == $engineId][0]{ _id, slug }`, { engineId });
+  return client.fetch(
+    `*[_type == "event" && engineId == $engineId][0]{ _id, slug, controlMode, startDate, endDate, ${SANITY_EDITORIAL_PROTECTED_FIELDS.join(", ")} }`,
+    { engineId },
+  );
+}
+
+/**
+ * Décide ce qui part réellement en écriture, selon ce qu'un éditeur a posé
+ * DANS SANITY — pas dans le stock local du moteur, qui n'a aucune vue sur
+ * une modification faite directement dans le Studio. C'est le pendant, côté
+ * Sanity, d'`applyControlMode` (agenda/store.ts) : même principe, sur la
+ * forme de document que ce module manipule.
+ *
+ * AUTOMATED (ou absent — documents antérieurs à ce champ) : `fresh` s'écrit
+ * tel quel, comportement historique inchangé.
+ * EDITORIAL : rien du contenu ne part ; seul `status` est recalculé depuis
+ * les dates ACTUELLEMENT dans Sanity (qu'un éditeur a pu lui-même corrigées).
+ * HYBRID : le factuel de `fresh` s'écrit, l'éditorial déjà posé dans Sanity
+ * est repris tel quel par-dessus.
+ */
+export function applySanityControlMode(existing: ExistingEventDocument, fresh: Record<string, unknown>): Record<string, unknown> {
+  const controlMode = existing.controlMode;
+  if (!controlMode || controlMode === "AUTOMATED") return fresh;
+
+  if (controlMode === "EDITORIAL") {
+    return { status: computeStatus(existing.startDate ?? "", existing.endDate ?? ""), lastVerifiedAt: new Date().toISOString() };
+  }
+
+  const preserved = Object.fromEntries(
+    SANITY_EDITORIAL_PROTECTED_FIELDS.filter((field) => existing[field] !== undefined).map((field) => [field, existing[field]]),
+  );
+  return { ...fresh, ...preserved };
 }
 
 /**
@@ -127,8 +187,13 @@ export async function publishEvent(event: AgendaEvent): Promise<EventPublication
   const doc = toEventDocument(event);
 
   if (existing) {
-    log("SANITY", `Agenda — mise à jour ${existing._id} : ${event.eventName}`);
-    await client.patch(existing._id).set(preserveSlug(doc, existing.slug?.current)).commit();
+    const toWrite = applySanityControlMode(existing, preserveSlug(doc, existing.slug?.current));
+    if (existing.controlMode === "EDITORIAL") {
+      log("SANITY", `Agenda — ${existing._id} sous contrôle éditorial : seul le statut temporel est recalculé (${event.eventName})`);
+    } else {
+      log("SANITY", `Agenda — mise à jour ${existing._id} : ${event.eventName}`);
+    }
+    await client.patch(existing._id).set(toWrite).commit();
     return { documentId: existing._id, created: false };
   }
 
