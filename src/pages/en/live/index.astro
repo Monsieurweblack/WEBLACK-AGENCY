@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import LivePlayer from "../../../components/sections/LivePlayer.astro";
+import CtaContact from "../../../components/sections/CtaContact.astro";
+import { useTranslations, localizedPath, type TranslationMap } from "../../../i18n/utils";
+import { getLiveEntries, primaryLive, archiveLives } from "../../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+const entries = await getLiveEntries(lang);
+const liveEntry = primaryLive(entries);
+const hasArchive = archiveLives(entries).length > 0;
+const isOffline = !liveEntry;
+
+const translations: TranslationMap = { fr: localizedPath("fr", "/live/") };
+---
+
+<BaseLayout lang={lang} title={t("live.hero.title")} description={t("live.seo.description")} translations={translations}>
+  {
+    isOffline ? (
+      <section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+        <div class="mx-auto max-w-(--container-content)" data-reveal>
+          <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("live.hero.eyebrow")}</p>
+          <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+            {t("live.hero.title")}
+          </h1>
+          <p class="font-display mt-4 max-w-xl text-balance text-xl text-(--color-paper)/70">
+            {t("live.hero.lead")}
+          </p>
+          <p class="mt-12 text-(--color-paper)/60">{t("live.empty")}</p>
+        </div>
+      </section>
+    ) : (
+      <LivePlayer lang={lang} live={liveEntry!} />
+    )
+  }
+
+  {
+    hasArchive && (
+      <section class="border-t border-(--color-line) bg-(--color-ink) px-6 py-16 md:px-10">
+        <div class="mx-auto max-w-(--container-content)" data-reveal>
+          <a
+            href={localizedPath(lang, "/live/archive/")}
+            class="label-tracked inline-flex items-center gap-2 text-(--color-paper)/70 transition-colors hover:text-(--color-gold)"
+          >
+            {t("live.archive.cta")} &rarr;
+          </a>
+        </div>
+      </section>
+    )
+  }
+
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

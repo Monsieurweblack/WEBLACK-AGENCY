@@ -1,93 +1,171 @@
 ---
-import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 import { intlTagFor } from "../../i18n/locales";
-import type { LiveData } from "../../lib/content";
+import RemoteImage from "../media/RemoteImage.astro";
+import type { LivePublicData } from "../../lib/live-public";
 
 interface Props {
   lang: Lang;
-  event: LiveData;
+  live: LivePublicData;
+  /** Détail (Phase 9) : affiche le fil vers l'événement Agenda et le partage. Sur /live elle-même, cette même donnée reste utile mais le lien "voir la fiche" n'a pas de sens vers soi-même. */
+  isDetailPage?: boolean;
 }
 
-const { lang, event } = Astro.props;
+const { lang, live, isDetailPage = false } = Astro.props;
 const t = useTranslations(lang);
-const { status, youtubeVideoId, showChat, date: scheduledStart } = event;
-const title = event.title;
-const description = event.description;
 
+// L'état vient uniquement de content.ts (toPublicLive), qui l'a déjà calculé
+// avec le vrai controlMode/manualStatus du document — jamais recalculé ici.
+const publicState = live.state;
+
+// Le script client ne rejoue le calcul en direct que pour une entrée
+// AUTOMATED/HYBRID dans un état qui peut réellement changer avec le temps —
+// un live EDITORIAL figé sur REPLAY, ou un live déjà REPLAY/ARCHIVED/
+// CANCELLED, n'a besoin d'aucun recalcul : l'affichage reste statique.
+const isTimeSensitive = (publicState === "SCHEDULED" || publicState === "PRELIVE" || publicState === "ON_AIR" || publicState === "ENDING") && live.controlMode !== "EDITORIAL";
+
+const detailHref = localizedPath(lang, `/live/${live.slug}/`);
+const eventHref = live.eventSlug ? localizedPath(lang, `/agenda/${live.eventSlug}/`) : undefined;
+const icsHref = `${localizedPath(lang, `/live/${live.slug}/`)}calendar.ics`;
+
+const playerUrl = `https://www.youtube-nocookie.com/embed/${live.youtubeVideoId}?enablejsapi=1`;
 const embedDomain = Astro.site ? new URL(Astro.site).hostname : Astro.url.hostname;
-const playerUrl = `https://www.youtube-nocookie.com/embed/${youtubeVideoId}`;
-const chatUrl = `https://www.youtube.com/live_chat?v=${youtubeVideoId}&embed_domain=${embedDomain}`;
+const chatUrl = `https://www.youtube.com/live_chat?v=${live.youtubeVideoId}&embed_domain=${embedDomain}`;
 
-const statusLabel = t(`live.status.${status}` as UiKey);
-const showPlayer = status === "live" || status === "replay";
-const showChatPanel = status === "live" && showChat;
-const scheduledDate = scheduledStart ? new Date(scheduledStart) : null;
-const dateFormatter = new Intl.DateTimeFormat(intlTagFor(lang), {
-  dateStyle: "long",
-  timeStyle: "short",
-});
+const scheduledDate = live.scheduledStart ? new Date(live.scheduledStart) : null;
+const dateFormatter = live.timezone
+  ? new Intl.DateTimeFormat(intlTagFor(lang), { dateStyle: "long", timeStyle: "short", timeZone: live.timezone })
+  : new Intl.DateTimeFormat(intlTagFor(lang), { dateStyle: "long", timeStyle: "short" });
+
+const showCountdown = publicState === "SCHEDULED" || publicState === "PRELIVE";
+const showPlayer = publicState === "ON_AIR" || publicState === "ENDING" || publicState === "REPLAY";
+const showChatPanel = (publicState === "ON_AIR" || publicState === "ENDING") && live.chatEnabled;
+
+const stateLabel = t(`live.status.${publicState}` as UiKey);
 ---
 
-<section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">
-  <div class="mx-auto max-w-(--container-content)">
-    <div data-reveal>
+<section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32" data-reveal>
+  <div
+    class="mx-auto max-w-(--container-content)"
+    {...(isTimeSensitive
+      ? {
+          "data-live-widget": "",
+          "data-control-mode": live.controlMode,
+          "data-manual-status": live.manualStatus,
+          "data-scheduled-start": live.scheduledStart,
+          "data-scheduled-end": live.scheduledEnd,
+          "data-youtube-video-id": live.youtubeVideoId,
+          "data-replay-enabled": String(live.replayEnabled),
+          "data-title": live.title,
+          "data-label-starting": t("live.status.PRELIVE"),
+          "data-label-live": t("live.status.ON_AIR"),
+          "data-label-ending": t("live.status.ENDING"),
+          "data-label-replay-soon": t("live.status.REPLAY"),
+          "data-label-day": t("live.countdown.day"),
+          "data-label-hour": t("live.countdown.hour"),
+          "data-label-minute": t("live.countdown.minute"),
+          "data-label-second": t("live.countdown.second"),
+        }
+      : {})}
+  >
+    <p class="sr-only" role="status" aria-live="polite" data-live-announce></p>
+
+    <div>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("live.hero.eyebrow")}</p>
       <div class="mt-4 flex flex-wrap items-center gap-4">
-        <span class="label-tracked border border-(--color-line) px-3 py-1.5 text-(--color-paper)">
-          {statusLabel}
+        <span
+          class:list={["label-tracked border border-(--color-line) px-3 py-1.5 text-(--color-paper)", publicState === "ON_AIR" && "live-on-air-badge"]}
+          data-live-status-label
+        >
+          {publicState === "ON_AIR" && <span class="live-on-air-dot" aria-hidden="true" />}
+          {stateLabel}
         </span>
         {
-          status === "upcoming" && scheduledDate && (
+          showCountdown && scheduledDate && (
             <span class="text-sm text-(--color-paper)/60">
               {dateFormatter.format(scheduledDate)}
+              {live.timezone && ` (${live.timezone})`}
               {" · "}
               <span class="text-(--color-gold)">{t("live.countdown.label")}</span>
               {" "}
-              <span
-                data-countdown
-                data-countdown-target={scheduledDate.toISOString()}
-                data-label-day={t("live.countdown.day")}
-                data-label-hour={t("live.countdown.hour")}
-                data-label-minute={t("live.countdown.minute")}
-              />
+              <span class="tabular-nums" data-live-countdown />
             </span>
           )
         }
       </div>
-      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">{title}</h1>
-      {description && <p class="mt-4 max-w-2xl text-(--color-paper)/70">{description}</p>}
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">{live.title}</h1>
+      {live.description && <p class="mt-4 max-w-2xl text-(--color-paper)/70">{live.description}</p>}
+      {
+        live.location && (
+          <p class="mt-2 text-sm text-(--color-paper)/50">{live.location}</p>
+        )
+      }
+      {
+        (eventHref || live.eventName) && (
+          <p class="mt-2 text-sm text-(--color-paper)/50">
+            {eventHref ? (
+              <a href={eventHref} class="border-b border-(--color-line) text-(--color-paper)/70 transition-colors hover:border-(--color-gold) hover:text-(--color-gold)">
+                {live.eventName}
+              </a>
+            ) : (
+              live.eventName
+            )}
+          </p>
+        )
+      }
+
+      <div class="mt-6 flex flex-wrap gap-4">
+        {showCountdown && live.scheduledStart && (
+          <a
+            href={icsHref}
+            class="label-tracked inline-flex items-center gap-2 border border-(--color-line) px-5 py-2.5 text-(--color-paper) transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          >
+            {t("live.cta.addToCalendar")}
+          </a>
+        )}
+        {!isDetailPage && (
+          <a
+            href={detailHref}
+            class="label-tracked inline-flex items-center gap-2 border border-(--color-line) px-5 py-2.5 text-(--color-paper) transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          >
+            {t("live.cta.share")}
+          </a>
+        )}
+      </div>
     </div>
+
+    {
+      !showPlayer && !showCountdown && live.coverImageUrl && (
+        <div class="mt-12 aspect-video w-full overflow-hidden bg-(--color-ink-soft)" data-reveal data-reveal-delay="0.1">
+          <RemoteImage src={live.coverImageUrl} alt={live.coverImageAlt ?? live.title} width={1280} height={720} class="h-full w-full" />
+        </div>
+      )
+    }
 
     {
       showPlayer && (
         <div
-          class:list={[
-            "mt-12 grid grid-cols-1 gap-6",
-            showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
-          ]}
+          class:list={["mt-12 grid grid-cols-1 gap-6", showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8"]}
           data-reveal
           data-reveal-delay="0.1"
         >
           <div class="aspect-video w-full overflow-hidden bg-(--color-ink-soft)">
             <iframe
+              data-live-player-frame
               src={playerUrl}
-              title={title}
+              title={live.title}
               class="h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowfullscreen
               loading="lazy"
             />
+            <div data-live-player-mount hidden class="h-full w-full" />
           </div>
           {showChatPanel ? (
             <div class="hidden max-h-[640px] overflow-hidden border border-(--color-line) bg-(--color-ink-soft) lg:block">
-              <iframe
-                src={chatUrl}
-                title={t("live.chat.title")}
-                class="h-full min-h-[480px] w-full"
-                loading="lazy"
-              />
+              <iframe src={chatUrl} title={t("live.chat.title")} class="h-full min-h-[480px] w-full" loading="lazy" />
             </div>
-          ) : status === "live" && !showChat ? (
+          ) : (publicState === "ON_AIR" || publicState === "ENDING") && !live.chatEnabled ? (
             <p class="text-sm text-(--color-paper)/50">{t("live.chat.unavailable")}</p>
           ) : null}
         </div>
@@ -97,6 +175,37 @@ const dateFormatter = new Intl.DateTimeFormat(intlTagFor(lang), {
 </section>
 
 <script>
-  import { initCountdown } from "../../scripts/video/countdown";
-  initCountdown();
+  import { initLiveExperience } from "../../scripts/video/live-experience";
+  initLiveExperience();
 </script>
+
+<style>
+  .live-on-air-badge {
+    border-color: var(--color-gold);
+  }
+  .live-on-air-dot {
+    display: inline-block;
+    width: 0.4rem;
+    height: 0.4rem;
+    margin-right: 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-gold);
+    vertical-align: middle;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .live-on-air-dot {
+      animation: live-player-pulse 1.8s ease-in-out infinite;
+    }
+  }
+  @keyframes live-player-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.35;
+      transform: scale(0.8);
+    }
+  }
+</style>

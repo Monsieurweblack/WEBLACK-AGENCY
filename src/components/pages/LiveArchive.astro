@@ -1,0 +1,106 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import { getLiveEntries, archiveLives, liveFacets } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const entries = await getLiveEntries(lang);
+const replays = archiveLives(entries);
+const facets = liveFacets(replays);
+
+const countLabel = replays.length === 1 ? "1" : `${replays.length}`;
+---
+
+<section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
+  <div class="mx-auto max-w-(--container-content)" data-reveal>
+    <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("live.archive.eyebrow")}</p>
+    <h1 class="font-display text-balance mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+      {t("live.archive.title")}
+    </h1>
+    <p class="label-tracked mt-8 text-(--color-paper)/40">{countLabel}</p>
+  </div>
+</section>
+
+<section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    {
+      replays.length > 0 && (
+        <form id="live-archive-filter" class="flex flex-wrap items-end gap-x-8 gap-y-5 border-y border-(--color-line) py-6" data-reveal>
+          <fieldset class="contents">
+            <legend class="sr-only">{t("live.archive.filter.legend")}</legend>
+
+            {facets.years.length > 1 && (
+              <label class="flex min-w-0 flex-col gap-2">
+                <span class="label-tracked text-(--color-paper)/40">{t("live.archive.filter.year")}</span>
+                <select name="year" class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none">
+                  <option value="all">{t("live.archive.filter.all")}</option>
+                  {facets.years.map((value) => (
+                    <option value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {facets.disciplines.length > 1 && (
+              <label class="flex min-w-0 flex-col gap-2">
+                <span class="label-tracked text-(--color-paper)/40">{t("live.archive.filter.discipline")}</span>
+                <select name="discipline" class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none">
+                  <option value="all">{t("live.archive.filter.all")}</option>
+                  {facets.disciplines.map((value) => (
+                    <option value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </fieldset>
+
+          <button
+            type="reset"
+            class="label-tracked ml-auto border-b border-transparent pb-2 text-(--color-paper)/50 transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          >
+            {t("live.archive.filter.reset")}
+          </button>
+        </form>
+      )
+    }
+
+    {
+      replays.length === 0 ? (
+        <p class="mt-14 text-(--color-paper)/60">{t("live.archive.empty")}</p>
+      ) : (
+        <ul id="live-archive-list" class="mt-4 m-0 list-none p-0">
+          {replays.map((live) => (
+            <li
+              class="border-t border-(--color-line)"
+              data-live-archive-item
+              data-year={live.scheduledStart?.slice(0, 4) ?? ""}
+              data-discipline={live.discipline ?? ""}
+            >
+              <a href={localizedPath(lang, `/live/${live.slug}/`)} class="group grid grid-cols-1 gap-x-8 gap-y-3 py-8 sm:grid-cols-[8rem_1fr]">
+                <p class="label-tracked text-(--color-gold)">
+                  {live.scheduledStart ? new Date(live.scheduledStart).getFullYear() : ""}
+                </p>
+                <div class="min-w-0">
+                  {live.discipline && <p class="label-tracked text-(--color-paper)/40">{live.discipline}</p>}
+                  <h2 class="font-display mt-2 text-2xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
+                    {live.title}
+                  </h2>
+                  {live.description && <p class="mt-2 max-w-2xl text-(--color-paper)/70">{live.description}</p>}
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    <p id="live-archive-empty" class="mt-14 text-(--color-paper)/60" hidden>
+      {t("live.archive.empty")}
+    </p>
+  </div>
+</section>

@@ -3,6 +3,7 @@ import { toHTML } from "@portabletext/to-html";
 import type { PortableTextBlock } from "@portabletext/types";
 import type { Lang } from "../i18n/utils";
 import { toPublicEvent, startsAfterPublication, isRunningNow, type AgendaEventData } from "./agenda-public";
+import { toPublicLive, type LivePublicData } from "./live-public";
 
 export const sanityClient: SanityClient = createClient({
   projectId: import.meta.env.SANITY_PROJECT_ID,
@@ -705,46 +706,63 @@ export async function getPartnerLogos(lang: Lang): Promise<PartnerLogoData[]> {
     .filter((p: PartnerLogoData | null): p is PartnerLogoData => p !== null);
 }
 
-// --- Live --------------------------------------------------------------------
+// --- Live ----------------------------------------------------------------
+//
+// L'état public (SCHEDULED/PRELIVE/ON_AIR/.../REPLAY) n'est pas lu depuis
+// Sanity : il est recalculé ici, au build, par src/lib/live-state.ts — la
+// même règle que l'Agenda applique déjà à ses propres statuts. Cette
+// fonction est la SEULE porte d'entrée vers les documents `live` ; aucune
+// page ne doit interroger Sanity directement pour ce type.
 
-export type LiveStatus = "upcoming" | "live" | "replay";
+export type { LiveState, ControlMode as LiveControlMode } from "./live-state";
+export type { LivePublicData } from "./live-public";
+export { primaryLive, archiveLives, liveFacets } from "./live-public";
 
-export interface LiveData {
-  id: string;
-  title: string;
-  description?: string;
-  eventName?: string;
-  date?: string;
-  coverImage?: EditorialImageData;
-  youtubeUrl?: string;
-  youtubeVideoId?: string;
-  status: LiveStatus;
-  showChat: boolean;
-  featured: boolean;
-  order?: number;
+const LIVE_PROJECTION = `{
+  _id, slug, titleFr, titleEn, descriptionFr, descriptionEn,
+  discipline, disciplineEn, location, eventName,
+  "relatedEventSlug": relatedEvent->slug.current,
+  "relatedEventName": relatedEvent->eventName,
+  coverImage, youtubeUrl, youtubeVideoId,
+  scheduledStart, scheduledEnd, timezone,
+  chatEnabled, replayEnabled, featured, order,
+  controlMode, manualStatus, visibility
+}`;
+
+/** Tous les documents `live` publics, dans l'état calculé au moment du build. */
+export async function getLiveEntries(lang: Lang): Promise<LivePublicData[]> {
+  const docs = await sanityClient.fetch(`*[_type == "live"] | order(order asc) ${LIVE_PROJECTION}`);
+  const now = new Date();
+  const entries: LivePublicData[] = [];
+  for (const doc of docs as any[]) {
+    const image = mapEditorialImage(doc.coverImage);
+    const entry = toPublicLive(
+      {
+        ...doc,
+        title: localized(lang, doc.titleFr, doc.titleEn),
+        description: localized(lang, doc.descriptionFr, doc.descriptionEn),
+        discipline: localized(lang, doc.discipline, doc.disciplineEn),
+        eventName: doc.relatedEventName ?? doc.eventName,
+        eventSlug: doc.relatedEventSlug,
+        coverImageUrl: image?.url,
+        coverImageAlt: image?.alt || undefined,
+      },
+      now,
+    );
+    if (entry) entries.push(entry);
+  }
+  return entries;
 }
 
-export async function getLiveEvents(lang: Lang): Promise<LiveData[]> {
-  const docs = await sanityClient.fetch(`*[_type == "live"] | order(order asc)`);
-  return docs.map((doc: any) => ({
-    id: doc._id,
-    title: localized(lang, doc.titleFr, doc.titleEn),
-    description: localized(lang, doc.descriptionFr, doc.descriptionEn) || undefined,
-    eventName: doc.eventName,
-    date: doc.date,
-    coverImage: mapEditorialImage(doc.coverImage),
-    youtubeUrl: doc.youtubeUrl,
-    youtubeVideoId: doc.youtubeVideoId,
-    status: doc.status,
-    showChat: doc.showChat ?? false,
-    featured: doc.featured ?? false,
-    order: doc.order,
-  }));
-}
-
-/** Picks which live entry to show: an actual "live" one first, else the featured one, else the first by order. Never infers "live" from a URL or date. */
-export function getPrimaryLive(entries: LiveData[]): LiveData | undefined {
-  return entries.find((e) => e.status === "live") ?? entries.find((e) => e.featured) ?? entries[0];
+/**
+ * La diffusion associée à un événement Agenda, s'il en existe une — pour le
+ * lien "Suivre en direct" / "Revoir" sur la page de l'événement (Phase 10).
+ * Passe par la même liste publique que getLiveEntries : une diffusion en
+ * brouillon reste invisible ici aussi, exactement comme sur /live.
+ */
+export async function getLiveForEvent(eventSlug: string, lang: Lang): Promise<LivePublicData | undefined> {
+  const entries = await getLiveEntries(lang);
+  return entries.find((live) => live.eventSlug === eventSlug);
 }
 
 // --- Agenda (type "event", écrit par le moteur éditorial) --------------------

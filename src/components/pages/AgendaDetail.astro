@@ -1,16 +1,24 @@
 ---
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { LOCALES } from "../../i18n/locales";
-import type { AgendaEventData } from "../../lib/content";
+import type { AgendaEventData, LivePublicData } from "../../lib/content";
 import { longDate, dateRange, placeLine, whoOf } from "../../lib/agenda-format";
 
 interface Props {
   lang: Lang;
   event: AgendaEventData;
+  /** Phase 10 : présente uniquement si une diffusion WEBLACK Live référence cet événement. */
+  relatedLive?: LivePublicData;
 }
 
-const { lang, event } = Astro.props;
+const { lang, event, relatedLive } = Astro.props;
 const t = useTranslations(lang);
+
+// Rien à regarder pour une diffusion annulée ou archivée sans replay — le
+// lien n'apparaît que lorsqu'il mène quelque part de réellement consultable.
+const showLiveCta = relatedLive && relatedLive.state !== "CANCELLED" && relatedLive.state !== "ARCHIVED";
+const liveHref = showLiveCta ? localizedPath(lang, `/live/${relatedLive!.slug}/`) : undefined;
+const liveCtaLabel = relatedLive?.state === "REPLAY" ? t("live.event.watchReplay") : t("live.event.watchLive");
 
 /**
  * Les données structurées ne décrivent que ce qui a été vérifié.
@@ -104,14 +112,26 @@ const facts: { label: string; value: string }[] = [
       }
     </dl>
 
-    <a
-      href={event.officialUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      class="label-tracked mt-14 inline-flex items-center gap-2 border border-(--color-gold) px-6 py-4 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-on-gold)"
-    >
-      {t("agenda.official")} &rarr;
-    </a>
+    <div class="mt-14 flex flex-wrap gap-4">
+      <a
+        href={event.officialUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="label-tracked inline-flex items-center gap-2 border border-(--color-gold) px-6 py-4 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-on-gold)"
+      >
+        {t("agenda.official")} &rarr;
+      </a>
+      {
+        showLiveCta && (
+          <a
+            href={liveHref}
+            class="label-tracked inline-flex items-center gap-2 border border-(--color-line) px-6 py-4 text-(--color-paper) transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          >
+            {liveCtaLabel} &rarr;
+          </a>
+        )
+      }
+    </div>
 
     <footer class="mt-16 border-t border-(--color-line) pt-8 text-sm text-(--color-paper)/40">
       {

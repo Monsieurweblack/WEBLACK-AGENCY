@@ -1,0 +1,19 @@
+---
+import LiveDetail from "../../components/pages/LiveDetail.astro";
+import { getLiveEntries } from "../../lib/content";
+
+/**
+ * Une page par diffusion, quel que soit son état — programmée, en direct,
+ * replay ou archivée : chacune mérite une URL permanente et partageable,
+ * pas seulement celle qu'affiche /live à l'instant du build.
+ */
+export async function getStaticPaths() {
+  const entries = await getLiveEntries("fr");
+  return entries.map((live) => ({ params: { slug: live.slug }, props: { live } }));
+}
+
+const lang = "fr" as const;
+const { live } = Astro.props;
+---
+
+<LiveDetail lang={lang} live={live} />

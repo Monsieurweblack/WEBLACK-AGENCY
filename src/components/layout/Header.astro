@@ -7,7 +7,7 @@ import SocialLinks from "./SocialLinks.astro";
 import SearchOverlay from "./SearchOverlay.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import { useTranslations, localizedPath, type Lang, type TranslationMap } from "../../i18n/utils";
-import { getLiveEvents, getPrimaryLive, type SiteSettingsData } from "../../lib/content";
+import { getLiveEntries, primaryLive, type SiteSettingsData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
@@ -17,7 +17,7 @@ interface Props {
 
 const { lang, translations, siteSettings } = Astro.props;
 const t = useTranslations(lang);
-const isOnAir = getPrimaryLive(await getLiveEvents(lang))?.status === "live";
+const isOnAir = primaryLive(await getLiveEntries(lang))?.state === "ON_AIR";
 
 const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 

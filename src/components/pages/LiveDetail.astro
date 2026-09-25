@@ -1,0 +1,63 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LivePlayer from "../sections/LivePlayer.astro";
+import CtaContact from "../sections/CtaContact.astro";
+import { useTranslations, localizedPath, type Lang, type TranslationMap } from "../../i18n/utils";
+import { LOCALES } from "../../i18n/locales";
+import type { LivePublicData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  live: LivePublicData;
+}
+
+const { lang, live } = Astro.props;
+const t = useTranslations(lang);
+
+const description = live.description ?? t("live.seo.detail.description");
+
+/**
+ * VideoObject + publication:BroadcastEvent — le balisage recommandé par
+ * Google pour un contenu de diffusion en direct/replay. Rien n'est déduit :
+ * la vignette vient de la couverture éditoriale si elle existe, sinon de
+ * la vignette YouTube publique (même vidéo, même droit d'usage que
+ * l'intégration elle-même) ; `isLiveBroadcast` reflète l'état RÉEL calculé,
+ * jamais une supposition sur l'heure seule.
+ */
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  name: live.title,
+  description,
+  thumbnailUrl: live.coverImageUrl ?? `https://i.ytimg.com/vi/${live.youtubeVideoId}/hqdefault.jpg`,
+  embedUrl: `https://www.youtube-nocookie.com/embed/${live.youtubeVideoId}`,
+  uploadDate: live.scheduledStart,
+  inLanguage: LOCALES[lang].hreflang,
+  ...(live.scheduledStart
+    ? {
+        publication: {
+          "@type": "BroadcastEvent",
+          isLiveBroadcast: live.state === "ON_AIR" || live.state === "ENDING",
+          startDate: live.scheduledStart,
+          ...(live.scheduledEnd ? { endDate: live.scheduledEnd } : {}),
+        },
+      }
+    : {}),
+};
+
+const translations: TranslationMap = {
+  [lang === "fr" ? "en" : "fr"]: localizedPath(lang === "fr" ? "en" : "fr", `/live/${live.slug}/`),
+} as TranslationMap;
+---
+
+<BaseLayout lang={lang} title={live.title} description={description} image={live.coverImageUrl} translations={translations}>
+  <LivePlayer lang={lang} live={live} isDetailPage />
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script type="application/ld+json" is:inline set:html={JSON.stringify(structuredData).replace(/</g, "\\u003c")} />
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

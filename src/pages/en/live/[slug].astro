@@ -1,0 +1,14 @@
+---
+import LiveDetail from "../../../components/pages/LiveDetail.astro";
+import { getLiveEntries } from "../../../lib/content";
+
+export async function getStaticPaths() {
+  const entries = await getLiveEntries("en");
+  return entries.map((live) => ({ params: { slug: live.slug }, props: { live } }));
+}
+
+const lang = "en" as const;
+const { live } = Astro.props;
+---
+
+<LiveDetail lang={lang} live={live} />

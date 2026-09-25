@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LiveArchive from "../../components/pages/LiveArchive.astro";
+import CtaContact from "../../components/sections/CtaContact.astro";
+import { useTranslations, localizedPath, type TranslationMap } from "../../i18n/utils";
+
+const lang = "fr" as const;
+const t = useTranslations(lang);
+const translations: TranslationMap = { en: localizedPath("en", "/live/archive/") };
+---
+
+<BaseLayout lang={lang} title={t("live.archive.title")} description={t("live.seo.description")} translations={translations}>
+  <LiveArchive lang={lang} />
+  <CtaContact lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  import { initLiveArchiveFilter } from "../../scripts/filters/live-archive-filter";
+  initScrollChoreography();
+  initLiveArchiveFilter();
+</script>
