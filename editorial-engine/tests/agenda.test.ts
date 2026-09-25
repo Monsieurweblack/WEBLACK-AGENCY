@@ -13,8 +13,9 @@ import {
 } from "../agenda/types.ts";
 import { eventIdentity, mergeEvent, isStaleMissingFieldReview, applyControlMode, normalizeLegacyEvent } from "../agenda/store.ts";
 import { rankSource, dateAppears, settleTerritory, resolveGeographicPriority } from "../agenda/verify.ts";
-import { planSearches } from "../agenda/discover.ts";
-import { AFRICA_CITIES, AFRO_DIASPORA_CITIES, INTERNATIONAL_CITIES, timezoneForCity, cityPriorityHint } from "../agenda/geography.ts";
+import { socialPlatform, isSocialUrl, socialAccountHandle, socialAccountMatches } from "../agenda/social.ts";
+import { planSearches, DIASPORA_EVENT_TYPES } from "../agenda/discover.ts";
+import { AFRICA_CITIES, AFRO_DIASPORA_CITIES, INTERNATIONAL_CITIES, timezoneForCity, cityPriorityHint, isAfricanCountry } from "../agenda/geography.ts";
 import { refersToSameEvent } from "../agenda/resolve.ts";
 import { resolveKnownEvent, reconcileEventList } from "../agenda/runAgendaCycle.ts";
 import { eventSlug, toEventDocument, preserveSlug, applySanityControlMode, type ExistingEventDocument } from "../sanity/events.ts";
@@ -722,9 +723,12 @@ test("la rotation ne se limite pas aux six métropoles africaines les plus docum
 test("une requête de diaspora nomme explicitement le lien africain — la ville seule n'oriente pas la recherche", () => {
   // "expositions dans les musées à New York" ne remonterait que de l'art
   // contemporain générique : sans l'angle diaspora dans la requête
-  // elle-même, la ville ne suffit à rien orienter.
-  const plans = planSearches(80, 0);
-  const requetesDiaspora = plans.filter((p) => Object.keys(AFRO_DIASPORA_CITIES).some((v) => p.endsWith(`à ${v}`)));
+  // elle-même, la ville ne suffit à rien orienter. Certaines villes (Rome,
+  // Milan, Dubaï…) apparaissent dans plusieurs paliers à la fois — c'est le
+  // TYPE de requête, jamais la ville, qui distingue un tirage diaspora d'un
+  // tirage international sur la même ville.
+  const plans = planSearches(200, 0);
+  const requetesDiaspora = plans.filter((p) => DIASPORA_EVENT_TYPES.some((type) => p.startsWith(type)));
   assert.ok(requetesDiaspora.length > 0, "aucune requête de diaspora dans cet échantillon");
   for (const requete of requetesDiaspora) {
     assert.match(requete, /africain|afro-|afro/i, `requête de diaspora sans angle africain explicite : « ${requete} »`);
@@ -786,27 +790,55 @@ test("cityPriorityHint classe une ville dans son palier, sans jamais rien décid
   assert.equal(cityPriorityHint("Trifouillis-les-Oies"), undefined);
 });
 
+test("isAfricanCountry reconnaît les 54 États africains, en français et en anglais, jamais au-delà", () => {
+  assert.equal(isAfricanCountry("Sénégal"), true);
+  assert.equal(isAfricanCountry("Senegal"), true);
+  assert.equal(isAfricanCountry("Nigeria"), true);
+  assert.equal(isAfricanCountry("South Africa"), true);
+  assert.equal(isAfricanCountry("Afrique du Sud"), true);
+  assert.equal(isAfricanCountry("France"), false);
+  assert.equal(isAfricanCountry(""), false);
+  assert.equal(isAfricanCountry("   "), false);
+});
+
 test("resolveGeographicPriority — AFRO_DIASPORA sans justification retombe sur INTERNATIONAL", () => {
   // §12 de la mission : jamais déduit de l'apparence physique. Une
   // classification que le modèle n'a pas su rattacher à un fait écrit dans
   // la page n'est pas une classification vérifiée.
-  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "" }), "INTERNATIONAL");
-  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "   " }), "INTERNATIONAL");
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "", city: "Paris", country: "France" }), "INTERNATIONAL");
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "   ", city: "Paris", country: "France" }), "INTERNATIONAL");
 });
 
 test("resolveGeographicPriority — AFRO_DIASPORA avec justification écrite est retenue", () => {
   assert.equal(
-    resolveGeographicPriority({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "L'artiste, née à Dakar, expose ses œuvres sur l'héritage wolof." }),
+    resolveGeographicPriority({
+      geographicPriority: "AFRO_DIASPORA",
+      geographicJustification: "L'artiste, née à Dakar, expose ses œuvres sur l'héritage wolof.",
+      city: "Paris",
+      country: "France",
+    }),
     "AFRO_DIASPORA",
   );
 });
 
-test("resolveGeographicPriority — AFRICA n'a besoin d'aucune justification, la géographie suffit", () => {
-  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRICA", geographicJustification: "" }), "AFRICA");
+test("resolveGeographicPriority — AFRICA confirmée par une ville africaine connue n'a besoin d'aucune justification", () => {
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRICA", geographicJustification: "", city: "Lagos", country: "Nigéria" }), "AFRICA");
+});
+
+test("resolveGeographicPriority — AFRICA confirmée par le pays même si la ville n'est pas répertoriée", () => {
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRICA", geographicJustification: "", city: "Ville inconnue", country: "Sénégal" }), "AFRICA");
+});
+
+test("resolveGeographicPriority — AFRICA non confirmée ni par la ville ni par le pays retombe sur INTERNATIONAL", () => {
+  // Cas réel observé en campagne de découverte : « Abstractions », une
+  // exposition de peinture abstraite dans une galerie parisienne sans
+  // aucun rapport avec l'Afrique, classée AFRICA par le modèle — sans
+  // ville africaine, sans pays africain, sans justification.
+  assert.equal(resolveGeographicPriority({ geographicPriority: "AFRICA", geographicJustification: "", city: "Paris", country: "France" }), "INTERNATIONAL");
 });
 
 test("resolveGeographicPriority — INTERNATIONAL n'est jamais rehaussé", () => {
-  assert.equal(resolveGeographicPriority({ geographicPriority: "INTERNATIONAL", geographicJustification: "" }), "INTERNATIONAL");
+  assert.equal(resolveGeographicPriority({ geographicPriority: "INTERNATIONAL", geographicJustification: "", city: "Paris", country: "France" }), "INTERNATIONAL");
 });
 
 // --- Report (POSTPONED) -----------------------------------------------------
@@ -1002,4 +1034,93 @@ test("normalizeLegacyEvent ne suppose jamais AFRO_DIASPORA depuis la seule ville
 test("normalizeLegacyEvent laisse une entrée déjà complète parfaitement intacte", () => {
   const complet = event({ geographicPriority: "AFRO_DIASPORA", geographicJustification: "Justification déjà établie.", timezone: "Europe/Paris", controlMode: "EDITORIAL" });
   assert.deepEqual(normalizeLegacyEvent(complet), complet);
+});
+
+// --- Sources sociales — reconnaissance, jamais devinée ----------------------
+//
+// Ce module ne cherche rien lui-même : il classe une URL déjà découverte par
+// la recherche web normale. Aucun contournement d'authentification, aucune
+// URL de publication devinée à partir d'un nom de compte.
+
+test("socialPlatform reconnaît les six plateformes supportées, jamais au-delà", () => {
+  assert.equal(socialPlatform("https://www.instagram.com/moriartmuseum/"), "instagram");
+  assert.equal(socialPlatform("https://m.instagram.com/moriartmuseum/"), "instagram", "sous-domaine mobile reconnu");
+  assert.equal(socialPlatform("https://www.facebook.com/moriartmuseum"), "facebook");
+  assert.equal(socialPlatform("https://www.linkedin.com/company/galerie-lelong"), "linkedin");
+  assert.equal(socialPlatform("https://x.com/moriartmuseum"), "x");
+  assert.equal(socialPlatform("https://twitter.com/moriartmuseum"), "x", "l'ancien domaine reste reconnu");
+  assert.equal(socialPlatform("https://www.youtube.com/@moriartmuseum"), "youtube");
+  assert.equal(socialPlatform("https://youtu.be/dQw4w9WgXcQ"), "youtube");
+  assert.equal(socialPlatform("https://www.tiktok.com/@moriartmuseum"), "tiktok");
+  assert.equal(socialPlatform("https://www.mori.art.museum/en/exhibitions/"), undefined, "un site officiel n'est pas une plateforme sociale");
+  assert.equal(socialPlatform("not a url"), undefined);
+});
+
+test("isSocialUrl est cohérent avec socialPlatform", () => {
+  assert.equal(isSocialUrl("https://www.instagram.com/moriartmuseum/"), true);
+  assert.equal(isSocialUrl("https://www.mori.art.museum/"), false);
+});
+
+test("socialAccountHandle lit le compte dans l'URL, jamais dans le contenu", () => {
+  assert.equal(socialAccountHandle("https://www.instagram.com/moriartmuseum/"), "moriartmuseum");
+  assert.equal(socialAccountHandle("https://www.facebook.com/moriartmuseum"), "moriartmuseum");
+  assert.equal(socialAccountHandle("https://www.linkedin.com/company/galerie-lelong"), "galerie-lelong");
+  assert.equal(socialAccountHandle("https://www.youtube.com/@moriartmuseum"), "moriartmuseum");
+  assert.equal(socialAccountHandle("https://x.com/moriartmuseum"), "moriartmuseum");
+});
+
+test("socialAccountHandle reconnaît une URL de publication comme dépourvue de compte identifiable", () => {
+  // /p/, /reel/, /status/, /watch/… ne portent pas de nom de compte : le
+  // premier segment de chemin y est un identifiant de publication, pas un
+  // compte. Le confondre ferait correspondre "p" ou "status" à n'importe
+  // quel nom — un faux positif garanti.
+  assert.equal(socialAccountHandle("https://www.instagram.com/p/Cxyz123/"), "");
+  assert.equal(socialAccountHandle("https://x.com/status/1234567890"), "");
+  assert.equal(socialAccountHandle("https://www.facebook.com/watch/?v=123"), "");
+});
+
+test("socialAccountMatches reconnaît un compte officiel malgré la ponctuation et la casse", () => {
+  assert.equal(socialAccountMatches("https://www.instagram.com/moriartmuseum/", "Mori Art Museum"), true);
+  assert.equal(socialAccountMatches("https://www.instagram.com/mori.art.museum/", "Mori Art Museum"), true);
+  assert.equal(socialAccountMatches("https://www.instagram.com/MoriArtMuseum/", "Mori Art Museum"), true, "insensible à la casse");
+});
+
+test("socialAccountMatches ne fait jamais correspondre un compte sans rapport réel", () => {
+  assert.equal(socialAccountMatches("https://www.instagram.com/randomartlover42/", "Mori Art Museum"), false);
+  assert.equal(socialAccountMatches("https://www.instagram.com/p/Cxyz123/", "Mori Art Museum"), false, "pas de compte à comparer sur une URL de publication");
+});
+
+test("socialAccountMatches refuse les faux positifs sur des noms ou handles trop courts", () => {
+  // Un handle de moins de 4 caractères ("x", "moma"—non, 4 c'est la limite)
+  // matcherait n'importe quoi par inclusion : le seuil existe précisément
+  // pour ça.
+  assert.equal(socialAccountMatches("https://x.com/moa", "MoMA"), false, "handle à 3 caractères — trop court pour être fiable");
+});
+
+// --- rankSource — un compte social officiel pèse comme sa propre page ------
+
+test("rankSource reconnaît un compte Instagram officiel comme OFFICIAL, à égalité avec le site institutionnel", () => {
+  const extracted = { venue: "Mori Art Museum", institution: "Mori Art Museum", organizer: "", artistOrCreator: "" };
+  assert.equal(rankSource("https://www.instagram.com/moriartmuseum/", extracted), "OFFICIAL");
+});
+
+test("rankSource reconnaît un compte social d'organisateur ou d'artiste à leur rang propre", () => {
+  const organizerExtracted = { venue: "", institution: "", organizer: "DESIGNART TOKYO COMMITTEE", artistOrCreator: "" };
+  assert.equal(rankSource("https://www.instagram.com/designarttokyo/", organizerExtracted), "ORGANIZER");
+
+  const artistExtracted = { venue: "", institution: "", organizer: "", artistOrCreator: "Barthélémy Toguo" };
+  assert.equal(rankSource("https://www.instagram.com/barthelemytoguo/", artistExtracted), "ARTIST_BRAND");
+});
+
+test("rankSource classe un compte social sans rapport connu en SECONDARY, sous une reprise de presse", () => {
+  const extracted = { venue: "Mori Art Museum", institution: "Mori Art Museum", organizer: "", artistOrCreator: "" };
+  const rang = rankSource("https://www.instagram.com/randomartlover42/", extracted);
+  assert.equal(rang, "SECONDARY");
+  const rankOrder = ["OFFICIAL", "INSTITUTION", "ORGANIZER", "ARTIST_BRAND", "MEDIA", "SECONDARY"];
+  assert.ok(rankOrder.indexOf(rang) > rankOrder.indexOf("MEDIA"), "un compte social sans rapport pèse moins qu'une reprise de presse identifiable");
+});
+
+test("rankSource ne confond jamais canal et fiabilité — un site web sans rapport reste MEDIA, pas mieux qu'un compte social sans rapport n'est pire", () => {
+  const extracted = { venue: "Mori Art Museum", institution: "Mori Art Museum", organizer: "", artistOrCreator: "" };
+  assert.equal(rankSource("https://www.lemonde.fr/culture/mori", extracted), "MEDIA");
 });

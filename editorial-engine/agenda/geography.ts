@@ -22,6 +22,45 @@ export const GEOGRAPHIC_PRIORITIES = ["AFRICA", "AFRO_DIASPORA", "INTERNATIONAL"
 export type GeographicPriority = (typeof GEOGRAPHIC_PRIORITIES)[number];
 
 /**
+ * Les 54 États africains reconnus par l'ONU, noms français et anglais —
+ * utilisés pour vérifier une classification AFRICA contre le pays
+ * réellement extrait de la page, pas seulement contre la ville.
+ *
+ * Existe à cause d'un cas réel observé en campagne de découverte : un
+ * modèle a classé « Abstractions », une exposition de peinture abstraite
+ * dans une galerie parisienne sans aucun rapport avec l'Afrique, comme
+ * AFRICA — sans ville africaine, sans justification, sans qu'aucun élément
+ * de la page ne l'évoque. `resolveGeographicPriority` (verify.ts) croise
+ * désormais toute classification AFRICA contre cette liste (ou contre
+ * AFRICA_CITIES) exactement comme il croise déjà AFRO_DIASPORA contre une
+ * justification écrite — la même discipline anti-fabrication, appliquée au
+ * palier qui en semblait dispensé.
+ */
+export const AFRICAN_COUNTRIES = new Set(
+  [
+    "Afrique du Sud", "South Africa", "Algérie", "Algeria", "Angola", "Bénin", "Benin", "Botswana",
+    "Burkina Faso", "Burundi", "Cameroun", "Cameroon", "Cap-Vert", "Cabo Verde", "Cape Verde",
+    "Comores", "Comoros", "Congo", "Côte d'Ivoire", "Cote d'Ivoire", "Ivory Coast", "Djibouti",
+    "Égypte", "Egypte", "Egypt", "Érythrée", "Erythree", "Eritrea", "Eswatini", "Éthiopie", "Ethiopie", "Ethiopia",
+    "Gabon", "Gambie", "Gambia", "Ghana", "Guinée", "Guinee", "Guinea", "Guinée-Bissau", "Guinea-Bissau",
+    "Guinée équatoriale", "Equatorial Guinea", "Kenya", "Lesotho", "Liberia", "Libéria", "Libye", "Libya",
+    "Madagascar", "Malawi", "Mali", "Maroc", "Morocco", "Maurice", "Mauritius", "Mauritanie", "Mauritania",
+    "Mozambique", "Namibie", "Namibia", "Niger", "Nigeria", "Nigéria", "Ouganda", "Uganda",
+    "République centrafricaine", "Central African Republic", "République démocratique du Congo",
+    "Democratic Republic of the Congo", "DR Congo", "DRC", "Rwanda", "Sao Tomé-et-Principe", "São Tomé and Príncipe",
+    "Sénégal", "Senegal", "Seychelles", "Sierra Leone", "Somalie", "Somalia", "Soudan", "Sudan",
+    "Soudan du Sud", "South Sudan", "Tanzanie", "Tanzania", "Tchad", "Chad", "Togo", "Tunisie", "Tunisia",
+    "Zambie", "Zambia", "Zimbabwe", "Sahara occidental", "Western Sahara",
+  ].map((n) => n.toLowerCase()),
+);
+
+/** Le pays extrait désigne-t-il un État africain — comparaison normalisée, jamais devinée au-delà d'une correspondance de nom. */
+export function isAfricanCountry(country: string): boolean {
+  if (!country.trim()) return false;
+  return AFRICAN_COUNTRIES.has(country.trim().toLowerCase());
+}
+
+/**
  * Villes africaines couvertes par la rotation, par région — pour que la
  * diversité soit structurelle plutôt que le fruit d'un tirage qui
  * favoriserait toujours les mêmes grandes capitales anglophones et
@@ -99,14 +138,23 @@ export const AFRICA_CITIES: Record<string, string> = {
  * réellement, pas à décider du résultat.
  */
 export const AFRO_DIASPORA_CITIES: Record<string, string> = {
+  // France, Royaume-Uni, Belgique
   Paris: "Europe/Paris",
   Londres: "Europe/London",
   London: "Europe/London",
   Bruxelles: "Europe/Brussels",
   Brussels: "Europe/Brussels",
+  // Allemagne, Espagne, Portugal, Italie
+  Berlin: "Europe/Berlin",
+  Madrid: "Europe/Madrid",
+  Barcelone: "Europe/Madrid",
+  Barcelona: "Europe/Madrid",
   Lisbonne: "Europe/Lisbon",
   Lisbon: "Europe/Lisbon",
+  Milan: "Europe/Rome",
+  Rome: "Europe/Rome",
   Amsterdam: "Europe/Amsterdam",
+  // États-Unis, Canada
   "New York": "America/New_York",
   Atlanta: "America/New_York",
   Miami: "America/New_York",
@@ -116,6 +164,7 @@ export const AFRO_DIASPORA_CITIES: Record<string, string> = {
   Toronto: "America/Toronto",
   Montréal: "America/Toronto",
   Montreal: "America/Toronto",
+  // Brésil, Caraïbes, Amérique latine
   "São Paulo": "America/Sao_Paulo",
   "Rio de Janeiro": "America/Sao_Paulo",
   Salvador: "America/Bahia",
@@ -124,6 +173,16 @@ export const AFRO_DIASPORA_CITIES: Record<string, string> = {
   "La Havane": "America/Havana",
   Havana: "America/Havana",
   Bridgetown: "America/Barbados",
+  Bogotá: "America/Bogota",
+  Bogota: "America/Bogota",
+  Cartagena: "America/Bogota",
+  // Moyen-Orient, Asie, Océanie
+  Dubaï: "Asia/Dubai",
+  Dubai: "Asia/Dubai",
+  Singapour: "Asia/Singapore",
+  Singapore: "Asia/Singapore",
+  Sydney: "Australia/Sydney",
+  Melbourne: "Australia/Melbourne",
 };
 
 /** Reste du monde pertinent pour WEBLACK, sans lien de diaspora documenté. */

@@ -6,7 +6,8 @@ import { log } from "../logs/logger.ts";
 import { eventIdentity, applyControlMode } from "./store.ts";
 import { computeStatus, ESSENTIAL_FIELDS, type AgendaEvent, type EventVerification, type SourceRank } from "./types.ts";
 import { WEBLACK_TERRITORIES, type WeblackTerritory } from "../generation/types.ts";
-import { GEOGRAPHIC_PRIORITIES, timezoneForCity, type GeographicPriority } from "./geography.ts";
+import { GEOGRAPHIC_PRIORITIES, timezoneForCity, cityPriorityHint, isAfricanCountry, type GeographicPriority } from "./geography.ts";
+import { socialPlatform, socialAccountMatches } from "./social.ts";
 
 const SCHEMA = {
   type: "object",
@@ -114,8 +115,20 @@ interface ExtractedEvent {
  * AFRICA n'a pas besoin de ce filet : la géographie de la ville la prouve
  * déjà, indépendamment de ce que le modèle en dit.
  */
-export function resolveGeographicPriority(extracted: Pick<ExtractedEvent, "geographicPriority" | "geographicJustification">): GeographicPriority {
+export function resolveGeographicPriority(
+  extracted: Pick<ExtractedEvent, "geographicPriority" | "geographicJustification" | "city" | "country">,
+): GeographicPriority {
   if (extracted.geographicPriority === "AFRO_DIASPORA" && !extracted.geographicJustification.trim()) return "INTERNATIONAL";
+  // Cas réel observé en campagne de découverte : une exposition de peinture
+  // abstraite dans une galerie parisienne, sans aucun rapport avec
+  // l'Afrique, classée AFRICA par le modèle — sans ville africaine, sans
+  // justification, sans rien dans la page qui l'évoque. AFRICA n'est un
+  // fait auto-suffisant QUE lorsque la géographie extraite le confirme
+  // elle-même (voir geography.ts) ; sinon, c'est une affirmation non
+  // vérifiée comme une autre, et elle retombe sur INTERNATIONAL.
+  if (extracted.geographicPriority === "AFRICA" && cityPriorityHint(extracted.city) !== "AFRICA" && !isAfricanCountry(extracted.country)) {
+    return "INTERNATIONAL";
+  }
   return extracted.geographicPriority;
 }
 
@@ -214,6 +227,7 @@ export async function verifyEventPage(url: string, runId: string): Promise<Agend
     officialUrl: url,
     sourceUrls: [url],
     sourceRank: rankSource(url, extracted),
+    sourcePlatform: socialPlatform(url),
     verificationStatus,
     verifiedFields,
     missingFields: [...missingFields],
@@ -421,7 +435,26 @@ function normalize(value: string): string {
  * main : si le domaine porte le nom du lieu ou de l'institution annoncés,
  * la page est celle de l'organisateur lui-même.
  */
+/**
+ * Le rang d'une source ne dépend jamais du CANAL (site, réseau social,
+ * article) mais de qui parle et de sa relation à l'événement — voir
+ * social.ts. Un compte Instagram officiel d'un musée pèse comme la page
+ * officielle de ce même musée, parce que c'est la même identité qui
+ * s'exprime ; un compte social sans rapport démontré pèse moins qu'une
+ * reprise de presse, parce que rien n'y garantit l'exactitude.
+ */
 export function rankSource(url: string, extracted: Pick<ExtractedEvent, "venue" | "institution" | "organizer" | "artistOrCreator">): SourceRank {
+  const platform = socialPlatform(url);
+  if (platform) {
+    if (socialAccountMatches(url, extracted.institution, extracted.venue)) return "OFFICIAL";
+    if (socialAccountMatches(url, extracted.organizer)) return "ORGANIZER";
+    if (socialAccountMatches(url, extracted.artistOrCreator)) return "ARTIST_BRAND";
+    // Un compte qui ne correspond à rien de connu pour cet événement : la
+    // plateforme ne garantit rien par elle-même, contrairement à une
+    // reprise de presse qui engage une rédaction identifiable.
+    return "SECONDARY";
+  }
+
   let host: string;
   try {
     host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();

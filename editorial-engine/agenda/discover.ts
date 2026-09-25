@@ -80,7 +80,7 @@ const EVENT_TYPES = [
  * de confirmer ou d'infirmer ce lien sur la page réellement lue — jamais
  * déduit de l'apparence de qui que ce soit (voir classifyGeographicPriority).
  */
-const DIASPORA_EVENT_TYPES = [
+export const DIASPORA_EVENT_TYPES = [
   "expositions d'artistes africains ou afro-descendants dans les musées et galeries",
   "événements culturels de la diaspora africaine et afro-caribéenne",
   "expositions et festivals sur la culture afro-brésilienne ou afro-caribéenne",
@@ -135,7 +135,7 @@ export async function discoverPages(query: string, runId: string): Promise<Disco
       tools: [{ type: "web_search" }],
       input: `Recherche des ${query} qui se tiennent actuellement ou commencent entre le ${horizon.toISOString().slice(0, 10)} et le ${until}.
 
-Consulte les pages officielles des institutions elles-mêmes : musées, fondations, galeries, centres d'art, maisons de mode, organisateurs de foires et de biennales.
+Consulte les pages officielles des institutions elles-mêmes : musées, fondations, galeries, centres d'art, maisons de mode, organisateurs de foires et de biennales — y compris leurs comptes officiels Instagram, Facebook, LinkedIn, X ou YouTube lorsqu'une annonce y est publiée : ce sont des sources légitimes au même titre qu'un site web, du moment qu'elles émanent bien du compte officiel de l'institution ou de l'organisateur.
 
 N'ouvre pas les listings municipaux de loisirs, les plateformes de billetterie généralistes, ni les pages de cours et d'ateliers pour amateurs : ce ne sont pas des rendez-vous de création.
 

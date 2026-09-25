@@ -1,7 +1,9 @@
 import type { WeblackTerritory } from "../generation/types.ts";
 import type { GeographicPriority } from "./geography.ts";
+import type { SocialPlatform } from "./social.ts";
 
 export type { GeographicPriority } from "./geography.ts";
+export type { SocialPlatform } from "./social.ts";
 
 /**
  * Structure interne de l'Agenda culturel.
@@ -86,6 +88,8 @@ export interface AgendaEvent {
   /** Toutes les pages réellement consultées pour cet événement, la première étant celle qui fait foi. */
   sourceUrls: string[];
   sourceRank: SourceRank;
+  /** La plateforme sociale de la source qui fait foi (officialUrl), si elle en est une — voir social.ts. Vide pour un site web ou un article. */
+  sourcePlatform?: SocialPlatform;
   verificationStatus: EventVerification;
   /** Ce qui a été retrouvé mot pour mot dans la page, et ce qui manquait. */
   verifiedFields: string[];

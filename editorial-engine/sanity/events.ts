@@ -69,6 +69,10 @@ export function toEventDocument(event: AgendaEvent): Record<string, unknown> {
   doc.geographicPriority = event.geographicPriority ?? "INTERNATIONAL";
   doc.controlMode = event.controlMode ?? "AUTOMATED";
   if ((event.timezone ?? "").trim()) doc.timezone = event.timezone.trim();
+  // Absent pour un site web ou un article : seule la source qui fait foi
+  // (officialUrl) porte une plateforme sociale, jamais fabriquée pour les
+  // autres.
+  if (event.sourcePlatform) doc.sourcePlatform = event.sourcePlatform;
 
   // Les champs que la source n'a pas donnés ne sont pas écrits : une chaîne
   // vide dans Sanity se lirait comme une donnée, alors qu'il n'y en a pas.
