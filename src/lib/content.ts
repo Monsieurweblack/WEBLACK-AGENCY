@@ -823,9 +823,24 @@ export async function getOngoingEvents(lang: Lang): Promise<AgendaEventData[]> {
   return events;
 }
 
+/**
+ * Tout événement public, à venir ou en cours confondus — la matière des
+ * pages détail individuelles (voir src/pages/agenda/[slug].astro, qui
+ * annonce lui-même « vérifié, à venir ou en cours » dans son propre
+ * commentaire). `getAgendaEvents` et `getOngoingEvents` sont deux vues
+ * disjointes par construction (startsAfterPublication / isRunningNow ne se
+ * recoupent jamais), mais un événement en cours n'a pas moins droit à sa
+ * propre page qu'un événement à venir — WEBLACK NOW le montre en accueil
+ * sans jamais pouvoir y mener directement sinon.
+ */
+export async function getAllPublicAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
+  const [upcoming, ongoing] = await Promise.all([getAgendaEvents(lang), getOngoingEvents(lang)]);
+  return [...upcoming, ...ongoing];
+}
+
 /** Un événement précis, pour sa page propre. Même filtre que la liste : ce qui ne s'annonce pas n'a pas de page. */
 export async function getAgendaEvent(slug: string, lang: Lang): Promise<AgendaEventData | undefined> {
-  const events = await getAgendaEvents(lang);
+  const events = await getAllPublicAgendaEvents(lang);
   return events.find((event) => event.slug === slug);
 }
 

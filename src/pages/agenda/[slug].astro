@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AgendaDetail from "../../components/pages/AgendaDetail.astro";
-import { getAgendaEvents } from "../../lib/content";
+import { getAllPublicAgendaEvents } from "../../lib/content";
 import { placeLine } from "../../lib/agenda-format";
 
 /**
@@ -16,7 +16,7 @@ import { placeLine } from "../../lib/agenda-format";
  * de traductions n'a besoin d'être fournie.
  */
 export async function getStaticPaths() {
-  const events = await getAgendaEvents("fr");
+  const events = await getAllPublicAgendaEvents("fr");
   return events.map((event) => ({ params: { slug: event.slug }, props: { event } }));
 }
 
