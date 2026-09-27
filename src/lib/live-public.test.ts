@@ -83,36 +83,47 @@ test("CAS 1 — un ON_AIR l'emporte toujours, même s'il existe aussi un SCHEDUL
   const onAir = publicLive({ id: "on-air", state: "ON_AIR" });
   const scheduled = publicLive({ id: "scheduled", state: "SCHEDULED" });
   const replay = publicLive({ id: "replay", state: "REPLAY" });
-  assert.equal(primaryLive([scheduled, replay, onAir])?.id, "on-air");
+  assert.equal(primaryLive([scheduled, replay, onAir], NOW)?.id, "on-air");
 });
 
 test("ENDING compte comme priorité 1, au même titre que ON_AIR", () => {
   const ending = publicLive({ id: "ending", state: "ENDING" });
   const scheduled = publicLive({ id: "scheduled", state: "SCHEDULED" });
-  assert.equal(primaryLive([scheduled, ending])?.id, "ending");
+  assert.equal(primaryLive([scheduled, ending], NOW)?.id, "ending");
 });
 
 test("CAS 2 — sans ON_AIR, le SCHEDULED/PRELIVE le plus proche dans le temps gagne", () => {
   const loin = publicLive({ id: "loin", state: "SCHEDULED", scheduledStart: "2026-12-01T00:00:00.000Z" });
   const proche = publicLive({ id: "proche", state: "PRELIVE", scheduledStart: "2026-09-25T19:00:00.000Z" });
-  assert.equal(primaryLive([loin, proche])?.id, "proche");
+  assert.equal(primaryLive([loin, proche], NOW)?.id, "proche");
+});
+
+test("un SCHEDULED déjà passé (repli après une fenêtre PRELIVE jamais confirmée) ne doit jamais l'emporter sur un direct réellement à venir, même si son horodatage brut est chronologiquement plus ancien", () => {
+  const enRetard = publicLive({ id: "en-retard", state: "SCHEDULED", scheduledStart: "2026-09-25T10:00:00.000Z" }); // avant NOW (18h)
+  const aVenir = publicLive({ id: "a-venir", state: "PRELIVE", scheduledStart: "2026-09-25T18:20:00.000Z" }); // après NOW
+  assert.equal(primaryLive([enRetard, aVenir], NOW)?.id, "a-venir");
+});
+
+test("un SCHEDULED déjà passé reste affiché s'il est le seul candidat (mieux qu'une page vide)", () => {
+  const enRetard = publicLive({ id: "en-retard", state: "SCHEDULED", scheduledStart: "2026-09-25T10:00:00.000Z" });
+  assert.equal(primaryLive([enRetard], NOW)?.id, "en-retard");
 });
 
 test("CAS 3 — sans ON_AIR ni futur, le REPLAY le plus récent gagne", () => {
   const ancien = publicLive({ id: "ancien", state: "REPLAY", scheduledStart: "2026-01-01T00:00:00.000Z" });
   const recent = publicLive({ id: "recent", state: "REPLAY", scheduledStart: "2026-09-01T00:00:00.000Z" });
-  assert.equal(primaryLive([ancien, recent])?.id, "recent");
+  assert.equal(primaryLive([ancien, recent], NOW)?.id, "recent");
 });
 
 test("CAS 4 — rien de public : undefined, jamais une page vide fabriquée ici (c'est à la page de décider quoi montrer)", () => {
-  assert.equal(primaryLive([]), undefined);
-  assert.equal(primaryLive([publicLive({ state: "ARCHIVED" })]), undefined);
+  assert.equal(primaryLive([], NOW), undefined);
+  assert.equal(primaryLive([publicLive({ state: "ARCHIVED" })], NOW), undefined);
 });
 
 test("featured départage deux candidats à égalité de priorité et de proximité temporelle", () => {
   const a = publicLive({ id: "a", state: "ON_AIR", featured: false });
   const b = publicLive({ id: "b", state: "ON_AIR", featured: true });
-  assert.equal(primaryLive([a, b])?.id, "b");
+  assert.equal(primaryLive([a, b], NOW)?.id, "b");
 });
 
 // --- archiveLives / liveFacets -----------------------------------------------

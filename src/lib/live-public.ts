@@ -111,13 +111,25 @@ function isManualStatus(value: unknown): value is ManualLiveStatus {
  * (deux ON_AIR n'arrivent normalement jamais — Phase 16, "un seul player
  * actif" — mais la règle doit rester définie).
  */
-export function primaryLive(entries: LivePublicData[]): LivePublicData | undefined {
+export function primaryLive(entries: LivePublicData[], now: Date): LivePublicData | undefined {
   const onAir = pickBest(entries.filter((e) => e.state === "ON_AIR" || e.state === "ENDING"));
   if (onAir) return onAir;
 
+  const nowMs = now.getTime();
+  // Un SCHEDULED "en retard" (repli propre de resolveLiveState quand une
+  // fenêtre PRELIVE n'a jamais été confirmée, voir live-state.ts) a un
+  // scheduledStart déjà passé — trié uniquement par date brute, il gagnait
+  // presque toujours contre un direct réellement à venir, puisque son
+  // horodatage est chronologiquement plus ancien. Un vrai "à venir" passe
+  // donc toujours devant un retard, quelle que soit sa propre date.
   const upcoming = entries
     .filter((e) => e.state === "SCHEDULED" || e.state === "PRELIVE")
-    .sort((a, b) => (a.scheduledStart ?? "").localeCompare(b.scheduledStart ?? ""));
+    .sort((a, b) => {
+      const aFuture = a.scheduledStart ? new Date(a.scheduledStart).getTime() > nowMs : false;
+      const bFuture = b.scheduledStart ? new Date(b.scheduledStart).getTime() > nowMs : false;
+      if (aFuture !== bFuture) return aFuture ? -1 : 1;
+      return (a.scheduledStart ?? "").localeCompare(b.scheduledStart ?? "");
+    });
   if (upcoming.length > 0) {
     const soonest = upcoming[0]!.scheduledStart;
     return pickBest(upcoming.filter((e) => e.scheduledStart === soonest));

@@ -43,7 +43,7 @@ const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJour
     getLiveEntries(lang),
   ]);
 // Même source de vérité que le Header et /live — voir LivePriority.astro.
-const activeLive = primaryLive(liveEntries);
+const activeLive = primaryLive(liveEntries, new Date());
 
 const heroImage = homepage?.hero.image ?? {
   url: "/photos/hero-home.jpg",

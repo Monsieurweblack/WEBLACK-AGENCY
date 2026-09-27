@@ -27,7 +27,7 @@ const t = useTranslations(lang);
  * partagé (live-experience.ts) reprend le calcul en temps réel et révèle
  * l'indicateur seulement sur confirmation réelle.
  */
-const activeLive = primaryLive(await getLiveEntries(lang));
+const activeLive = primaryLive(await getLiveEntries(lang), new Date());
 const isEditorialOnAir = Boolean(activeLive && activeLive.controlMode === "EDITORIAL" && activeLive.state === "ON_AIR");
 const isTimeSensitive = Boolean(
   activeLive &&

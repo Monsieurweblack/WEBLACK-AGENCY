@@ -8,7 +8,7 @@ import { getLiveEntries, primaryLive, archiveLives } from "../../lib/content";
 const lang = "fr" as const;
 const t = useTranslations(lang);
 const entries = await getLiveEntries(lang);
-const liveEntry = primaryLive(entries);
+const liveEntry = primaryLive(entries, new Date());
 const hasArchive = archiveLives(entries).length > 0;
 const isOffline = !liveEntry;
 
