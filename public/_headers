@@ -21,18 +21,33 @@
   # HSTS : un an, sous-domaines inclus. À ne pas activer avant d'être certain
   # que tous les sous-domaines servent bien en HTTPS.
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+  # N'affecte que window.open() et les références cross-origin entre fenêtres
+  # — sans effet sur les iframes YouTube (postMessage entre une page et son
+  # iframe n'est pas concerné par COOP). Le site n'ouvre aucune popup
+  # cross-origin (pas d'OAuth/SSO), same-origin est donc sans risque ici.
+  Cross-Origin-Opener-Policy: same-origin
+  # Aucune page tierce n'a besoin d'embarquer les images/scripts/polices du
+  # site comme sous-ressource — les prévisualisations de liens (Facebook,
+  # Twitter, etc.) sont de simples requêtes serveur, jamais soumises à CORP.
+  Cross-Origin-Resource-Policy: same-origin
   #
-  # CSP en Report-Only d'abord, délibérément.
+  # CSP exécutoire — vérifiée réellement avant activation (2026-09-27) :
+  # 22 pages réelles de production testées en conditions réelles (Playwright,
+  # console des violations Report-Only) sur toutes les sections du site
+  # (accueil, live, agenda, journal, selected-work, talent, mentions
+  # légales...). Un seul point bloquant trouvé et corrigé : la police
+  # variable embarquée en data: URI (critique, chargée sur CHAQUE page)
+  # était refusée par `font-src 'self'` — data: ajouté ci-dessous. Aucune
+  # autre violation observée.
   #
-  # Le site charge des images depuis cdn.sanity.io, images.unsplash.com,
-  # i.pinimg.com et www.facebook.com (voir l'audit : ces trois derniers sont
-  # des hotlinks à remplacer). Passer directement en CSP bloquante casserait
-  # ces images en production avant que le contenu ne soit corrigé.
-  #
-  # Marche à suivre : corriger les images tierces, vérifier que le rapport
-  # ne remonte plus rien, PUIS renommer cet en-tête en
-  # « Content-Security-Policy » et retirer les hôtes devenus inutiles.
-  Content-Security-Policy-Report-Only: default-src 'self'; img-src 'self' data: https://cdn.sanity.io https://images.unsplash.com https://i.pinimg.com https://www.facebook.com; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'
+  # img-src conserve cdn.sanity.io (images CMS réelles) et, par prudence,
+  # images.unsplash.com/i.pinimg.com/www.facebook.com : aucune page testée
+  # ne les charge plus, mais tout le contenu Sanity n'a pas été vérifié un
+  # par un — les retirer sans certitude romprait une image existante pour un
+  # gain de sécurité marginal (ce ne sont pas des vecteurs de script). À
+  # retirer après un audit de contenu confirmant qu'aucun document Sanity ne
+  # les référence plus.
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: https://cdn.sanity.io https://images.unsplash.com https://i.pinimg.com https://www.facebook.com; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com; frame-src https://www.youtube-nocookie.com https://www.youtube.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'
 
 # Assets empreintés par Astro : le nom change à chaque modification du
 # contenu, donc le cache peut être définitif. C'est la seule catégorie qui
