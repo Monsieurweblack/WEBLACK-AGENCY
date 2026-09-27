@@ -97,6 +97,7 @@ function setupWidget(el: HTMLElement) {
   const countdownEl = el.querySelector<HTMLElement>("[data-live-countdown]");
   const statusLabelEl = el.querySelector<HTMLElement>("[data-live-status-label]");
   const announceEl = el.querySelector<HTMLElement>("[data-live-announce]");
+  const playerBlock = el.querySelector<HTMLElement>("[data-live-player-block]");
   const playerMount = el.querySelector<HTMLElement>("[data-live-player-mount]");
   const playerFrame = el.querySelector<HTMLIFrameElement>("[data-live-player-frame]");
 
@@ -109,6 +110,14 @@ function setupWidget(el: HTMLElement) {
     return state === "PRELIVE" || state === "ON_AIR" || state === "ENDING";
   }
 
+  // Le bloc lecteur (conteneur visuel) n'est visible que là où le rendu
+  // serveur l'affiche déjà — PRELIVE le pré-monte caché uniquement pour que
+  // l'IFrame Player API existe et puisse rapporter un vrai état, jamais pour
+  // être vu avant confirmation.
+  function shouldShowPlayerBlock(state: LiveState): boolean {
+    return state === "ON_AIR" || state === "ENDING" || state === "REPLAY";
+  }
+
   async function mountYoutubePlayer() {
     if (ytMounted || !playerMount || !data.youtubeVideoId) return;
     ytMounted = true;
@@ -118,7 +127,13 @@ function setupWidget(el: HTMLElement) {
     playerMount.id = mountId;
     ytPlayer = new window.YT.Player(mountId, {
       videoId: data.youtubeVideoId,
-      playerVars: { autoplay: 0, playsinline: 1 },
+      // Muet, mais en lecture automatique : c'est ce qui permet au lecteur de
+      // rapporter réellement "buffering"/"playing" tout seul dès qu'une
+      // diffusion réelle commence. Un lecteur laissé sur autoplay: 0 reste
+      // "cued" indéfiniment — personne ne clique play sur un lecteur encore
+      // masqué — et la confirmation YouTube que la mission exige avant
+      // ON_AIR ne se produit alors jamais.
+      playerVars: { autoplay: 1, mute: 1, playsinline: 1 },
       events: {
         onStateChange: (event: { data: number }) => {
           youtubeState = YT_STATE_MAP[event.data] ?? "unknown";
@@ -130,6 +145,9 @@ function setupWidget(el: HTMLElement) {
 
   function applyStateClasses(state: LiveState) {
     el.dataset.currentState = state;
+    // Retire le hors-écran dès que confirmé — jamais un `hidden` (display:
+    // none), qui suspendrait le lecteur au lieu de simplement l'afficher.
+    if (playerBlock) playerBlock.classList.toggle("live-player-premount", !shouldShowPlayerBlock(state));
     // Le player natif "youtube-nocookie" (sans JS API, chargé côté build
     // pour REPLAY et pour le rendu initial ON_AIR sans JS) reste affiché
     // tant que l'API n'a pas pris le relais — jamais un player vide.

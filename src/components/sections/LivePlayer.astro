@@ -41,6 +41,15 @@ const showCountdown = publicState === "SCHEDULED" || publicState === "PRELIVE";
 const showPlayer = publicState === "ON_AIR" || publicState === "ENDING" || publicState === "REPLAY";
 const showChatPanel = (publicState === "ON_AIR" || publicState === "ENDING") && live.chatEnabled;
 
+// PRELIVE (hors EDITORIAL) doit déjà contenir la structure du lecteur dans
+// le DOM, invisible, sinon le script client n'a rien à monter : sans ce
+// point d'ancrage présent dès la génération de la page, l'IFrame Player API
+// n'est jamais créée, donc n'appelle jamais onStateChange, donc la vraie
+// confirmation YouTube que la mission exige avant d'afficher ON_AIR ne peut
+// tout simplement jamais arriver, quelle que soit la durée d'attente.
+const premountPlayer = isTimeSensitive && publicState === "PRELIVE";
+const renderPlayerBlock = showPlayer || premountPlayer;
+
 const stateLabel = t(`live.status.${publicState}` as UiKey);
 ---
 
@@ -143,22 +152,29 @@ const stateLabel = t(`live.status.${publicState}` as UiKey);
     }
 
     {
-      showPlayer && (
+      renderPlayerBlock && (
         <div
-          class:list={["mt-12 grid grid-cols-1 gap-6", showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8"]}
+          data-live-player-block
+          class:list={[
+            "mt-12 grid grid-cols-1 gap-6",
+            showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
+            premountPlayer && "live-player-premount",
+          ]}
           data-reveal
           data-reveal-delay="0.1"
         >
           <div class="aspect-video w-full overflow-hidden bg-(--color-ink-soft)">
-            <iframe
-              data-live-player-frame
-              src={playerUrl}
-              title={live.title}
-              class="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen
-              loading="lazy"
-            />
+            {showPlayer && (
+              <iframe
+                data-live-player-frame
+                src={playerUrl}
+                title={live.title}
+                class="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                loading="lazy"
+              />
+            )}
             <div data-live-player-mount hidden class="h-full w-full" />
           </div>
           {showChatPanel ? (
@@ -180,6 +196,23 @@ const stateLabel = t(`live.status.${publicState}` as UiKey);
 </script>
 
 <style>
+  /*
+   * PRELIVE (Phase 7) : le lecteur YouTube réel doit déjà exister et décoder
+   * pour pouvoir un jour rapporter "playing" de lui-même — un conteneur en
+   * display:none (attribut hidden) suspend la décodage vidéo dans la
+   * plupart des navigateurs, ce qui bloquerait la confirmation aussi
+   * sûrement que l'absence de lecteur. Position fixe hors écran plutôt que
+   * hidden : le lecteur reste "affiché" au sens du rendu, juste invisible.
+   */
+  .live-player-premount {
+    position: fixed;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    pointer-events: none;
+  }
   .live-on-air-badge {
     border-color: var(--color-gold);
   }
