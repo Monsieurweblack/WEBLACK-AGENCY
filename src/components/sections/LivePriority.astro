@@ -1,0 +1,178 @@
+---
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { LivePublicData } from "../../lib/content";
+
+/**
+ * La couche "Live Priority" (mission WEBLACK LIVE PRIORITY EXPERIENCE) :
+ * ce composant ne décide jamais lui-même si un Live est réellement en
+ * cours — il consomme l'état déjà calculé par resolveLiveState()/
+ * toPublicLive()/primaryLive(), exactement comme LivePlayer.astro sur
+ * /live. Aucune seconde logique de détection n'est créée ici.
+ */
+interface Props {
+  lang: Lang;
+  live?: LivePublicData;
+}
+
+const { lang, live } = Astro.props;
+const t = useTranslations(lang);
+
+// EDITORIAL : la vérité vient entièrement de l'éditeur, déjà tranchée au
+// build — pas besoin d'attendre une confirmation client (même principe que
+// LivePlayer.astro).
+const isEditorialOnAir = Boolean(live && live.controlMode === "EDITORIAL" && live.state === "ON_AIR");
+
+// AUTOMATED/HYBRID : seul un live encore SCHEDULED/PRELIVE/ON_AIR/ENDING
+// peut un jour devenir la priorité de la homepage — jamais un REPLAY
+// (Phase 16 de la mission), jamais une estimation par l'heure seule.
+const isTimeSensitive = Boolean(
+  live &&
+    live.controlMode !== "EDITORIAL" &&
+    (live.state === "SCHEDULED" || live.state === "PRELIVE" || live.state === "ON_AIR" || live.state === "ENDING"),
+);
+
+const shouldRender = isEditorialOnAir || isTimeSensitive;
+
+// SCHEDULED (souvent des heures avant le début) : la structure existe pour
+// que l'horloge cliente puisse suivre la transition sans reconstruction du
+// site, mais rien n'est monté ni affiché avant PRELIVE.
+const premountPlayer = isTimeSensitive && live!.state === "PRELIVE";
+const showNow = isEditorialOnAir || (isTimeSensitive && (live!.state === "ON_AIR" || live!.state === "ENDING"));
+
+const detailHref = live ? localizedPath(lang, `/live/${live.slug}/`) : undefined;
+const playerUrl = live ? `https://www.youtube-nocookie.com/embed/${live.youtubeVideoId}?enablejsapi=1` : undefined;
+---
+
+{
+  shouldRender && live && (
+    <section
+      data-live-priority-block
+      data-live-key={live.slug}
+      class:list={[
+        "live-priority bg-(--color-ink) px-6 pb-16 md:px-10",
+        // Mutuellement exclusifs : SCHEDULED (loin de l'échéance) coûte zéro
+        // (display:none), PRELIVE doit rester hors-écran SANS display:none
+        // pour que le lecteur caché puisse continuer à décoder en attendant
+        // une vraie confirmation — les deux classes ne doivent jamais
+        // s'appliquer ensemble, sous peine de faire gagner display:none par
+        // spécificité du style scoped Astro.
+        !showNow && !premountPlayer && "live-priority-hidden",
+        premountPlayer && "live-premount-offscreen",
+      ]}
+      {...(isTimeSensitive
+        ? {
+            "data-live-widget": "",
+            "data-control-mode": live.controlMode,
+            "data-manual-status": live.manualStatus,
+            "data-scheduled-start": live.scheduledStart,
+            "data-scheduled-end": live.scheduledEnd,
+            "data-youtube-video-id": live.youtubeVideoId,
+            "data-replay-enabled": String(live.replayEnabled),
+            "data-title": live.title,
+            "data-label-starting": t("live.status.PRELIVE"),
+            "data-label-live": t("live.status.ON_AIR"),
+            "data-label-ending": t("live.status.ENDING"),
+            "data-label-replay-soon": t("live.status.REPLAY"),
+            "data-label-day": t("live.countdown.day"),
+            "data-label-hour": t("live.countdown.hour"),
+            "data-label-minute": t("live.countdown.minute"),
+            "data-label-second": t("live.countdown.second"),
+          }
+        : {})}
+    >
+      <p class="sr-only" role="status" aria-live="polite" data-live-announce></p>
+      <div class="mx-auto max-w-(--container-content)">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="label-tracked inline-flex items-center gap-2 border border-(--color-gold) px-3 py-1.5 text-(--color-gold)" data-live-status-label>
+            <span class="live-priority-dot" aria-hidden="true" />
+            {t("live.priority.eyebrow")}
+          </span>
+          {live.eventName && <span class="text-sm text-(--color-paper)/50">{live.eventName}</span>}
+        </div>
+
+        <h2 class="font-display mt-4 max-w-3xl text-3xl text-(--color-paper) sm:text-4xl lg:text-5xl">{live.title}</h2>
+        {live.description && <p class="mt-4 max-w-2xl text-(--color-paper)/70">{live.description}</p>}
+        {live.location && <p class="mt-2 text-sm text-(--color-paper)/50">{live.location}</p>}
+
+        <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-end lg:gap-10">
+          <div class="aspect-video w-full overflow-hidden bg-(--color-ink-soft)">
+            {isEditorialOnAir ? (
+              <iframe
+                data-live-player-frame
+                src={playerUrl}
+                title={live.title}
+                class="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                loading="lazy"
+              />
+            ) : (
+              <div data-live-player-mount class="h-full w-full" />
+            )}
+          </div>
+          <a
+            href={detailHref}
+            class="label-tracked inline-flex w-fit items-center gap-2 border border-(--color-line) px-5 py-2.5 text-(--color-paper) transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          >
+            {t("live.event.watchLive")} &rarr;
+          </a>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  /*
+   * Le Header est position:fixed (voir Header.astro) — son vrai --header-h
+   * est mesuré en direct par nav.ts (déjà appelé par initNav() dans le
+   * script du Header), le même custom property que .menu-spacer-top y
+   * réutilise déjà. Un padding-top codé en dur se serait à nouveau désynchro
+   * nisé du Header réel dès qu'un libellé passe à la ligne — exactement le
+   * bug déjà documenté ailleurs dans ce fichier pour le menu.
+   */
+  .live-priority {
+    padding-top: calc(var(--header-h, 80px) + 1.5rem);
+  }
+
+  .live-priority-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background-color: var(--color-gold);
+    animation: live-priority-pulse 1.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-priority-dot {
+      animation: none;
+    }
+  }
+
+  @keyframes live-priority-pulse {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(0.75);
+    }
+  }
+
+  /*
+   * SCHEDULED (loin de l'échéance) : la section n'existe que pour porter
+   * l'horloge cliente, aucun lecteur n'est encore monté — display:none est
+   * sûr et gratuit ici. Ne s'applique jamais en même temps que
+   * .live-premount-offscreen (voir class:list plus haut).
+   */
+  .live-priority-hidden {
+    display: none;
+  }
+
+  /* Une fois révélée (JS retire .live-priority-hidden), la section entre
+     avec une transition douce plutôt qu'un saut brutal de mise en page
+     (Phase 14 de la mission) — voir .live-priority-enter/-active. */
+</style>

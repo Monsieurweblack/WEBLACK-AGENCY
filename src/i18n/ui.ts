@@ -470,6 +470,8 @@ const translations = {
     "live.event.watchLive": "Suivre en direct",
     "live.event.watchReplay": "Revoir la diffusion",
     "live.seo.detail.description": "Diffusion WEBLACK — vérifiée, disponible en direct ou en replay.",
+    "live.header.onair": "En direct",
+    "live.priority.eyebrow": "En direct",
 
     "responsibility.hero.eyebrow": "Responsabilité",
     "responsibility.hero.title": "Une pratique documentée, pas une promesse.",
@@ -1026,6 +1028,8 @@ const translations = {
     "live.event.watchLive": "Watch live",
     "live.event.watchReplay": "Watch the replay",
     "live.seo.detail.description": "A WEBLACK broadcast — verified, available live or on replay.",
+    "live.header.onair": "Live",
+    "live.priority.eyebrow": "Live",
 
     "responsibility.hero.eyebrow": "Responsibility",
     "responsibility.hero.title": "A documented practice, not a promise.",

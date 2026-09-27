@@ -1,7 +1,7 @@
 import { resolveLiveState, countdownParts, type LiveStateInput, type LiveState, type YoutubePlayerState } from "../../lib/live-state.ts";
 
 /**
- * Ce script fait deux choses, et seulement deux :
+ * Ce script fait trois choses, et seulement trois :
  *
  * 1. Il affiche un compte à rebours qui tourne réellement, seconde par
  *    seconde — jamais de décalage de mise en page (les chiffres occupent
@@ -13,6 +13,16 @@ import { resolveLiveState, countdownParts, type LiveStateInput, type LiveState, 
  *    confirmation, jamais l'heure seule, qui fait passer la page en
  *    ON_AIR — resolveLiveState() porte cette règle, ce script ne fait que
  *    lui fournir l'état du lecteur à chaque recalcul.
+ *
+ * 3. (WEBLACK LIVE PRIORITY EXPERIENCE) Il révèle/masque, sur la même
+ *    confirmation et sans jamais recalculer l'état différemment, le bloc
+ *    Live Priority de la homepage et l'indicateur "● LIVE" du Header — qui
+ *    peuvent coexister sur une même page (homepage) ou apparaître seuls
+ *    (Header sur les autres pages). Un seul document actif à la fois
+ *    (primaryLive, déjà en amont) ; les widgets qui le référencent
+ *    (Header + LivePriority + LivePlayer/live détail) sont regroupés par
+ *    `data-live-key` pour ne jamais monter deux lecteurs YouTube pour le
+ *    même direct sur la même page.
  *
  * Tout se passe sans recharger la page : le site est statique (build
  * périodique via le scheduler), ce script est ce qui le fait paraître
@@ -91,32 +101,68 @@ const YT_STATE_MAP: Record<number, YoutubePlayerState> = {
   5: "cued",
 };
 
-/** Un widget = une diffusion sur la page. `initLiveExperience` en gère plusieurs sans conflit (archive avec plusieurs vignettes, par ex.). */
-function setupWidget(el: HTMLElement) {
-  const data = readData(el);
-  const countdownEl = el.querySelector<HTMLElement>("[data-live-countdown]");
-  const statusLabelEl = el.querySelector<HTMLElement>("[data-live-status-label]");
-  const announceEl = el.querySelector<HTMLElement>("[data-live-announce]");
-  const playerBlock = el.querySelector<HTMLElement>("[data-live-player-block]");
-  const playerMount = el.querySelector<HTMLElement>("[data-live-player-mount]");
-  const playerFrame = el.querySelector<HTMLIFrameElement>("[data-live-player-frame]");
+function shouldMountPlayer(state: LiveState): boolean {
+  return state === "PRELIVE" || state === "ON_AIR" || state === "ENDING";
+}
+
+// Le bloc lecteur (conteneur visuel, LivePlayer sur /live) n'est visible que
+// là où le rendu serveur l'affiche déjà — PRELIVE le pré-monte caché
+// uniquement pour que l'IFrame Player API existe et puisse rapporter un
+// vrai état, jamais pour être vu avant confirmation.
+function shouldShowPlayerBlock(state: LiveState): boolean {
+  return state === "ON_AIR" || state === "ENDING" || state === "REPLAY";
+}
+
+// La priorité homepage, elle, ne concerne jamais REPLAY (Phase 16 de la
+// mission WEBLACK LIVE PRIORITY EXPERIENCE) — un replay reste accessible
+// depuis /live, jamais présenté comme un direct en cours.
+function shouldShowPriority(state: LiveState): boolean {
+  return state === "ON_AIR" || state === "ENDING";
+}
+
+/**
+ * Un groupe = un même document Live référencé par un ou plusieurs widgets
+ * sur la même page (Header + LivePriority sur la homepage, Header +
+ * LivePlayer sur /live/[slug], ou Header seul ailleurs). Un seul calcul, un
+ * seul lecteur YouTube partagé — jamais deux lecteurs pour le même direct.
+ */
+function setupLiveGroup(widgets: HTMLElement[]) {
+  const data = readData(widgets[0]!);
+  const countdownEls = widgets.flatMap((w) => Array.from(w.querySelectorAll<HTMLElement>("[data-live-countdown]")));
+  const statusLabelEls = widgets.flatMap((w) => Array.from(w.querySelectorAll<HTMLElement>("[data-live-status-label]")));
+  const announceEls = widgets.flatMap((w) => Array.from(w.querySelectorAll<HTMLElement>("[data-live-announce]")));
+  // `data-live-priority-block` et `data-live-indicator-link` marquent la
+  // racine du widget elle-même (LivePriority, le lien Header), pas un
+  // descendant — un filtre sur `widgets`, pas un querySelectorAll qui ne
+  // verrait jamais l'élément sur lequel il est posé.
+  const priorityBlocks = widgets.filter((w) => "livePriorityBlock" in w.dataset);
+  const indicatorLinks = widgets.filter((w) => "liveIndicatorLink" in w.dataset);
+
+  let playerBlock: HTMLElement | null = null;
+  let playerMount: HTMLElement | null = null;
+  let playerFrame: HTMLIFrameElement | null = null;
+  for (const w of widgets) {
+    playerBlock ??= w.querySelector<HTMLElement>("[data-live-player-block]");
+    playerMount ??= w.querySelector<HTMLElement>("[data-live-player-mount]");
+    playerFrame ??= w.querySelector<HTMLIFrameElement>("[data-live-player-frame]");
+  }
+
+  // Aucun widget présent sur cette page ne montre de lecteur visible (cas :
+  // Header seul, sur une page sans /live ni Live Priority) — une confirmation
+  // réelle reste nécessaire pour l'indicateur, donc un point d'ancrage minimal
+  // et invisible est créé, jamais un second système de détection.
+  let syntheticMount = false;
+  if (!playerMount) {
+    syntheticMount = true;
+    playerMount = document.createElement("div");
+    playerMount.className = "live-premount-offscreen";
+    document.body.appendChild(playerMount);
+  }
 
   let youtubeState: YoutubePlayerState = "unknown";
   let currentState: LiveState | undefined;
   let ytPlayer: { destroy: () => void } | undefined;
   let ytMounted = false;
-
-  function shouldMountPlayer(state: LiveState): boolean {
-    return state === "PRELIVE" || state === "ON_AIR" || state === "ENDING";
-  }
-
-  // Le bloc lecteur (conteneur visuel) n'est visible que là où le rendu
-  // serveur l'affiche déjà — PRELIVE le pré-monte caché uniquement pour que
-  // l'IFrame Player API existe et puisse rapporter un vrai état, jamais pour
-  // être vu avant confirmation.
-  function shouldShowPlayerBlock(state: LiveState): boolean {
-    return state === "ON_AIR" || state === "ENDING" || state === "REPLAY";
-  }
 
   async function mountYoutubePlayer() {
     if (ytMounted || !playerMount || !data.youtubeVideoId) return;
@@ -143,26 +189,59 @@ function setupWidget(el: HTMLElement) {
     });
   }
 
+  function revealPriorityBlock(el: HTMLElement) {
+    el.classList.remove("live-priority-hidden", "live-premount-offscreen");
+    el.classList.add("live-priority-enter");
+    // Double rAF : force le navigateur à peindre l'état de départ avant
+    // d'ajouter la classe de transition, sinon les deux styles arrivent dans
+    // la même frame et rien ne s'anime (Phase 14 : jamais un saut brutal).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.add("live-priority-enter-active");
+      });
+    });
+  }
+
+  function hidePriorityBlock(el: HTMLElement) {
+    el.classList.remove("live-priority-enter", "live-priority-enter-active");
+    el.classList.add("live-priority-hidden");
+  }
+
   function applyStateClasses(state: LiveState) {
-    el.dataset.currentState = state;
+    widgets.forEach((w) => (w.dataset.currentState = state));
+
     // Retire le hors-écran dès que confirmé — jamais un `hidden` (display:
     // none), qui suspendrait le lecteur au lieu de simplement l'afficher.
-    if (playerBlock) playerBlock.classList.toggle("live-player-premount", !shouldShowPlayerBlock(state));
+    if (playerBlock) playerBlock.classList.toggle("live-premount-offscreen", !shouldShowPlayerBlock(state));
     // Le player natif "youtube-nocookie" (sans JS API, chargé côté build
     // pour REPLAY et pour le rendu initial ON_AIR sans JS) reste affiché
-    // tant que l'API n'a pas pris le relais — jamais un player vide.
+    // tant que l'API n'a pas pris le relais — jamais un player vide. Un
+    // point d'ancrage synthétique (Header seul) n'a pas cette bascule : il
+    // reste hors-écran en permanence, il ne sert qu'à la confirmation.
     if (playerFrame) playerFrame.hidden = shouldMountPlayer(state) && ytMounted;
-    if (playerMount) playerMount.hidden = !(shouldMountPlayer(state) && ytMounted);
+    if (!syntheticMount && playerMount) playerMount.hidden = !(shouldMountPlayer(state) && ytMounted);
+
+    const onAirForPriority = shouldShowPriority(state);
+    priorityBlocks.forEach((el) => (onAirForPriority ? revealPriorityBlock(el) : hidePriorityBlock(el)));
+
+    const onAirForIndicator = state === "ON_AIR" || state === "ENDING";
+    indicatorLinks.forEach((link) => {
+      link.classList.toggle("live-on-air", onAirForIndicator);
+      const dot = link.querySelector<HTMLElement>("[data-live-indicator-dot]");
+      if (dot) dot.hidden = !onAirForIndicator;
+      const label = link.querySelector<HTMLElement>("[data-live-indicator-label]");
+      if (label) label.textContent = onAirForIndicator ? (link.dataset.labelOnair ?? "") : (link.dataset.labelDefault ?? "");
+    });
   }
 
   function render() {
     const now = new Date();
     const state = resolveLiveState(data, now, shouldMountPlayer(currentState ?? "SCHEDULED") ? youtubeState : "unknown");
 
-    if (countdownEl) {
+    if (countdownEls.length) {
       const remaining = data.scheduledStart ? new Date(data.scheduledStart).getTime() - now.getTime() : 0;
       const parts = countdownParts(remaining);
-      countdownEl.textContent =
+      const text =
         remaining <= 0
           ? ""
           : parts.days > 0
@@ -170,19 +249,18 @@ function setupWidget(el: HTMLElement) {
             : parts.hours > 0
               ? `${parts.hours}${data.labels.hour} ${parts.minutes}${data.labels.minute}`
               : `${parts.minutes}${data.labels.minute} ${parts.seconds}${data.labels.second}`;
+      countdownEls.forEach((el) => (el.textContent = text));
     }
 
     if (state !== currentState) {
       currentState = state;
       applyStateClasses(state);
-      if (statusLabelEl) {
-        statusLabelEl.textContent =
-          state === "ON_AIR" ? data.labels.live : state === "ENDING" ? data.labels.ending : state === "PRELIVE" ? data.labels.starting : "";
-      }
+      const label = state === "ON_AIR" ? data.labels.live : state === "ENDING" ? data.labels.ending : state === "PRELIVE" ? data.labels.starting : "";
+      statusLabelEls.forEach((el) => (el.textContent = label));
       // Une seule annonce par CHANGEMENT d'état, jamais à chaque seconde —
       // c'est exactement ce que Phase 18 interdit pour les technologies
       // d'assistance.
-      if (announceEl) announceEl.textContent = `${data.title} — ${statusLabelEl?.textContent ?? state}`;
+      announceEls.forEach((el) => (el.textContent = `${data.title} — ${label || state}`));
       if (shouldMountPlayer(state)) void mountYoutubePlayer();
     }
   }
@@ -194,6 +272,7 @@ function setupWidget(el: HTMLElement) {
     () => {
       window.clearInterval(intervalId);
       ytPlayer?.destroy();
+      if (syntheticMount) playerMount?.remove();
     },
     { once: true },
   );
@@ -202,5 +281,15 @@ function setupWidget(el: HTMLElement) {
 export function initLiveExperience() {
   if (initialized) return;
   initialized = true;
-  document.querySelectorAll<HTMLElement>("[data-live-widget]").forEach(setupWidget);
+  const widgets = Array.from(document.querySelectorAll<HTMLElement>("[data-live-widget]"));
+  if (!widgets.length) return;
+
+  const groups = new Map<string, HTMLElement[]>();
+  widgets.forEach((w, i) => {
+    const key = w.dataset.liveKey || w.dataset.youtubeVideoId || `unkeyed-${i}`;
+    const group = groups.get(key);
+    if (group) group.push(w);
+    else groups.set(key, [w]);
+  });
+  groups.forEach((group) => setupLiveGroup(group));
 }

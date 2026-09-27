@@ -56,6 +56,7 @@ const stateLabel = t(`live.status.${publicState}` as UiKey);
 <section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32" data-reveal>
   <div
     class="mx-auto max-w-(--container-content)"
+    data-live-key={live.slug}
     {...(isTimeSensitive
       ? {
           "data-live-widget": "",
@@ -158,7 +159,7 @@ const stateLabel = t(`live.status.${publicState}` as UiKey);
           class:list={[
             "mt-12 grid grid-cols-1 gap-6",
             showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
-            premountPlayer && "live-player-premount",
+            premountPlayer && "live-premount-offscreen",
           ]}
           data-reveal
           data-reveal-delay="0.1"
@@ -196,23 +197,9 @@ const stateLabel = t(`live.status.${publicState}` as UiKey);
 </script>
 
 <style>
-  /*
-   * PRELIVE (Phase 7) : le lecteur YouTube réel doit déjà exister et décoder
-   * pour pouvoir un jour rapporter "playing" de lui-même — un conteneur en
-   * display:none (attribut hidden) suspend la décodage vidéo dans la
-   * plupart des navigateurs, ce qui bloquerait la confirmation aussi
-   * sûrement que l'absence de lecteur. Position fixe hors écran plutôt que
-   * hidden : le lecteur reste "affiché" au sens du rendu, juste invisible.
-   */
-  .live-player-premount {
-    position: fixed;
-    left: -9999px;
-    top: -9999px;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    pointer-events: none;
-  }
+  /* Le hors-écran partagé (.live-premount-offscreen) vit maintenant dans
+     global.css — LivePriority et le fallback Header/JS le réutilisent tel
+     quel, un seul point de définition plutôt que trois copies divergentes. */
   .live-on-air-badge {
     border-color: var(--color-gold);
   }

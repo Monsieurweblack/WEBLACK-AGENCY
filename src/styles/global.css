@@ -347,4 +347,37 @@
     --color-gold: var(--color-gold-inverse);
     --color-paper: var(--color-ink);
   }
+
+  /*
+   * Un lecteur YouTube réel doit exister et décoder pour pouvoir un jour
+   * rapporter "playing" de lui-même (WEBLACK Live, Live Priority, indicateur
+   * Header) — un conteneur en display:none (l'attribut `hidden`) suspend le
+   * décodage vidéo dans la plupart des navigateurs, ce qui bloquerait la
+   * confirmation aussi sûrement que l'absence de lecteur. Position fixe hors
+   * écran plutôt que hidden : le lecteur reste "affiché" au sens du rendu,
+   * juste invisible. Partagé entre LivePlayer, LivePriority et le fallback
+   * créé par live-experience.ts — un seul point de définition.
+   */
+  .live-premount-offscreen {
+    position: fixed;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* Transition douce d'apparition pour Live Priority — jamais un saut brutal de mise en page (prefers-reduced-motion neutralise déjà transition-duration globalement, voir plus haut). */
+  .live-priority-enter {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  .live-priority-enter-active {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 420ms ease,
+      transform 420ms ease;
+  }
 }

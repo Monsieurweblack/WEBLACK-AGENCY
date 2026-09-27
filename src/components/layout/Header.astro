@@ -17,7 +17,25 @@ interface Props {
 
 const { lang, translations, siteSettings } = Astro.props;
 const t = useTranslations(lang);
-const isOnAir = primaryLive(await getLiveEntries(lang))?.state === "ON_AIR";
+
+/**
+ * Indicateur Header (WEBLACK LIVE PRIORITY EXPERIENCE) : même source de
+ * vérité que /live et que la homepage — primaryLive()/resolveLiveState(),
+ * jamais une seconde règle de priorité ou de détection. Le calcul au build
+ * (youtube toujours "unknown" hors EDITORIAL) ne peut par nature jamais
+ * confirmer ON_AIR pour un live AUTOMATED/HYBRID réel : le script client
+ * partagé (live-experience.ts) reprend le calcul en temps réel et révèle
+ * l'indicateur seulement sur confirmation réelle.
+ */
+const activeLive = primaryLive(await getLiveEntries(lang));
+const isEditorialOnAir = Boolean(activeLive && activeLive.controlMode === "EDITORIAL" && activeLive.state === "ON_AIR");
+const isTimeSensitive = Boolean(
+  activeLive &&
+    activeLive.controlMode !== "EDITORIAL" &&
+    (activeLive.state === "SCHEDULED" || activeLive.state === "PRELIVE" || activeLive.state === "ON_AIR" || activeLive.state === "ENDING"),
+);
+const showNow = isEditorialOnAir || (isTimeSensitive && (activeLive!.state === "ON_AIR" || activeLive!.state === "ENDING"));
+const dynamicLiveHref = activeLive ? localizedPath(lang, `/live/${activeLive.slug}/`) : undefined;
 
 const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
@@ -61,14 +79,30 @@ const liveHref = localizedPath(lang, "/live");
 
     <div class="header-cluster flex items-center gap-3">
       <a
-        href={liveHref}
+        href={dynamicLiveHref ?? liveHref}
+        data-live-indicator-link
+        data-live-key={activeLive?.slug}
+        data-label-onair={t("live.header.onair")}
+        data-label-default={t("nav.live")}
         class:list={[
-          "label-tracked inline-flex items-center transition-[color,transform] duration-300 hover:-translate-y-px",
-          isOnAir ? "gap-2 live-on-air" : "text-(--color-paper) hover:text-(--color-gold)",
+          "label-tracked inline-flex items-center gap-2 transition-[color,transform] duration-300 hover:-translate-y-px",
+          showNow ? "live-on-air" : "text-(--color-paper) hover:text-(--color-gold)",
         ]}
+        {...(isTimeSensitive
+          ? {
+              "data-live-widget": "",
+              "data-control-mode": activeLive!.controlMode,
+              "data-manual-status": activeLive!.manualStatus,
+              "data-scheduled-start": activeLive!.scheduledStart,
+              "data-scheduled-end": activeLive!.scheduledEnd,
+              "data-youtube-video-id": activeLive!.youtubeVideoId,
+              "data-replay-enabled": String(activeLive!.replayEnabled),
+              "data-title": activeLive!.title,
+            }
+          : {})}
       >
-        {isOnAir && <span class="live-on-air-dot" aria-hidden="true" />}
-        {t("nav.live")}
+        <span data-live-indicator-dot hidden={!showNow} class="live-on-air-dot" aria-hidden="true" />
+        <span data-live-indicator-label>{showNow ? t("live.header.onair") : t("nav.live")}</span>
       </a>
       <WorkWithPicker lang={lang} />
       <LanguageSwitcher lang={lang} translations={translations} />
@@ -442,6 +476,11 @@ const liveHref = localizedPath(lang, "/live");
 <script>
   import { initNav } from "../../scripts/gsap/nav";
   import { initTheme } from "../../scripts/theme";
+  import { initLiveExperience } from "../../scripts/video/live-experience";
+  // Idempotent (voir `initialized` dans live-experience.ts) : sans effet
+  // sur les pages qui montent déjà le même module (LivePlayer/LivePriority)
+  // depuis le Header, qui est présent sur tout le site.
+  initLiveExperience();
   initNav();
   initTheme();
 </script>

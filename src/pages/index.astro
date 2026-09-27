@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import HeroHome from "../components/sections/HeroHome.astro";
+import LivePriority from "../components/sections/LivePriority.astro";
 import ManifestoQuote from "../components/sections/ManifestoQuote.astro";
 import DivisionsGrid from "../components/sections/DivisionsGrid.astro";
 import SelectedWorkPreview from "../components/sections/SelectedWorkPreview.astro";
@@ -20,6 +21,8 @@ import {
   getExpertises,
   getTeamMembers,
   getPartnerLogos,
+  getLiveEntries,
+  primaryLive,
   type JournalEntry,
   type WorkEntry,
 } from "../lib/content";
@@ -27,7 +30,7 @@ import { localizedPath, type TranslationMap } from "../i18n/utils";
 
 const lang = "fr" as const;
 
-const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJournal, allWork, featuredWork] =
+const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJournal, allWork, featuredWork, liveEntries] =
   await Promise.all([
     getHomepage(lang),
     getExpertises(lang),
@@ -37,7 +40,10 @@ const [homepage, expertises, teamMembers, partnerLogos, allJournal, featuredJour
     getFeatured("journal", lang),
     getEntriesByLang("work", lang),
     getFeatured("work", lang),
+    getLiveEntries(lang),
   ]);
+// Même source de vérité que le Header et /live — voir LivePriority.astro.
+const activeLive = primaryLive(liveEntries);
 
 const heroImage = homepage?.hero.image ?? {
   url: "/photos/hero-home.jpg",
@@ -112,6 +118,11 @@ const translations: TranslationMap = {
     présence sur l'accueil via un second bloc à l'état vide n'ajouterait
     rien que la page dédiée /talent ne dise déjà mieux.
   */}
+
+  {/* WEBLACK LIVE PRIORITY EXPERIENCE — au-dessus du Hero, mais seulement
+      quand un direct réel est confirmé ON_AIR ; invisible et sans coût sinon
+      (voir LivePriority.astro). */}
+  <LivePriority lang={lang} live={activeLive} />
 
   {/* ATTENTION */}
   <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
