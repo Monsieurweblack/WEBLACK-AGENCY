@@ -1,0 +1,57 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import BoutiqueHero from "../../../components/sections/BoutiqueHero.astro";
+import BoutiqueCatalogue from "../../../components/pages/BoutiqueCatalogue.astro";
+import { useTranslations, localizedPath, type TranslationMap } from "../../../i18n/utils";
+import { getBoutiqueSettings, getBoutiqueProducts, getBoutiqueCategories, getBoutiqueCollections } from "../../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+
+const settings = await getBoutiqueSettings(lang);
+
+const [products, categories, collections] = settings.active
+  ? await Promise.all([getBoutiqueProducts(lang), getBoutiqueCategories(lang), getBoutiqueCollections(lang)])
+  : [[], [], []];
+
+const translations: TranslationMap = {
+  fr: localizedPath("fr", "/boutique"),
+};
+---
+
+<BaseLayout
+  lang={lang}
+  title={settings.seoTitle || t("boutique.hero.title")}
+  description={settings.seoDescription || t("boutique.seo.description")}
+  translations={translations}
+>
+  {settings.active ? (
+    <>
+      <BoutiqueHero
+        lang={lang}
+        eyebrow={settings.hero.eyebrow}
+        title={settings.hero.title}
+        intro={settings.hero.intro}
+        image={settings.hero.image}
+        count={products.length}
+      />
+      <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+        <div class="mx-auto max-w-(--container-content)">
+          <BoutiqueCatalogue lang={lang} products={products} categories={categories} collections={collections} />
+        </div>
+      </section>
+    </>
+  ) : (
+    <section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10">
+      <div class="mx-auto max-w-(--container-content)" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("boutique.hero.eyebrow")}</p>
+        <p class="font-display mt-4 max-w-2xl text-2xl text-(--color-paper)">{t("boutique.empty")}</p>
+      </div>
+    </section>
+  )}
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

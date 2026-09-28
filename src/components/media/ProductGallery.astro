@@ -1,0 +1,96 @@
+---
+import RemoteImage from "./RemoteImage.astro";
+import { useTranslations, type Lang } from "../../i18n/utils";
+import type { EditorialImageData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  images: EditorialImageData[];
+  productName: string;
+}
+
+const { lang, images, productName } = Astro.props;
+const t = useTranslations(lang);
+---
+
+{
+  images.length > 0 && (
+    <div data-product-gallery>
+      <div class:list={["grid grid-cols-1 gap-3", images.length > 1 && "sm:grid-cols-2"]}>
+        {images.map((image, i) => (
+          <button
+            type="button"
+            class="group relative block aspect-square w-full overflow-hidden bg-(--color-ink-soft) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-gold)"
+            data-product-gallery-thumb
+            data-index={i}
+            aria-label={t("boutique.gallery.open")}
+          >
+            <RemoteImage
+              src={image.url}
+              alt={image.alt || productName}
+              width={800}
+              height={800}
+              class="h-full w-full transition-transform duration-500 ease-(--ease-signature) group-hover:scale-105"
+              sizes="(min-width: 640px) 50vw, 100vw"
+            />
+          </button>
+        ))}
+      </div>
+
+      <div
+        id="product-gallery-lightbox"
+        class="gallery-lightbox fixed inset-0 z-[90] hidden items-center justify-center bg-(--color-ink)/95 p-4 sm:p-8"
+        role="dialog"
+        aria-modal="true"
+        aria-label={productName}
+        data-product-gallery-dialog
+      >
+        <button
+          type="button"
+          class="label-tracked absolute right-4 top-4 inline-flex min-h-11 min-w-11 items-center justify-center text-(--color-paper)/70 transition-colors hover:text-(--color-gold) sm:right-6 sm:top-6"
+          data-product-gallery-close
+          aria-label={t("boutique.gallery.close")}
+        >
+          <span aria-hidden="true">&#10005;</span>
+        </button>
+
+        <button
+          type="button"
+          class="label-tracked absolute left-2 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center text-(--color-paper)/70 transition-colors hover:text-(--color-gold) sm:left-6"
+          data-product-gallery-prev
+          aria-label={t("boutique.gallery.previous")}
+          hidden={images.length < 2}
+        >
+          <span aria-hidden="true">&larr;</span>
+        </button>
+        <button
+          type="button"
+          class="label-tracked absolute right-2 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center text-(--color-paper)/70 transition-colors hover:text-(--color-gold) sm:right-6"
+          data-product-gallery-next
+          aria-label={t("boutique.gallery.next")}
+          hidden={images.length < 2}
+        >
+          <span aria-hidden="true">&rarr;</span>
+        </button>
+
+        <figure class="flex max-h-full max-w-4xl flex-col items-center gap-4">
+          <img data-product-gallery-image class="max-h-[75vh] w-auto max-w-full object-contain" alt="" />
+          {images.length > 1 && (
+            <figcaption class="label-tracked text-(--color-paper)/50" data-product-gallery-counter />
+          )}
+        </figure>
+
+        <template data-product-gallery-sources>
+          {images.map((image) => (
+            <span data-src={image.url} data-alt={image.alt || productName} />
+          ))}
+        </template>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  import { initProductGallery } from "../../scripts/boutique/product-gallery";
+  initProductGallery();
+</script>

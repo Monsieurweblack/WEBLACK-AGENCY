@@ -1,0 +1,125 @@
+---
+import ProductGallery from "../media/ProductGallery.astro";
+import CardBoutiqueProduct from "../cards/CardBoutiqueProduct.astro";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import type { BoutiqueProductData } from "../../lib/content";
+import { formatBoutiquePrice } from "../../lib/boutique-format";
+
+interface Props {
+  lang: Lang;
+  product: BoutiqueProductData;
+  related: BoutiqueProductData[];
+  /** siteSettings.contactEmail — le même canal réel déjà utilisé partout ailleurs sur le site, jamais une adresse inventée pour la Boutique. */
+  contactEmail?: string;
+}
+
+const { lang, product, related, contactEmail } = Astro.props;
+const t = useTranslations(lang);
+
+const galleryImages = product.coverImage ? [product.coverImage, ...product.gallery] : product.gallery;
+const priceLabel = formatBoutiquePrice(product.pricing, lang, t);
+const notAvailable = product.availability === "sold-out" || product.availability === "unavailable";
+
+// Jamais un bouton sans destination : chaque mode commercial a exactement
+// une seule sortie possible, les deux autres sont simplement absentes.
+const inquirySubject = `[WEBLACK Boutique] ${product.productCode} — ${product.name}`;
+const inquiryHref = contactEmail ? `mailto:${contactEmail}?subject=${encodeURIComponent(inquirySubject)}` : undefined;
+
+const catalogueHref = localizedPath(lang, "/boutique/");
+const collectionHref = product.collection ? localizedPath(lang, `/boutique/collection/${product.collection.slug}/`) : undefined;
+---
+
+<article class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    <a href={catalogueHref} class="label-tracked inline-flex items-center gap-2 text-(--color-paper)/50 transition-colors hover:text-(--color-gold)">
+      &larr; {t("boutique.cta.backToCatalogue")}
+    </a>
+
+    <div class="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[1.2fr_1fr]">
+      <div>
+        {galleryImages.length > 0 ? (
+          <ProductGallery lang={lang} images={galleryImages} productName={product.name} />
+        ) : (
+          <div class="aspect-square w-full bg-(--color-ink-soft)" />
+        )}
+      </div>
+
+      <div data-reveal>
+        {product.collection && (
+          <a href={collectionHref} class="label-tracked text-(--color-gold) transition-colors hover:text-(--color-paper)">
+            {product.collection.name}
+          </a>
+        )}
+        <h1 class="font-display mt-3 max-w-xl text-3xl text-(--color-paper) sm:text-4xl">{product.name}</h1>
+        <p class="label-tracked mt-3 text-(--color-paper)/40">{t("boutique.productCode")} · {product.productCode}</p>
+
+        <div class="mt-6 flex flex-wrap items-center gap-4">
+          <p class="text-xl text-(--color-paper)">{priceLabel}</p>
+          <span
+            class:list={["label-tracked border px-3 py-1.5", notAvailable ? "border-(--color-line) text-(--color-paper)/50" : "border-(--color-gold) text-(--color-gold)"]}
+          >
+            {t(`boutique.availability.${product.availability}` as UiKey)}
+          </span>
+        </div>
+
+        {product.shortDescription && <p class="mt-6 text-(--color-paper)/70">{product.shortDescription}</p>}
+
+        {product.descriptionHtml && (
+          <div class="prose-weblack mt-8 max-w-none" set:html={product.descriptionHtml} />
+        )}
+
+        <div class="mt-8 flex flex-wrap gap-4">
+          {product.commerceMode === "inquiry" && inquiryHref && (
+            <a
+              href={inquiryHref}
+              class="label-tracked inline-flex items-center gap-2 border border-(--color-gold) px-6 py-4 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-on-gold)"
+            >
+              {t("boutique.cta.inquiry")}
+            </a>
+          )}
+          {product.commerceMode === "external-shop" && product.externalShopUrl && (
+            <a
+              href={product.externalShopUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="label-tracked inline-flex items-center gap-2 border border-(--color-gold) px-6 py-4 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-on-gold)"
+            >
+              {t("boutique.cta.externalShop")} &rarr;
+            </a>
+          )}
+        </div>
+
+        {product.downloads.length > 0 && (
+          <div class="mt-12 border-t border-(--color-line) pt-8">
+            <p class="label-tracked text-(--color-paper)/40">{t("boutique.downloads.title")}</p>
+            <ul class="mt-4 flex flex-col gap-3">
+              {product.downloads.map((download) => (
+                <li>
+                  <a
+                    href={download.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 text-(--color-paper)/80 underline decoration-(--color-line) underline-offset-4 transition-colors hover:text-(--color-gold)"
+                  >
+                    {download.title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {related.length > 0 && (
+      <div class="mt-20 border-t border-(--color-line) pt-14" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("boutique.related.title")}</p>
+        <div class="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {related.map((item, i) => (
+            <CardBoutiqueProduct lang={lang} product={item} index={i} />
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</article>

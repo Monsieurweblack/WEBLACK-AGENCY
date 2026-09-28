@@ -1,0 +1,39 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import { useTranslations, type Lang } from "../../i18n/utils";
+import type { EditorialImageData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  eyebrow?: string;
+  title?: string;
+  intro?: string;
+  image?: EditorialImageData;
+  count?: number;
+}
+
+const { lang, eyebrow, title, intro, image, count } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
+  <div class="mx-auto max-w-(--container-content)" data-reveal>
+    <div class:list={["grid grid-cols-1 gap-10", image && "lg:grid-cols-[1.3fr_1fr] lg:items-end lg:gap-14"]}>
+      <div>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{eyebrow || t("boutique.hero.eyebrow")}</p>
+        <h1 class="font-display text-balance mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+          {title || t("boutique.hero.title")}
+        </h1>
+        <p class="mt-4 max-w-2xl text-(--color-paper)/70">{intro || t("boutique.hero.intro")}</p>
+        {typeof count === "number" && <p class="label-tracked mt-8 text-(--color-paper)/40">{count}</p>}
+      </div>
+      {
+        image && (
+          <div class="aspect-[4/3] w-full overflow-hidden bg-(--color-ink-soft)">
+            <RemoteImage src={image.url} alt={image.alt} width={900} height={675} class="h-full w-full" />
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>

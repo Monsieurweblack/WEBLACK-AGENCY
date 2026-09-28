@@ -1,0 +1,38 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import BoutiqueCollectionDetail from "../../../components/pages/BoutiqueCollectionDetail.astro";
+import { localizedPath, type TranslationMap } from "../../../i18n/utils";
+import { getBoutiqueSettings, getBoutiqueCollections, getProductsByCollection, getBoutiqueCategories, type BoutiqueCollectionData } from "../../../lib/content";
+
+const lang = "fr" as const;
+
+export async function getStaticPaths() {
+  const settings = await getBoutiqueSettings("fr");
+  if (!settings.active) return [];
+  const collections = await getBoutiqueCollections("fr");
+  return collections.map((collection) => ({ params: { slug: collection.slug }, props: { collection } }));
+}
+
+const { collection } = Astro.props as { collection: BoutiqueCollectionData };
+const [products, categories] = await Promise.all([getProductsByCollection(lang, collection.slug), getBoutiqueCategories(lang)]);
+
+const translations: TranslationMap = {
+  en: localizedPath("en", `/boutique/collection/${collection.slug}`),
+};
+---
+
+<BaseLayout
+  lang={lang}
+  title={collection.seo?.title || collection.name}
+  description={collection.seo?.description || collection.description}
+  image={collection.heroImage?.url || collection.image?.url}
+  imageAlt={collection.heroImage?.alt || collection.image?.alt}
+  translations={translations}
+>
+  <BoutiqueCollectionDetail lang={lang} collection={collection} products={products} categories={categories} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

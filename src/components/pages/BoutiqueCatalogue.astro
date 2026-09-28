@@ -1,0 +1,156 @@
+---
+import CardBoutiqueProduct from "../cards/CardBoutiqueProduct.astro";
+import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import type { BoutiqueProductData, BoutiqueCategoryData, BoutiqueCollectionData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  products: BoutiqueProductData[];
+  categories: BoutiqueCategoryData[];
+  collections: BoutiqueCollectionData[];
+  /** Filtre pré-appliqué côté serveur (ex. /boutique/collection/[slug] réutilise cette même grille) — masque le sélecteur correspondant, il n'a plus de sens à changer depuis cette page. */
+  lockedCollectionSlug?: string;
+}
+
+const { lang, products, categories, collections, lockedCollectionSlug } = Astro.props;
+const t = useTranslations(lang);
+
+const params = Astro.url.searchParams;
+const initialCategory = params.get("category") ?? "all";
+const initialCollection = lockedCollectionSlug ?? params.get("collection") ?? "all";
+const initialAvailability = params.get("availability") ?? "all";
+const initialSort = params.get("sort") ?? "recommended";
+const initialQuery = params.get("q") ?? "";
+
+const SORT_OPTIONS: { value: string; labelKey: UiKey }[] = [
+  { value: "recommended", labelKey: "boutique.sort.recommended" },
+  { value: "latest", labelKey: "boutique.sort.latest" },
+  { value: "price-asc", labelKey: "boutique.sort.priceAsc" },
+  { value: "price-desc", labelKey: "boutique.sort.priceDesc" },
+];
+
+const AVAILABILITY_OPTIONS: BoutiqueProductData["availability"][] = ["available", "limited", "sold-out", "unavailable"];
+---
+
+{
+  products.length === 0 ? (
+    <p class="mt-14 text-(--color-paper)/60">{t("boutique.empty")}</p>
+  ) : (
+    <>
+      <form
+        id="boutique-filter"
+        class="flex flex-wrap items-end gap-x-8 gap-y-5 border-y border-(--color-line) py-6"
+        data-reveal
+        data-boutique-filter
+      >
+        <fieldset class="contents">
+          <legend class="sr-only">{t("boutique.filter.legend")}</legend>
+
+          <label class="flex min-w-48 flex-1 flex-col gap-2 sm:flex-none">
+            <span class="label-tracked text-(--color-paper)/40">{t("boutique.search.label")}</span>
+            <input
+              type="search"
+              name="q"
+              value={initialQuery}
+              placeholder={t("boutique.search.placeholder")}
+              class="min-w-0 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) placeholder:text-(--color-paper)/30 focus-visible:border-(--color-gold) focus-visible:outline-none"
+              data-boutique-search
+            />
+          </label>
+
+          {categories.length > 0 && (
+            <label class="flex min-w-0 flex-col gap-2">
+              <span class="label-tracked text-(--color-paper)/40">{t("boutique.filter.category")}</span>
+              <select
+                name="category"
+                class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+              >
+                <option value="all" selected={initialCategory === "all"}>
+                  {t("boutique.filter.all")}
+                </option>
+                {categories.map((c) => (
+                  <option value={c.slug} selected={initialCategory === c.slug}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {collections.length > 0 && !lockedCollectionSlug && (
+            <label class="flex min-w-0 flex-col gap-2">
+              <span class="label-tracked text-(--color-paper)/40">{t("boutique.filter.collection")}</span>
+              <select
+                name="collection"
+                class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+              >
+                <option value="all" selected={initialCollection === "all"}>
+                  {t("boutique.filter.all")}
+                </option>
+                {collections.map((c) => (
+                  <option value={c.slug} selected={initialCollection === c.slug}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <label class="flex min-w-0 flex-col gap-2">
+            <span class="label-tracked text-(--color-paper)/40">{t("boutique.filter.availability")}</span>
+            <select
+              name="availability"
+              class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+            >
+              <option value="all" selected={initialAvailability === "all"}>
+                {t("boutique.filter.all")}
+              </option>
+              {AVAILABILITY_OPTIONS.map((value) => (
+                <option value={value} selected={initialAvailability === value}>
+                  {t(`boutique.availability.${value}` as UiKey)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label class="flex min-w-0 flex-col gap-2">
+            <span class="label-tracked text-(--color-paper)/40">{t("boutique.sort.label")}</span>
+            <select
+              name="sort"
+              class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option value={opt.value} selected={initialSort === opt.value}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </fieldset>
+
+        <button
+          type="reset"
+          class="label-tracked ml-auto border-b border-transparent pb-2 text-(--color-paper)/50 transition-colors hover:border-(--color-gold) hover:text-(--color-gold)"
+          data-boutique-reset
+        >
+          {t("boutique.filter.reset")}
+        </button>
+      </form>
+
+      <div id="boutique-grid" class="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4" data-boutique-grid>
+        {products.map((product, i) => (
+          <CardBoutiqueProduct lang={lang} product={product} index={i} />
+        ))}
+      </div>
+
+      <p id="boutique-no-results" class="mt-14 text-(--color-paper)/60" hidden data-boutique-no-results>
+        {t("boutique.noResults")}
+      </p>
+    </>
+  )
+}
+
+<script>
+  import { initBoutiqueFilter } from "../../scripts/boutique/catalogue-filter";
+  initBoutiqueFilter();
+</script>

@@ -729,9 +729,22 @@ const LIVE_PROJECTION = `{
   controlMode, manualStatus, visibility
 }`;
 
+// Mémoïsé au niveau du module : ce fetch brut ne dépend pas de `lang` (seule
+// la mise en forme ci-dessous en dépend), et Header.astro appelle
+// getLiveEntries() sur chacune des ~130 pages du build — sans ce cache, ce
+// serait un aller-retour Sanity non mis en cache par page (même défaut de
+// perf que celui corrigé pour getBoutiqueSettings, voir plus bas).
+let liveDocsPromise: Promise<any[]> | undefined;
+function fetchLiveDocs(): Promise<any[]> {
+  if (!liveDocsPromise) {
+    liveDocsPromise = sanityClient.fetch(`*[_type == "live"] | order(order asc) ${LIVE_PROJECTION}`);
+  }
+  return liveDocsPromise;
+}
+
 /** Tous les documents `live` publics, dans l'état calculé au moment du build. */
 export async function getLiveEntries(lang: Lang): Promise<LivePublicData[]> {
-  const docs = await sanityClient.fetch(`*[_type == "live"] | order(order asc) ${LIVE_PROJECTION}`);
+  const docs = await fetchLiveDocs();
   const now = new Date();
   const entries: LivePublicData[] = [];
   for (const doc of docs as any[]) {
@@ -926,4 +939,307 @@ export async function getNowSignals(lang: Lang): Promise<NowSignalData[]> {
     });
   }
   return signals;
+}
+
+// --- Boutique (catalogue digital) -------------------------------------------
+//
+// Sanity est la seule source de vérité éditoriale et commerciale : aucune
+// donnée produit/catégorie/collection n'est codée en dur ici — uniquement
+// des types, des requêtes et du mapping. `publicationStatus` (visibilité)
+// et `availability` (achetable) sont deux axes indépendants ; ne jamais
+// déduire l'un de l'autre.
+
+export type BoutiquePublicationStatus = "draft" | "published" | "archived";
+export type BoutiqueAvailability = "available" | "limited" | "sold-out" | "unavailable";
+export type BoutiquePriceDisplayMode = "exact" | "from" | "request";
+export type BoutiqueCommerceMode = "inquiry" | "external-shop" | "none";
+export type BoutiqueDownloadType = "images-hd" | "catalog-pdf" | "lookbook" | "press-kit" | "product-sheet" | "other";
+export type BoutiqueSelectionMode = "featured" | "latest" | "manual";
+
+export interface BoutiquePricing {
+  displayMode: BoutiquePriceDisplayMode;
+  amount?: number;
+  currency?: string;
+}
+
+export interface BoutiqueDownload {
+  title: string;
+  type: BoutiqueDownloadType;
+  url: string;
+  order: number;
+}
+
+export interface BoutiqueVariantGroup {
+  label: string;
+  values: string[];
+}
+
+export interface BoutiqueCategoryData {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  image?: EditorialImageData;
+  order: number;
+}
+
+export interface BoutiqueCollectionData {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  image?: EditorialImageData;
+  heroImage?: EditorialImageData;
+  order: number;
+  featured: boolean;
+  seo?: Seo;
+}
+
+export interface BoutiqueProductData {
+  id: string;
+  productCode: string;
+  slug: string;
+  name: string;
+  shortDescription?: string;
+  descriptionHtml?: string;
+  category?: BoutiqueCategoryData;
+  collection?: BoutiqueCollectionData;
+  pricing: BoutiquePricing;
+  availability: BoutiqueAvailability;
+  publicationStatus: BoutiquePublicationStatus;
+  commerceMode: BoutiqueCommerceMode;
+  externalShopUrl?: string;
+  variants: BoutiqueVariantGroup[];
+  coverImage?: EditorialImageData;
+  gallery: EditorialImageData[];
+  downloads: BoutiqueDownload[];
+  relatedProductSlugs: string[];
+  featured: boolean;
+  order: number;
+  createdAt: string;
+  seo?: Seo;
+}
+
+export interface BoutiqueSettingsData {
+  active: boolean;
+  navigationLabel: string;
+  hero: { eyebrow?: string; title?: string; intro?: string; image?: EditorialImageData };
+  showOnHomepage: boolean;
+  homepageTitle?: string;
+  homepageIntro?: string;
+  homepageProductLimit: number;
+  selectionMode: BoutiqueSelectionMode;
+  selectedProductSlugs: string[];
+  seoTitle?: string;
+  seoDescription?: string;
+}
+
+const BOUTIQUE_CATEGORY_PROJECTION = `{
+  _id, "slug": slug.current, nameFr, nameEn, descriptionFr, descriptionEn, image, order, active
+}`;
+
+const BOUTIQUE_COLLECTION_PROJECTION = `{
+  _id, "slug": slug.current, nameFr, nameEn, descriptionFr, descriptionEn, image, heroImage, order, featured, active, seo
+}`;
+
+const BOUTIQUE_PRODUCT_PROJECTION = `{
+  _id, productCode, "slug": slug.current, nameFr, nameEn, shortDescriptionFr, shortDescriptionEn,
+  descriptionFr, descriptionEn,
+  "category": category->${BOUTIQUE_CATEGORY_PROJECTION},
+  "collection": collection->${BOUTIQUE_COLLECTION_PROJECTION},
+  pricing, availability, publicationStatus, commerceMode, externalShopUrl,
+  variants[]{labelFr, labelEn, values},
+  coverImage, gallery,
+  downloadableAssets[]{titleFr, titleEn, type, order, "url": file.asset->url},
+  "relatedProductSlugs": relatedProducts[]->slug.current,
+  featured, order, _createdAt, seo
+}`;
+
+function toPublicBoutiqueCategory(doc: any, lang: Lang): BoutiqueCategoryData | undefined {
+  if (!doc?.slug) return undefined;
+  return {
+    id: doc._id,
+    slug: doc.slug,
+    name: localized(lang, doc.nameFr, doc.nameEn),
+    description: localized(lang, doc.descriptionFr, doc.descriptionEn) || undefined,
+    image: mapEditorialImage(doc.image),
+    order: doc.order ?? 0,
+  };
+}
+
+function toPublicBoutiqueCollection(doc: any, lang: Lang): BoutiqueCollectionData | undefined {
+  // Une collection désactivée n'a plus de page publique — aucun produit ne
+  // doit pointer vers un lien mort, donc elle disparaît aussi comme
+  // référence portée par un produit (voir toPublicBoutiqueProduct).
+  if (!doc?.slug || doc.active !== true) return undefined;
+  return {
+    id: doc._id,
+    slug: doc.slug,
+    name: localized(lang, doc.nameFr, doc.nameEn),
+    description: localized(lang, doc.descriptionFr, doc.descriptionEn) || undefined,
+    image: mapEditorialImage(doc.image),
+    heroImage: mapEditorialImage(doc.heroImage),
+    order: doc.order ?? 0,
+    featured: doc.featured === true,
+    seo: doc.seo,
+  };
+}
+
+function toPublicBoutiqueProduct(doc: any, lang: Lang): BoutiqueProductData | undefined {
+  if (!doc?.slug || !doc.productCode || !doc.coverImage) return undefined;
+  const cover = mapEditorialImage(doc.coverImage);
+  if (!cover) return undefined;
+
+  const pricing: BoutiquePricing = {
+    displayMode: doc.pricing?.displayMode ?? "request",
+    amount: typeof doc.pricing?.amount === "number" ? doc.pricing.amount : undefined,
+    currency: doc.pricing?.currency || undefined,
+  };
+
+  const downloads: BoutiqueDownload[] = (doc.downloadableAssets ?? [])
+    .filter((d: any) => d?.url && d?.type)
+    .map((d: any) => ({
+      title: localized(lang, d.titleFr, d.titleEn),
+      type: d.type,
+      url: d.url,
+      order: d.order ?? 0,
+    }))
+    .sort((a: BoutiqueDownload, b: BoutiqueDownload) => a.order - b.order);
+
+  const variants: BoutiqueVariantGroup[] = (doc.variants ?? [])
+    .filter((v: any) => v?.values?.length)
+    .map((v: any) => ({ label: localized(lang, v.labelFr, v.labelEn), values: v.values }));
+
+  return {
+    id: doc._id,
+    productCode: doc.productCode,
+    slug: doc.slug,
+    name: localized(lang, doc.nameFr, doc.nameEn),
+    shortDescription: localized(lang, doc.shortDescriptionFr, doc.shortDescriptionEn) || undefined,
+    descriptionHtml: toHtmlSafe(lang === "en" ? doc.descriptionEn : doc.descriptionFr) || undefined,
+    category: toPublicBoutiqueCategory(doc.category, lang),
+    collection: toPublicBoutiqueCollection(doc.collection, lang),
+    pricing,
+    availability: doc.availability ?? "unavailable",
+    publicationStatus: doc.publicationStatus ?? "draft",
+    commerceMode: doc.commerceMode ?? "none",
+    externalShopUrl: doc.commerceMode === "external-shop" ? doc.externalShopUrl || undefined : undefined,
+    variants,
+    coverImage: cover,
+    gallery: (doc.gallery ?? []).map(mapEditorialImage).filter(Boolean) as EditorialImageData[],
+    downloads,
+    relatedProductSlugs: (doc.relatedProductSlugs ?? []).filter(Boolean),
+    featured: doc.featured === true,
+    order: doc.order ?? 0,
+    createdAt: doc._createdAt,
+    seo: doc.seo,
+  };
+}
+
+/** Catalogue complet publié, trié par ordre éditorial — le filtrage/tri fin (recherche, prix...) se fait côté client sur ce même jeu de données, jamais par une nouvelle requête réseau. */
+export async function getBoutiqueProducts(lang: Lang): Promise<BoutiqueProductData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "boutiqueProduct" && publicationStatus == "published"] | order(order asc) ${BOUTIQUE_PRODUCT_PROJECTION}`,
+  );
+  return (docs as any[]).map((doc) => toPublicBoutiqueProduct(doc, lang)).filter((p): p is BoutiqueProductData => Boolean(p));
+}
+
+export async function getBoutiqueProductBySlug(lang: Lang, slug: string): Promise<BoutiqueProductData | undefined> {
+  const doc = await sanityClient.fetch(
+    `*[_type == "boutiqueProduct" && publicationStatus == "published" && slug.current == $slug][0] ${BOUTIQUE_PRODUCT_PROJECTION}`,
+    { slug },
+  );
+  return toPublicBoutiqueProduct(doc, lang);
+}
+
+export async function getFeaturedBoutiqueProducts(lang: Lang): Promise<BoutiqueProductData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "boutiqueProduct" && publicationStatus == "published" && featured == true] | order(order asc) ${BOUTIQUE_PRODUCT_PROJECTION}`,
+  );
+  return (docs as any[]).map((doc) => toPublicBoutiqueProduct(doc, lang)).filter((p): p is BoutiqueProductData => Boolean(p));
+}
+
+export async function getProductsByCategory(lang: Lang, categorySlug: string): Promise<BoutiqueProductData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "boutiqueProduct" && publicationStatus == "published" && category->slug.current == $categorySlug] | order(order asc) ${BOUTIQUE_PRODUCT_PROJECTION}`,
+    { categorySlug },
+  );
+  return (docs as any[]).map((doc) => toPublicBoutiqueProduct(doc, lang)).filter((p): p is BoutiqueProductData => Boolean(p));
+}
+
+export async function getProductsByCollection(lang: Lang, collectionSlug: string): Promise<BoutiqueProductData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "boutiqueProduct" && publicationStatus == "published" && collection->slug.current == $collectionSlug] | order(order asc) ${BOUTIQUE_PRODUCT_PROJECTION}`,
+    { collectionSlug },
+  );
+  return (docs as any[]).map((doc) => toPublicBoutiqueProduct(doc, lang)).filter((p): p is BoutiqueProductData => Boolean(p));
+}
+
+/** Seules les catégories actives apparaissent dans le filtre — les produits qui référencent une catégorie désactivée restent inchangés (voir toPublicBoutiqueProduct, qui ne filtre pas sur `active`). */
+export async function getBoutiqueCategories(lang: Lang): Promise<BoutiqueCategoryData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "boutiqueCategory" && active == true] | order(order asc) ${BOUTIQUE_CATEGORY_PROJECTION}`,
+  );
+  return (docs as any[]).map((doc) => toPublicBoutiqueCategory(doc, lang)).filter((c): c is BoutiqueCategoryData => Boolean(c));
+}
+
+/** Seules les collections actives génèrent une page publique (getStaticPaths de /boutique/collection/[slug] s'appuie directement sur cette fonction). */
+export async function getBoutiqueCollections(lang: Lang): Promise<BoutiqueCollectionData[]> {
+  const docs = await sanityClient.fetch(
+    `*[_type == "boutiqueCollection" && active == true] | order(order asc) ${BOUTIQUE_COLLECTION_PROJECTION}`,
+  );
+  return (docs as any[]).map((doc) => toPublicBoutiqueCollection(doc, lang)).filter((c): c is BoutiqueCollectionData => Boolean(c));
+}
+
+/**
+ * Singleton — absent tant que personne n'a créé le document dans Studio
+ * (rien n'est inventé) : dans ce cas `active` retombe sur `false`, donc la
+ * Boutique reste invisible sur le site tant qu'un éditeur ne l'a pas
+ * explicitement configurée.
+ *
+ * Header.astro appelle cette fonction sur CHAQUE page du site (pour savoir
+ * si le lien "Boutique" doit apparaître) — sans mémoïsation, un document
+ * language-agnostic identique aurait été re-récupéré par un aller-retour
+ * réseau Sanity séparé sur chacune des ~130 pages du build (mesuré : ce
+ * seul appel a fait passer le build de ~30s à plus de 4 minutes). Le build
+ * Astro tourne dans un seul processus Node pour tout le site statique : un
+ * cache module-level, valable le temps du build, est donc correct — la
+ * donnée ne change jamais entre deux pages d'un même build.
+ */
+let boutiqueSettingsDocPromise: Promise<any> | undefined;
+function fetchBoutiqueSettingsDoc(): Promise<any> {
+  if (!boutiqueSettingsDocPromise) {
+    boutiqueSettingsDocPromise = sanityClient.fetch(
+      `*[_id == "boutiqueSettings"][0]{
+        active, navigationLabelFr, navigationLabelEn,
+        heroEyebrowFr, heroEyebrowEn, heroTitleFr, heroTitleEn, heroIntroFr, heroIntroEn, heroImage,
+        showOnHomepage, homepageTitleFr, homepageTitleEn, homepageIntroFr, homepageIntroEn, homepageProductLimit,
+        selectionMode, "selectedProductSlugs": selectedProducts[]->slug.current,
+        seoTitleFr, seoTitleEn, seoDescriptionFr, seoDescriptionEn
+      }`,
+    );
+  }
+  return boutiqueSettingsDocPromise;
+}
+
+export async function getBoutiqueSettings(lang: Lang): Promise<BoutiqueSettingsData> {
+  const doc = await fetchBoutiqueSettingsDoc();
+  return {
+    active: doc?.active === true,
+    navigationLabel: localized(lang, doc?.navigationLabelFr, doc?.navigationLabelEn) || (lang === "en" ? "Shop" : "Boutique"),
+    hero: {
+      eyebrow: localized(lang, doc?.heroEyebrowFr, doc?.heroEyebrowEn) || undefined,
+      title: localized(lang, doc?.heroTitleFr, doc?.heroTitleEn) || undefined,
+      intro: localized(lang, doc?.heroIntroFr, doc?.heroIntroEn) || undefined,
+      image: mapEditorialImage(doc?.heroImage),
+    },
+    showOnHomepage: doc?.showOnHomepage === true,
+    homepageTitle: localized(lang, doc?.homepageTitleFr, doc?.homepageTitleEn) || undefined,
+    homepageIntro: localized(lang, doc?.homepageIntroFr, doc?.homepageIntroEn) || undefined,
+    homepageProductLimit: doc?.homepageProductLimit ?? 4,
+    selectionMode: doc?.selectionMode ?? "featured",
+    selectedProductSlugs: (doc?.selectedProductSlugs ?? []).filter(Boolean),
+    seoTitle: localized(lang, doc?.seoTitleFr, doc?.seoTitleEn) || undefined,
+    seoDescription: localized(lang, doc?.seoDescriptionFr, doc?.seoDescriptionEn) || undefined,
+  };
 }

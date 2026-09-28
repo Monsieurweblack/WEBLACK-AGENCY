@@ -1,0 +1,49 @@
+---
+import CardBoutiqueProduct from "../cards/CardBoutiqueProduct.astro";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { BoutiqueProductData, BoutiqueSettingsData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  settings: BoutiqueSettingsData;
+  products: BoutiqueProductData[];
+}
+
+const { lang, settings, products } = Astro.props;
+const t = useTranslations(lang);
+---
+
+{
+  // Pilotée entièrement par Sanity (boutiqueSettings.showOnHomepage) — pas
+  // seulement l'activation de la Boutique elle-même, mais le choix éditorial
+  // explicite de la mettre en avant sur l'accueil.
+  settings.active && settings.showOnHomepage && products.length > 0 && (
+    <section class="bg-(--color-ink) py-24 md:py-32">
+      <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+        <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+          <div class="max-w-2xl">
+            <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("boutique.hero.eyebrow")}</p>
+            <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">
+              {settings.homepageTitle || t("boutique.hero.title")}
+            </h2>
+            {(settings.homepageIntro || settings.hero.intro) && (
+              <p class="mt-4 max-w-lg text-(--color-paper)/70">{settings.homepageIntro || settings.hero.intro}</p>
+            )}
+          </div>
+          <a
+            href={localizedPath(lang, "/boutique/")}
+            class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+          >
+            {t("boutique.homepage.cta")} &rarr;
+          </a>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          {products.map((product, i) => (
+            <CardBoutiqueProduct lang={lang} product={product} index={i} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

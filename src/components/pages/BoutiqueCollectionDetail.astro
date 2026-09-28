@@ -1,0 +1,33 @@
+---
+import BoutiqueHero from "../sections/BoutiqueHero.astro";
+import BoutiqueCatalogue from "./BoutiqueCatalogue.astro";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { BoutiqueCollectionData, BoutiqueProductData, BoutiqueCategoryData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  collection: BoutiqueCollectionData;
+  products: BoutiqueProductData[];
+  categories: BoutiqueCategoryData[];
+}
+
+const { lang, collection, products, categories } = Astro.props;
+const t = useTranslations(lang);
+const catalogueHref = localizedPath(lang, "/boutique/");
+---
+
+<BoutiqueHero lang={lang} eyebrow={t("boutique.hero.eyebrow")} title={collection.name} intro={collection.description} image={collection.heroImage} count={products.length} />
+
+<section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
+  <div class="mx-auto max-w-(--container-content)">
+    <BoutiqueCatalogue lang={lang} products={products} categories={categories} collections={[]} lockedCollectionSlug={collection.slug} />
+
+    <a
+      href={catalogueHref}
+      class="label-tracked mt-16 flex items-center justify-center gap-2 border-t border-(--color-line) pt-10 text-(--color-paper)/50 transition-colors hover:text-(--color-gold)"
+      data-reveal
+    >
+      {t("boutique.collection.viewCatalogue")}
+    </a>
+  </div>
+</section>

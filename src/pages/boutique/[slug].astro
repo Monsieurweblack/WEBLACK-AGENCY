@@ -1,0 +1,92 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BoutiqueProductDetail from "../../components/pages/BoutiqueProductDetail.astro";
+import { useTranslations, localizedPath, type TranslationMap } from "../../i18n/utils";
+import { getBoutiqueSettings, getBoutiqueProducts, getSiteSettings, type BoutiqueProductData } from "../../lib/content";
+
+const lang = "fr" as const;
+
+export async function getStaticPaths() {
+  const settings = await getBoutiqueSettings("fr");
+  if (!settings.active) return [];
+  const products = await getBoutiqueProducts("fr");
+  return products.map((product) => ({ params: { slug: product.slug }, props: { product } }));
+}
+
+const { product } = Astro.props as { product: BoutiqueProductData };
+const t = useTranslations(lang);
+const siteSettings = await getSiteSettings(lang);
+
+/**
+ * Sélection manuelle (relatedProducts) si renseignée, sinon rapprochement
+ * automatique : même collection, puis même catégorie, jamais l'un OU
+ * l'autre mélangé de façon incohérente — la collection est le lien
+ * éditorial le plus fort, la catégorie le repli. Aucun rapprochement
+ * inventé : liste vide si rien ne correspond réellement.
+ */
+async function findRelated(current: BoutiqueProductData): Promise<BoutiqueProductData[]> {
+  const all = await getBoutiqueProducts(lang);
+  if (current.relatedProductSlugs.length > 0) {
+    const bySlug = new Map(all.map((p) => [p.slug, p]));
+    return current.relatedProductSlugs.map((s) => bySlug.get(s)).filter((p): p is BoutiqueProductData => Boolean(p) && p!.slug !== current.slug);
+  }
+  const sameCollection = current.collection
+    ? all.filter((p) => p.slug !== current.slug && p.collection?.slug === current.collection!.slug)
+    : [];
+  const sameCategory = current.category
+    ? all.filter((p) => p.slug !== current.slug && p.category?.slug === current.category!.slug && !sameCollection.some((r) => r.slug === p.slug))
+    : [];
+  return [...sameCollection, ...sameCategory].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || a.order - b.order).slice(0, 4);
+}
+
+const related = await findRelated(product);
+
+const translations: TranslationMap = {
+  en: localizedPath("en", `/boutique/${product.slug}`),
+};
+---
+
+<BaseLayout
+  lang={lang}
+  title={`${product.name} — ${t("nav.boutique")}`}
+  description={product.shortDescription || t("boutique.seo.description")}
+  image={product.coverImage?.url}
+  imageAlt={product.coverImage?.alt}
+  translations={translations}
+>
+  <BoutiqueProductDetail lang={lang} product={product} related={related} contactEmail={siteSettings?.contactEmail} />
+</BaseLayout>
+
+{
+  product.pricing.displayMode !== "request" && typeof product.pricing.amount === "number" && product.pricing.currency && product.availability !== "unavailable" && (
+    <script
+      type="application/ld+json"
+      is:inline
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.name,
+        description: product.shortDescription,
+        sku: product.productCode,
+        image: product.coverImage?.url,
+        brand: { "@type": "Organization", name: "WEBLACK" },
+        offers: {
+          "@type": "Offer",
+          price: product.pricing.amount,
+          priceCurrency: product.pricing.currency,
+          availability:
+            product.availability === "available"
+              ? "https://schema.org/InStock"
+              : product.availability === "limited"
+                ? "https://schema.org/LimitedAvailability"
+                : "https://schema.org/OutOfStock",
+        },
+      }).replace(/</g, "\\u003c")}
+    />
+  )
+}
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>

@@ -1,0 +1,62 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import { imageFit, type BoutiqueProductData } from "../../lib/content";
+import { formatBoutiquePrice } from "../../lib/boutique-format";
+
+interface Props {
+  lang: Lang;
+  product: BoutiqueProductData;
+  index?: number;
+}
+
+const { lang, product, index = 0 } = Astro.props;
+const t = useTranslations(lang);
+const href = localizedPath(lang, `/boutique/${product.slug}/`);
+const priceLabel = formatBoutiquePrice(product.pricing, lang, t);
+const notAvailable = product.availability === "sold-out" || product.availability === "unavailable";
+---
+
+<a
+  href={href}
+  class="group block focus-visible:outline-none"
+  data-reveal
+  data-reveal-delay={String((index % 4) * 0.06)}
+  data-boutique-item
+  data-name={product.name.toLowerCase()}
+  data-code={product.productCode.toLowerCase()}
+  data-category={product.category?.slug ?? ""}
+  data-collection={product.collection?.slug ?? ""}
+  data-availability={product.availability}
+  data-price={typeof product.pricing.amount === "number" ? String(product.pricing.amount) : ""}
+  data-created={product.createdAt}
+  data-featured={String(product.featured)}
+  data-order={String(product.order)}
+>
+  <div
+    class="relative aspect-[4/5] overflow-hidden bg-(--color-ink-soft) transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-(--color-gold) group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-(--color-ink)"
+  >
+    <RemoteImage
+      src={product.coverImage!.url}
+      alt={product.coverImage!.alt}
+      width={800}
+      height={1000}
+      fit={imageFit(product.coverImage!)}
+      class:list={["h-full w-full transition-[transform,filter] duration-700 ease-(--ease-signature) group-hover:scale-105", notAvailable && "grayscale opacity-60"]}
+      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+    />
+    {
+      notAvailable && (
+        <span class="label-tracked absolute left-4 top-4 border border-(--color-line) bg-(--color-ink)/80 px-3 py-1.5 text-(--color-paper)">
+          {t(`boutique.availability.${product.availability}` as UiKey)}
+        </span>
+      )
+    }
+    <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/5 to-transparent"></div>
+    <div class="absolute inset-x-0 bottom-0 p-5">
+      {product.collection && <p class="label-tracked text-(--color-gold)">{product.collection.name}</p>}
+      <h3 class="font-display mt-2 text-xl text-(--color-paper) transition-colors group-hover:text-(--color-gold)">{product.name}</h3>
+      <p class="mt-2 text-sm text-(--color-paper)/60">{priceLabel}</p>
+    </div>
+  </div>
+</a>

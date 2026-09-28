@@ -7,7 +7,7 @@ import SocialLinks from "./SocialLinks.astro";
 import SearchOverlay from "./SearchOverlay.astro";
 import weblackIcon from "../../assets/logo/weblack-icon-gold-180.png";
 import { useTranslations, localizedPath, type Lang, type TranslationMap } from "../../i18n/utils";
-import { getLiveEntries, primaryLive, type SiteSettingsData } from "../../lib/content";
+import { getLiveEntries, primaryLive, getBoutiqueSettings, type SiteSettingsData } from "../../lib/content";
 
 interface Props {
   lang: Lang;
@@ -27,7 +27,13 @@ const t = useTranslations(lang);
  * partagé (live-experience.ts) reprend le calcul en temps réel et révèle
  * l'indicateur seulement sur confirmation réelle.
  */
-const activeLive = primaryLive(await getLiveEntries(lang), new Date());
+// Les deux fetch Sanity de ce Header (Live + Boutique) tournent en
+// parallèle — jamais l'un après l'autre : ce composant est rendu sur
+// chaque page du site, donc toute latence ajoutée ici se multiplie par le
+// nombre de pages du build (getBoutiqueSettings reste par ailleurs
+// mémoïsée pour tout le build, voir content.ts).
+const [liveEntries, boutiqueSettings] = await Promise.all([getLiveEntries(lang), getBoutiqueSettings(lang)]);
+const activeLive = primaryLive(liveEntries, new Date());
 const isEditorialOnAir = Boolean(activeLive && activeLive.controlMode === "EDITORIAL" && activeLive.state === "ON_AIR");
 const isTimeSensitive = Boolean(
   activeLive &&
@@ -39,11 +45,16 @@ const dynamicLiveHref = activeLive ? localizedPath(lang, `/live/${activeLive.slu
 
 const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
+// La Boutique n'apparaît dans la navigation que si elle est explicitement
+// activée dans Sanity (boutiqueSettings.active) — jamais un lien vers un
+// catalogue vide ou une fonctionnalité non encore voulue.
+
 const navItems = [
   { label: t("nav.talent"), href: "/talent" },
   { label: t("nav.creative"), href: "/creative" },
   { label: t("nav.consulting"), href: "/consulting" },
   { label: t("nav.selectedwork"), href: "/selected-work" },
+  ...(boutiqueSettings.active ? [{ label: boutiqueSettings.navigationLabel, href: "/boutique" }] : []),
   { label: t("nav.journal"), href: "/journal" },
   { label: t("nav.agenda"), href: "/agenda" },
   { label: t("nav.responsibility"), href: "/responsibility" },
