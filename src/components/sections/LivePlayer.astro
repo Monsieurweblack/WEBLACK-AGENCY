@@ -41,14 +41,19 @@ const showCountdown = publicState === "SCHEDULED" || publicState === "PRELIVE";
 const showPlayer = publicState === "ON_AIR" || publicState === "ENDING" || publicState === "REPLAY";
 const showChatPanel = (publicState === "ON_AIR" || publicState === "ENDING") && live.chatEnabled;
 
-// PRELIVE (hors EDITORIAL) doit déjà contenir la structure du lecteur dans
-// le DOM, invisible, sinon le script client n'a rien à monter : sans ce
-// point d'ancrage présent dès la génération de la page, l'IFrame Player API
-// n'est jamais créée, donc n'appelle jamais onStateChange, donc la vraie
-// confirmation YouTube que la mission exige avant d'afficher ON_AIR ne peut
-// tout simplement jamais arriver, quelle que soit la durée d'attente.
+// Le conteneur du lecteur doit exister dans le DOM dès que ce document peut
+// un jour changer d'état sans reconstruction du site — pas seulement à
+// partir de PRELIVE. Le site est un SSG : un document construit alors qu'il
+// est encore SCHEDULED (souvent des heures avant l'échéance, si le dernier
+// build a eu lieu bien avant) doit pouvoir traverser SCHEDULED → PRELIVE →
+// ON_AIR entièrement côté client, sans jamais être reconstruit entre les
+// deux. Si ce conteneur n'existe qu'à partir de PRELIVE, un visiteur qui
+// charge la page pendant qu'elle est encore SCHEDULED n'a tout simplement
+// aucun endroit où le lecteur réel confirmé pourrait un jour apparaître —
+// le script de secours (mount synthétique, live-experience.ts) confirme
+// bien l'état auprès de YouTube, mais n'a nulle part où le montrer.
 const premountPlayer = isTimeSensitive && publicState === "PRELIVE";
-const renderPlayerBlock = showPlayer || premountPlayer;
+const renderPlayerBlock = showPlayer || isTimeSensitive;
 
 const stateLabel = t(`live.status.${publicState}` as UiKey);
 ---
@@ -159,6 +164,11 @@ const stateLabel = t(`live.status.${publicState}` as UiKey);
           class:list={[
             "mt-12 grid grid-cols-1 gap-6",
             showChatPanel && "lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8",
+            // Mutuellement exclusifs, jamais les deux à la fois : SCHEDULED
+            // (rien n'est encore monté) coûte zéro en display:none ; PRELIVE
+            // doit rester hors-écran SANS display:none, qui suspendrait le
+            // lecteur qui vient d'y être monté.
+            !showPlayer && !premountPlayer && "live-block-hidden",
             premountPlayer && "live-premount-offscreen",
           ]}
           data-reveal

@@ -56,7 +56,7 @@ const playerUrl = live ? `https://www.youtube-nocookie.com/embed/${live.youtubeV
         // une vraie confirmation — les deux classes ne doivent jamais
         // s'appliquer ensemble, sous peine de faire gagner display:none par
         // spécificité du style scoped Astro.
-        !showNow && !premountPlayer && "live-priority-hidden",
+        !showNow && !premountPlayer && "live-block-hidden",
         premountPlayer && "live-premount-offscreen",
       ]}
       {...(isTimeSensitive
@@ -162,17 +162,7 @@ const playerUrl = live ? `https://www.youtube-nocookie.com/embed/${live.youtubeV
     }
   }
 
-  /*
-   * SCHEDULED (loin de l'échéance) : la section n'existe que pour porter
-   * l'horloge cliente, aucun lecteur n'est encore monté — display:none est
-   * sûr et gratuit ici. Ne s'applique jamais en même temps que
-   * .live-premount-offscreen (voir class:list plus haut).
-   */
-  .live-priority-hidden {
-    display: none;
-  }
-
-  /* Une fois révélée (JS retire .live-priority-hidden), la section entre
+  /* Une fois révélée (JS retire .live-block-hidden), la section entre
      avec une transition douce plutôt qu'un saut brutal de mise en page
      (Phase 14 de la mission) — voir .live-priority-enter/-active. */
 </style>

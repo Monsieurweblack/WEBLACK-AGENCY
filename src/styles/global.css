@@ -368,6 +368,19 @@
     pointer-events: none;
   }
 
+  /*
+   * Le pendant "rien n'est monté, donc coût nul" de .live-premount-offscreen
+   * ci-dessus — pour SCHEDULED, avant que le script client n'ait jamais
+   * appelé mountYoutubePlayer(). display:none est sûr ici précisément parce
+   * qu'aucun lecteur n'existe encore dans ce conteneur. Les deux classes ne
+   * doivent jamais s'appliquer ensemble au même élément (voir
+   * live-experience.ts, applyStateClasses) : la deuxième suspendrait un
+   * lecteur qui vient d'être monté dans la première.
+   */
+  .live-block-hidden {
+    display: none;
+  }
+
   /* Transition douce d'apparition pour Live Priority — jamais un saut brutal de mise en page (prefers-reduced-motion neutralise déjà transition-duration globalement, voir plus haut). */
   .live-priority-enter {
     opacity: 0;

@@ -190,7 +190,7 @@ function setupLiveGroup(widgets: HTMLElement[]) {
   }
 
   function revealPriorityBlock(el: HTMLElement) {
-    el.classList.remove("live-priority-hidden", "live-premount-offscreen");
+    el.classList.remove("live-block-hidden", "live-premount-offscreen");
     el.classList.add("live-priority-enter");
     // Double rAF : force le navigateur à peindre l'état de départ avant
     // d'ajouter la classe de transition, sinon les deux styles arrivent dans
@@ -202,17 +202,47 @@ function setupLiveGroup(widgets: HTMLElement[]) {
     });
   }
 
-  function hidePriorityBlock(el: HTMLElement) {
+  // Trois états mutuellement exclusifs pour un bloc lecteur (LivePlayer sur
+  // /live, LivePriority sur la homepage) : visible, hors-écran mais
+  // décodable (un vrai lecteur y est ou va y être monté — PRELIVE), ou
+  // entièrement masqué en display:none (rien n'est monté, coût nul —
+  // SCHEDULED loin de l'échéance, ou tout autre état qui ne montre rien).
+  //
+  // Un document construit alors qu'il est encore SCHEDULED (le cas normal
+  // sur un SSG si le dernier build a eu lieu bien avant l'heure programmée)
+  // traverse SCHEDULED → PRELIVE → ON_AIR entièrement côté client, sans
+  // reconstruction. Appliquer bêtement display:none à tout ce qui n'est pas
+  // "montrable maintenant" — comme le faisait cette fonction avant —
+  // suspend le lecteur qui vient d'être monté dès que l'état devient
+  // PRELIVE : la confirmation YouTube réelle que la mission exige ne peut
+  // alors plus jamais arriver, quelle que soit la durée d'attente.
+  //
+  // LivePlayer (playerBlock) n'a jamais eu de transition d'entrée — un
+  // simple retrait de classe, comme avant cette correction, pour ne pas
+  // changer son comportement visuel. LivePriority (priorityBlocks) garde sa
+  // transition douce déjà en place (Phase 14, WEBLACK LIVE PRIORITY
+  // EXPERIENCE).
+  function setPlayerBlockVisibility(el: HTMLElement, mode: "visible" | "premount" | "hidden") {
+    el.classList.remove("live-block-hidden", "live-premount-offscreen");
+    if (mode === "premount") el.classList.add("live-premount-offscreen");
+    else if (mode === "hidden") el.classList.add("live-block-hidden");
+  }
+
+  function setPriorityBlockVisibility(el: HTMLElement, mode: "visible" | "premount" | "hidden") {
+    if (mode === "visible") {
+      revealPriorityBlock(el);
+      return;
+    }
     el.classList.remove("live-priority-enter", "live-priority-enter-active");
-    el.classList.add("live-priority-hidden");
+    el.classList.remove("live-block-hidden", "live-premount-offscreen");
+    el.classList.add(mode === "premount" ? "live-premount-offscreen" : "live-block-hidden");
   }
 
   function applyStateClasses(state: LiveState) {
     widgets.forEach((w) => (w.dataset.currentState = state));
 
-    // Retire le hors-écran dès que confirmé — jamais un `hidden` (display:
-    // none), qui suspendrait le lecteur au lieu de simplement l'afficher.
-    if (playerBlock) playerBlock.classList.toggle("live-premount-offscreen", !shouldShowPlayerBlock(state));
+    const premount = state === "PRELIVE";
+    if (playerBlock) setPlayerBlockVisibility(playerBlock, shouldShowPlayerBlock(state) ? "visible" : premount ? "premount" : "hidden");
     // Le player natif "youtube-nocookie" (sans JS API, chargé côté build
     // pour REPLAY et pour le rendu initial ON_AIR sans JS) reste affiché
     // tant que l'API n'a pas pris le relais — jamais un player vide. Un
@@ -222,7 +252,7 @@ function setupLiveGroup(widgets: HTMLElement[]) {
     if (!syntheticMount && playerMount) playerMount.hidden = !(shouldMountPlayer(state) && ytMounted);
 
     const onAirForPriority = shouldShowPriority(state);
-    priorityBlocks.forEach((el) => (onAirForPriority ? revealPriorityBlock(el) : hidePriorityBlock(el)));
+    priorityBlocks.forEach((el) => setPriorityBlockVisibility(el, onAirForPriority ? "visible" : premount ? "premount" : "hidden"));
 
     const onAirForIndicator = state === "ON_AIR" || state === "ENDING";
     indicatorLinks.forEach((link) => {
