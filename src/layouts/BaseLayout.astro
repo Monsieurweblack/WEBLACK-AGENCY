@@ -35,6 +35,20 @@ const siteSettings = await getSiteSettings(lang);
   <head>
     <meta charset="UTF-8" />
     <!--
+      Doit rester le tout premier élément après charset — avant tout script,
+      même inline. Un navigateur qui n'a pas encore rencontré cette balise
+      utilise sa largeur de viewport par défaut (historiquement 980px,
+      pensée pour une page desktop) : si un <script> non-async la précède
+      dans le document, l'analyseur HTML s'arrête pour l'exécuter avant de
+      continuer à parser — donc avant que cette balise n'existe seulement
+      dans le DOM — et Safari iOS en particulier peut peindre une première
+      image avec cette largeur desktop, avant de rebasculer sur le mobile
+      une fois la balise enfin appliquée. C'est exactement le flash
+      desktop→mobile observé en production ; elle vivait après les deux
+      scripts inline ci-dessous, ce qui suffisait à le provoquer.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
       L'image LCP de presque toutes les pages vient de cdn.sanity.io. Sans
       preconnect, le navigateur ne résout le DNS et ne négocie le TLS qu'au
       moment où il rencontre la balise <img>, loin dans le document : la
@@ -113,7 +127,6 @@ const siteSettings = await getSiteSettings(lang);
         }
       } catch (e) {}
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/png" href="/favicon-32.png" />

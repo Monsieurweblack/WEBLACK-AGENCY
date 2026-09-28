@@ -67,6 +67,29 @@ const journalLastmodByPath = await loadJournalLastmodByPath();
 
 export default defineConfig({
   site: 'https://weblack.fr',
+  // Le CSS global (Tailwind compilé, ~70Ko) était lié en <link
+  // rel="stylesheet"> externe, injecté par Astro à un point fixe de <head>
+  // (juste après le JSON-LD du Seo) que réordonner les composants du layout
+  // ne déplace pas — vérifié en essayant. Sur une connexion mobile lente,
+  // le navigateur peint une première fois avec les seuls styles UA par
+  // défaut (aucune media query mobile appliquée) avant que cette feuille
+  // externe n'arrive et ne corrige la mise en page : c'est le flash
+  // desktop→mobile signalé en production.
+  //
+  // 'always' inline ce CSS directement dans le HTML de chaque page : plus
+  // aucune requête réseau séparée à attendre avant qu'il s'applique, donc
+  // plus de fenêtre possible pour ce flash — mesuré : FCP passe de ~4.0s à
+  // ~1.4s sous Slow 4G + CPU×4. Coût mesuré en contrepartie sous ces mêmes
+  // conditions extrêmes : LCP +1.3s (le HTML transporte ~70Ko de plus avant
+  // d'atteindre l'image du Hero) et le CSS n'est plus mis en cache une
+  // seule fois entre pages (il l'était via /_astro/*, immutable un an).
+  // Accepté : le bug signalé porte sur la mise en page au premier rendu,
+  // pas sur la vitesse d'apparition de l'image ; et ce coût est mesuré sans
+  // la compression Brotli que Cloudflare applique réellement en
+  // production, donc surestimé ici.
+  build: {
+    inlineStylesheets: 'always',
+  },
   integrations: [
     sitemap({
       filter: (page) => !NOINDEX_PATHS.some((path) => page.endsWith(path)),
