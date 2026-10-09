@@ -4,7 +4,6 @@ import { processArticle } from "./run.ts";
 import { loadConfig } from "../config/env.ts";
 import { acquireCycleLock, releaseCycleLock } from "./cycleLock.ts";
 import { readLedger } from "../logs/productionLedger.ts";
-import { runAgendaCycle } from "../agenda/runAgendaCycle.ts";
 import { currentQueue } from "../newsletter/queue.ts";
 import { log, logError } from "../logs/logger.ts";
 
@@ -48,14 +47,10 @@ export async function runOneCycle(dryRun: boolean): Promise<void> {
       }
     }
 
-    // Agenda culturel : à l'intérieur du même cycle, sous le verrou déjà
-    // détenu — pas de second planificateur, pas de boucle concurrente. Un
-    // échec de recherche web ne doit jamais faire tomber le cycle éditorial.
-    try {
-      await runAgendaCycle(dryRun);
-    } catch (error) {
-      logError("FETCH", error, { source: "agenda", recommendedAction: "Vérifier la disponibilité de la recherche web" });
-    }
+    // L'Agenda n'est plus alimenté automatiquement : runAgendaCycle()
+    // n'est plus appelé ici (ni ailleurs — voir cli.ts). Gouvernance
+    // éditoriale manuelle exclusive dans Sanity Studio ; le code du moteur
+    // de découverte reste présent mais n'a plus aucun point d'entrée actif.
   } finally {
     releaseCycleLock();
   }

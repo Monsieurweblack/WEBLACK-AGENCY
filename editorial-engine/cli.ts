@@ -16,7 +16,6 @@ import { log } from "./logs/logger.ts";
 import { reviewQueue, readLedger } from "./logs/productionLedger.ts";
 import { currentQueue } from "./newsletter/queue.ts";
 import { upcomingEvents, reviewEvents, currentEvents } from "./agenda/store.ts";
-import { runAgendaCycle } from "./agenda/runAgendaCycle.ts";
 import { currentSignals, reviewSignals, publishedSignals } from "./now/store.ts";
 import { runNowCycle } from "./now/runNowCycle.ts";
 import { dispatchDue, buildDigest, providerProblem } from "./newsletter/dispatch.ts";
@@ -171,8 +170,10 @@ async function main() {
 
     case "agenda": {
       if (positional[0] === "search") {
-        const result = await runAgendaCycle(dryRun);
-        console.log(JSON.stringify(result, null, 2));
+        console.log(
+          "editorial:agenda -- search a été désactivé : l'Agenda est désormais alimenté exclusivement à la main dans Sanity Studio, jamais par une découverte automatique. Le code de runAgendaCycle reste présent mais n'est plus appelé nulle part.",
+        );
+        process.exitCode = 1;
         break;
       }
       const upcoming = upcomingEvents();
@@ -279,7 +280,7 @@ async function main() {
       console.log("  npm run editorial:review                   — file de revue: ce qui attend une décision humaine");
       console.log("  npm run editorial:ledger                   — registre de production: cycles, décisions, coûts");
       console.log("  npm run editorial:agenda                    — événements culturels vérifiés en stock");
-      console.log("  npm run editorial:agenda -- search          — un passage de recherche (--dry-run pour ne rien stocker)");
+      console.log("  npm run editorial:agenda -- search          — DÉSACTIVÉ (gouvernance manuelle, voir Sanity Studio)");
       console.log("  npm run editorial:now                       — signaux WEBLACK NOW en stock");
       console.log("  npm run editorial:now -- run                — un passage de découverte (--dry-run pour ne rien stocker/écrire)");
       console.log("  npm run editorial:newsletter -- [list|preview|digest|send] — file des numéros");
