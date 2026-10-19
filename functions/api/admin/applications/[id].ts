@@ -2,8 +2,9 @@ import { json } from "../../../lib/json.ts";
 import { requireAdmin, UUID_RE } from "../../../lib/adminSession.ts";
 import { deletePhoto } from "../../../lib/photos.ts";
 import { APPLICATION_STATUSES, type ApplicationRecord } from "../../../lib/applicationTypes.ts";
+import { DriveClient, DriveError, driveConfigured, folderUrl, type DriveEnv } from "../../../lib/googleDrive.ts";
 
-interface Env {
+interface Env extends DriveEnv {
   DB: D1Database;
   PHOTOS: KVNamespace;
   ADMIN_SESSION_SECRET?: string;
@@ -48,7 +49,26 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
     .bind(id)
     .all();
 
-  return json({ ok: true, application, photos: photoUrls, emails: emails ?? [] }, 200);
+  // Archivage Drive : le lien du dossier n'existe que dans cette réponse
+  // authentifiée — jamais dans une page publique ni dans le formulaire.
+  const drive = await env.DB.prepare(
+    `SELECT status, attempts, last_error, last_synced_at, folder_id, (SELECT COUNT(*) FROM drive_files f WHERE f.application_id = s.application_id) AS files
+     FROM drive_sync s WHERE application_id = ?`,
+  )
+    .bind(id)
+    .first<{ status: string; attempts: number; last_error: string | null; last_synced_at: string | null; folder_id: string | null; files: number }>();
+  const driveInfo = drive
+    ? {
+        status: drive.status,
+        attempts: drive.attempts,
+        lastError: drive.last_error,
+        lastSyncedAt: drive.last_synced_at,
+        files: drive.files,
+        folderUrl: drive.folder_id ? folderUrl(drive.folder_id) : null,
+      }
+    : null;
+
+  return json({ ok: true, application, photos: photoUrls, emails: emails ?? [], drive: driveInfo }, 200);
 };
 
 interface PatchBody {
@@ -110,9 +130,26 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     .bind(id)
     .all<{ id: string }>();
 
+  // Archive Drive d'abord, et seulement vers la corbeille (récupérable 30
+  // jours). Si Drive refuse, rien n'est supprimé : le dossier reste cohérent
+  // partout, l'administrateur peut réessayer.
+  const archived = await env.DB.prepare(`SELECT folder_id FROM drive_sync WHERE application_id = ?`).bind(id).first<{ folder_id: string | null }>();
+  if (archived?.folder_id) {
+    if (!driveConfigured(env)) return json({ ok: false, reason: "drive_not_configured" }, 409);
+    try {
+      await new DriveClient(env).trash(archived.folder_id);
+    } catch (error) {
+      if (!(error instanceof DriveError && error.code === "drive_not_found")) {
+        return json({ ok: false, reason: "drive_trash_failed", code: error instanceof DriveError ? error.code : "internal" }, 502);
+      }
+    }
+  }
+
   // D1 d'abord, en une transaction : si elle échoue, rien n'est perdu. Les
   // fichiers ne sont effacés qu'une fois le dossier réellement supprimé.
-  const [, , deleted] = await env.DB.batch([
+  const [, , , , deleted] = await env.DB.batch([
+    env.DB.prepare(`DELETE FROM drive_files WHERE application_id = ?`).bind(id),
+    env.DB.prepare(`DELETE FROM drive_sync WHERE application_id = ?`).bind(id),
     env.DB.prepare(`DELETE FROM email_outbox WHERE application_id = ?`).bind(id),
     env.DB.prepare(`DELETE FROM application_photos WHERE application_id = ?`).bind(id),
     env.DB.prepare(`DELETE FROM applications WHERE id = ?`).bind(id),

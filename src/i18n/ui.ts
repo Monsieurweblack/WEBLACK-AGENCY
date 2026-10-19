@@ -1,4 +1,4 @@
-import { defaultLocale, ENABLED_LOCALE_CODES, LOCALES, type LocaleCode } from "./locales";
+import { defaultLocale, ENABLED_LOCALE_CODES, LOCALES, type LocaleCode } from "./locales.ts";
 
 export type Lang = LocaleCode;
 

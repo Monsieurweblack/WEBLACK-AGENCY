@@ -4,9 +4,10 @@ import { demotePhoto, getPhoto, promotePhoto } from "../../lib/photos.ts";
 import { parseApplication } from "../../lib/validation.ts";
 import { fetchTalentApplicationSettings } from "../../lib/sanity.ts";
 import { deliverOutbox, outboxInserts, referenceFor, type OutboxEnv } from "../../lib/talentOutbox.ts";
+import { driveSyncInsert, syncDrive, type DriveSyncEnv } from "../../lib/driveSync.ts";
 import type { ValidApplication } from "../../lib/applicationTypes.ts";
 
-interface Env extends OutboxEnv {
+interface Env extends OutboxEnv, DriveSyncEnv {
   PHOTOS: KVNamespace;
   SANITY_PROJECT_ID?: string;
   SANITY_DATASET?: string;
@@ -108,12 +109,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    // batch() = une transaction : le dossier, ses références photo et les
-    // e-mails à envoyer sont écrits ensemble, ou pas du tout.
+    // batch() = une transaction : le dossier, ses références photo, les
+    // e-mails à envoyer et l'archivage Drive à faire sont écrits ensemble,
+    // ou pas du tout.
     await env.DB.batch([
       buildApplicationInsert(env.DB, id, now, app),
       ...buildPhotoInserts(env.DB, id, now, app, contentTypes),
       ...outboxInserts(env.DB, id, now),
+      driveSyncInsert(env.DB, id, now),
     ]);
   } catch {
     // Deux envois simultanés du même formulaire : l'autre a gagné (index
@@ -138,9 +141,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Lignes restées en attente : relancées plus tard.
   }
 
-  // Au passage, quelques e-mails en retard d'autres dossiers (panne passée
-  // du fournisseur) — après la réponse, sans la retarder.
-  const backlog = deliverOutbox(env, { limit: 3, sanityNotifyEmail: settings.internalNotificationEmail }).catch(() => undefined);
+  // Après la réponse, sans la retarder : archivage Drive de ce dossier, puis
+  // un dossier en retard au plus, et quelques e-mails en retard d'autres
+  // dossiers (panne passée d'un fournisseur). La confirmation au candidat
+  // signifie « candidature enregistrée », jamais « archivée dans Drive » :
+  // l'état d'archivage est suivi à part, dans l'administration.
+  const backlog = (async () => {
+    await syncDrive(env, { applicationIds: [id] }).catch(() => undefined);
+    await syncDrive(env, { limit: 1 }).catch(() => undefined);
+    await deliverOutbox(env, { limit: 3, sanityNotifyEmail: settings.internalNotificationEmail }).catch(() => undefined);
+  })();
   if (context.waitUntil) context.waitUntil(backlog);
   else await backlog;
 

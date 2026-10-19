@@ -100,6 +100,8 @@ Une fois les deux étapes faites, toute publication dans le Studio republie le s
 - Chaque dossier écrit, dans la même transaction, deux lignes `email_outbox` (confirmation candidat, notification équipe). Un échec du fournisseur ne fait jamais perdre la candidature : la ligne passe en « Échec » avec un code technique (ex. `http_403:validation_error`), visible dans `/admin/candidatures/`, avec un bouton « Relancer les e-mails en attente ». 5 tentatives maximum par e-mail ; clé d'idempotence Resend = identifiant de la ligne (pas de doublon chez le destinataire).
 - « Accepté par le fournisseur » ne prouve pas la réception en boîte de réception : vérifier ponctuellement sur une adresse de test, et ajouter un enregistrement DMARC à weblack.fr (absent au 19/10/2026) pour la délivrabilité.
 
+**Archivage Google Drive** : copie de chaque dossier dans le Drive de weblackconsulting@gmail.com, après l'enregistrement, avec suivi et relance dans l'administration. Mise en service et autorisations : [docs/google-drive.md](docs/google-drive.md).
+
 **Dossiers PDF** (`public/downloads/`) : générés par `node --experimental-strip-types scripts/talent-pdf/generate.mjs` à partir des libellés de `src/i18n/ui.ts` — à relancer après toute modification de ces libellés (le test `scripts/lib/talentPdf.test.mjs` échoue tant que les PDF publiés ne correspondent pas). Les dossiers PDF arrivent par e-mail à l'adresse de contact, avec l'objet « Candidature PDF — … » / « PDF application — … » : aucun traitement automatique ni confirmation ; un filtre Gmail sur ces objets permet de les isoler (libellé « WEBLACK TALENTS / PDF »).
 
 ---

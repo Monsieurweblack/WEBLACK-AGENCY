@@ -81,6 +81,79 @@ export function initAdminCandidatures() {
     renderFilters();
     void loadList();
     void loadEmailSummary();
+    void loadDriveSummary(false);
+  }
+
+  // --- Archivage Google Drive -----------------------------------------------------
+  const driveSummary = document.getElementById("drive-summary");
+  const driveCheck = document.getElementById("drive-check") as HTMLButtonElement | null;
+  const driveRetry = document.getElementById("drive-retry") as HTMLButtonElement | null;
+  const DRIVE_STATUS_LABELS: Record<string, string> = {
+    pending_sync: "En attente d'archivage",
+    syncing: "Archivage en cours",
+    synced: "Archivé dans Google Drive",
+    sync_failed: "Échec de l'archivage",
+  };
+
+  async function loadDriveSummary(check: boolean) {
+    if (!driveSummary || !driveRetry) return;
+    const response = await fetch(`/api/admin/drive${check ? "?check=1" : ""}`);
+    if (response.status === 401) return showLogin();
+    if (!response.ok) return;
+    const data = (await response.json()) as {
+      configured: boolean;
+      summary: { status: string; last_error: string | null; count: number; last_synced_at: string | null }[];
+      connection?: { ok: boolean; code?: string };
+    };
+    const count = (status: string) => data.summary.filter((r) => r.status === status).reduce((n, r) => n + r.count, 0);
+    const waiting = count("pending_sync") + count("sync_failed") + count("syncing");
+    const errors = [...new Set(data.summary.filter((r) => r.last_error).map((r) => r.last_error))];
+    const last = data.summary.map((r) => r.last_synced_at).filter(Boolean).sort().pop();
+    driveSummary.textContent = [
+      `Google Drive : ${data.configured ? "configuré" : "non autorisé"}`,
+      data.connection ? (data.connection.ok ? "connexion vérifiée" : `connexion en échec (${data.connection.code})`) : "",
+      `archivés : ${count("synced")}`,
+      `en attente ou en échec : ${waiting}`,
+      last ? `dernière synchronisation : ${new Date(last).toLocaleString("fr-FR")}` : "",
+      errors.length ? `motif : ${errors.join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    driveRetry.hidden = waiting === 0 || !data.configured;
+  }
+
+  driveCheck?.addEventListener("click", () => void loadDriveSummary(true));
+  driveRetry?.addEventListener("click", async () => {
+    driveRetry.disabled = true;
+    const response = await fetch("/api/admin/drive", { method: "POST" });
+    driveRetry.disabled = false;
+    if (response.status === 401) return showLogin();
+    await loadDriveSummary(false);
+  });
+
+  interface DriveInfo {
+    status: string;
+    attempts: number;
+    lastError: string | null;
+    lastSyncedAt: string | null;
+    files: number;
+    folderUrl: string | null;
+  }
+
+  function driveHtml(drive: DriveInfo | null): string {
+    if (!drive) return "";
+    const parts = [
+      `<span class="text-(--color-gold)">${escapeHtml(DRIVE_STATUS_LABELS[drive.status] ?? drive.status)}</span>`,
+      drive.status === "synced" ? `${drive.files} fichier(s) vérifié(s)` : `${drive.attempts} tentative(s)`,
+      drive.lastSyncedAt ? `le ${escapeHtml(new Date(drive.lastSyncedAt).toLocaleString("fr-FR"))}` : "",
+      drive.lastError ? `motif : ${escapeHtml(drive.lastError)}` : "",
+    ].filter(Boolean);
+    // Lien privé : présent uniquement dans la réponse authentifiée de l'API, ouvert avec le compte Google propriétaire.
+    const link = drive.folderUrl
+      ? ` · <a href="${escapeHtml(drive.folderUrl)}" target="_blank" rel="noopener noreferrer" class="text-(--color-gold) underline">Ouvrir le dossier Drive</a>`
+      : "";
+    const retry = drive.status === "synced" ? "" : ` · <button id="drive-retry-one" class="text-(--color-gold) underline">Relancer l'archivage</button>`;
+    return `<div class="mt-8"><h3 class="label-tracked text-(--color-gold)">Archive Google Drive</h3><p class="mt-3 text-sm text-(--color-paper)">${parts.join(" — ")}${link}${retry}</p></div>`;
   }
 
   // --- Suivi des e-mails ------------------------------------------------------
@@ -232,12 +305,12 @@ export function initAdminCandidatures() {
       showLogin();
       return;
     }
-    const data = (await response.json()) as { ok: boolean; application?: ApplicationDetail; photos?: PhotoRef[]; emails?: EmailRow[] };
+    const data = (await response.json()) as { ok: boolean; application?: ApplicationDetail; photos?: PhotoRef[]; emails?: EmailRow[]; drive?: DriveInfo | null };
     if (!data.ok || !data.application) return;
 
     listView!.hidden = true;
     detailView!.hidden = false;
-    renderDetail(id, data.application, data.photos ?? [], data.emails ?? []);
+    renderDetail(id, data.application, data.photos ?? [], data.emails ?? [], data.drive ?? null);
   }
 
   interface EmailRow {
@@ -326,7 +399,7 @@ export function initAdminCandidatures() {
 
   const translate = (key: string) => (ui.fr as Record<string, string>)[key];
 
-  function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[], emails: EmailRow[]) {
+  function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[], emails: EmailRow[], drive: DriveInfo | null) {
     const sections = FIELD_GROUPS.map((group) => {
       const rows = group.fields
         .map(([key, label]) => [label, formatApplicationField(key, application[key], translate)] as const)
@@ -359,6 +432,7 @@ export function initAdminCandidatures() {
       ${projects}
       ${photosHtml}
       ${emailsHtml(emails)}
+      ${driveHtml(drive)}
       <div class="mt-8 border-t border-(--color-line) pt-6">
         <label class="label-tracked text-(--color-paper)/70">Statut</label>
         <select id="detail-status" class="form-input mt-2 max-w-xs">
@@ -388,6 +462,17 @@ export function initAdminCandidatures() {
       saveStatus.textContent = data.ok ? "Enregistré." : "Échec de l'enregistrement.";
     });
 
+    document.getElementById("drive-retry-one")?.addEventListener("click", async () => {
+      const response = await fetch("/api/admin/drive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applicationId: id }),
+      });
+      if (response.status === 401) return showLogin();
+      await openDetail(id);
+      void loadDriveSummary(false);
+    });
+
     const deleteButton = document.getElementById("delete-detail") as HTMLButtonElement;
     let confirming = false;
     deleteButton.addEventListener("click", async () => {
@@ -397,13 +482,18 @@ export function initAdminCandidatures() {
         return;
       }
       const response = await fetch(`/api/admin/applications/${id}`, { method: "DELETE" });
-      const data = (await response.json()) as { ok: boolean };
+      const data = (await response.json()) as { ok: boolean; reason?: string };
       if (data.ok) {
         detailView!.hidden = true;
         listView!.hidden = false;
         void loadList();
+        void loadDriveSummary(false);
       } else {
-        deleteButton.textContent = "Échec — réessayer";
+        // Rien n'a été supprimé : l'archive Drive doit d'abord partir à la corbeille.
+        deleteButton.textContent =
+          data.reason === "drive_trash_failed" || data.reason === "drive_not_configured"
+            ? "Archive Drive inaccessible, rien n'a été supprimé — réessayer"
+            : "Échec — réessayer";
         confirming = false;
       }
     });

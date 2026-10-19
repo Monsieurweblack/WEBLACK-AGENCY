@@ -51,6 +51,13 @@ import "../../styles/global.css";
           <button id="email-retry" hidden class="label-tracked min-h-10 text-(--color-gold) hover:text-(--color-gold-bright)">Relancer les e-mails en attente</button>
         </div>
 
+        <!-- Archivage Google Drive : suivi séparé de l'enregistrement du dossier -->
+        <div id="drive-panel" class="mt-2 flex flex-wrap items-center gap-4 text-sm text-(--color-paper)/60">
+          <p id="drive-summary" role="status" aria-live="polite"></p>
+          <button id="drive-check" class="label-tracked min-h-10 text-(--color-paper)/60 hover:text-(--color-gold)">Tester la connexion Drive</button>
+          <button id="drive-retry" hidden class="label-tracked min-h-10 text-(--color-gold) hover:text-(--color-gold-bright)">Relancer l'archivage en attente</button>
+        </div>
+
         <div id="list-view">
           <ul id="applications-list" class="mt-6 divide-y divide-(--color-line)"></ul>
           <p id="list-empty" hidden class="mt-10 text-(--color-paper)/60">Aucun dossier pour ce filtre.</p>

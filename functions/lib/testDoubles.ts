@@ -134,8 +134,138 @@ export const network = {
   },
 };
 
+// --- Doublure Google Drive (API v3) ---------------------------------------------------
+
+export interface FakeDriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  parents: string[];
+  appProperties: Record<string, string>;
+  size: number;
+  trashed: boolean;
+  permissions: { id: string; type: string; role: string }[];
+}
+
+type DriveMode = "ok" | "server_error" | "quota" | "timeout" | "unavailable" | "unauthorized" | "lose_upload_response";
+
+export const fakeDrive = {
+  files: new Map<string, FakeDriveFile>(),
+  oauth: "ok" as "ok" | "invalid_grant" | "invalid_client" | "timeout",
+  mode: "ok" as DriveMode,
+  /** Panne seulement à partir du N-ième appel Drive (0 = dès le premier). */
+  failAfterCalls: 0,
+  calls: 0,
+  uploads: 0,
+  tokenRequests: 0,
+  issuedToken: "ya29.test-access-token",
+  reset() {
+    this.files = new Map();
+    this.oauth = "ok";
+    this.mode = "ok";
+    this.failAfterCalls = 0;
+    this.calls = 0;
+    this.uploads = 0;
+    this.tokenRequests = 0;
+  },
+  live(): FakeDriveFile[] {
+    return [...this.files.values()].filter((f) => !f.trashed);
+  },
+};
+
+let driveIds = 0;
+
+function driveJson(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+}
+
+function driveError(status: number, reason: string) {
+  return driveJson({ error: { code: status, message: `failure for secret file name`, errors: [{ reason }] } }, status);
+}
+
+/** Comme Drive : un élément placé dans un dossier mis à la corbeille est lui-même à la corbeille. */
+function isTrashed(f: FakeDriveFile): boolean {
+  return f.trashed || f.parents.some((p) => {
+    const parent = fakeDrive.files.get(p);
+    return parent ? isTrashed(parent) : false;
+  });
+}
+
+function matchesQuery(file: FakeDriveFile, q: string): boolean {
+  if (/trashed = false/.test(q) && isTrashed(file)) return false;
+  for (const m of q.matchAll(/'([^']+)' in parents/g)) if (!file.parents.includes(m[1]!)) return false;
+  for (const m of q.matchAll(/appProperties has \{ key='([^']+)' and value='([^']+)' \}/g)) if (file.appProperties[m[1]!] !== m[2]) return false;
+  return true;
+}
+
+function view(file: FakeDriveFile) {
+  return { id: file.id, name: file.name, size: String(file.size), trashed: isTrashed(file), parents: file.parents, appProperties: file.appProperties };
+}
+
+async function handleDrive(url: URL, init: RequestInit | undefined): Promise<Response> {
+  if (url.hostname === "oauth2.googleapis.com") {
+    fakeDrive.tokenRequests += 1;
+    if (fakeDrive.oauth === "timeout") throw new DOMException("timed out", "TimeoutError");
+    if (fakeDrive.oauth === "invalid_grant") return driveJson({ error: "invalid_grant", error_description: "Token has been expired or revoked." }, 400);
+    if (fakeDrive.oauth === "invalid_client") return driveJson({ error: "invalid_client" }, 401);
+    return driveJson({ access_token: fakeDrive.issuedToken, expires_in: 3599, scope: "https://www.googleapis.com/auth/drive.file", token_type: "Bearer" });
+  }
+
+  fakeDrive.calls += 1;
+  const headers = new Headers(init?.headers);
+  if (headers.get("Authorization") !== `Bearer ${fakeDrive.issuedToken}` || fakeDrive.mode === "unauthorized") return driveError(401, "authError");
+  const failing = fakeDrive.calls > fakeDrive.failAfterCalls;
+  if (failing && fakeDrive.mode === "timeout") throw new DOMException("timed out", "TimeoutError");
+  if (failing && fakeDrive.mode === "server_error") return driveError(500, "backendError");
+  if (failing && fakeDrive.mode === "unavailable") return driveError(503, "backendError");
+  if (failing && fakeDrive.mode === "quota") return driveError(403, "userRateLimitExceeded");
+
+  const method = init?.method ?? "GET";
+  const path = url.pathname;
+
+  if (path === "/upload/drive/v3/files" && method === "POST") {
+    const boundary = headers.get("Content-Type")!.split("boundary=")[1]!;
+    const raw = Buffer.from(init!.body as Uint8Array);
+    const text = raw.toString("latin1");
+    const metaStart = text.indexOf("\r\n\r\n") + 4;
+    const metaEnd = text.indexOf(`\r\n--${boundary}`, metaStart);
+    const meta = JSON.parse(Buffer.from(raw.subarray(metaStart, metaEnd)).toString("utf8"));
+    const mediaStart = text.indexOf("\r\n\r\n", metaEnd + 2) + 4;
+    const mediaEnd = text.lastIndexOf(`\r\n--${boundary}--`);
+    const file: FakeDriveFile = { id: `f${++driveIds}`, name: meta.name, mimeType: "application/octet-stream", parents: meta.parents, appProperties: meta.appProperties ?? {}, size: mediaEnd - mediaStart, trashed: false, permissions: [{ id: "owner", type: "user", role: "owner" }] };
+    fakeDrive.files.set(file.id, file);
+    fakeDrive.uploads += 1;
+    if (fakeDrive.mode === "lose_upload_response" && fakeDrive.uploads === 1) throw new TypeError("fetch failed");
+    return driveJson(view(file));
+  }
+  if (path === "/drive/v3/files" && method === "POST") {
+    const meta = JSON.parse(String(init!.body));
+    const file: FakeDriveFile = { id: `d${++driveIds}`, name: meta.name, mimeType: meta.mimeType, parents: meta.parents ?? ["root"], appProperties: meta.appProperties ?? {}, size: 0, trashed: false, permissions: [{ id: "owner", type: "user", role: "owner" }] };
+    fakeDrive.files.set(file.id, file);
+    return driveJson(view(file));
+  }
+  if (path === "/drive/v3/files" && method === "GET") {
+    const q = url.searchParams.get("q") ?? "";
+    return driveJson({ files: [...fakeDrive.files.values()].filter((f) => matchesQuery(f, q)).map(view) });
+  }
+  const permissions = path.match(/^\/drive\/v3\/files\/([^/]+)\/permissions$/);
+  if (permissions) {
+    const file = fakeDrive.files.get(decodeURIComponent(permissions[1]!));
+    return file ? driveJson({ permissions: file.permissions }) : driveError(404, "notFound");
+  }
+  const single = path.match(/^\/drive\/v3\/files\/([^/]+)$/);
+  if (single) {
+    const file = fakeDrive.files.get(decodeURIComponent(single[1]!));
+    if (!file) return driveError(404, "notFound");
+    if (method === "PATCH") Object.assign(file, JSON.parse(String(init!.body)));
+    return driveJson(view(file));
+  }
+  throw new Error(`appel Drive inattendu : ${method} ${url}`);
+}
+
 globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
   const url = String(input instanceof Request ? input.url : input);
+  if (/^https:\/\/(oauth2|www)\.googleapis\.com\//.test(url)) return handleDrive(new URL(url), init);
   if (url.includes("api.sanity.io")) {
     if (network.sanityDown) return new Response("upstream error", { status: 503 });
     return new Response(JSON.stringify({ result: network.campaign }));
