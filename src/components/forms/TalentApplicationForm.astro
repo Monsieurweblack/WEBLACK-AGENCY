@@ -1,0 +1,352 @@
+---
+import { useTranslations, type Lang, type UiKey } from "../../i18n/utils";
+import type { TalentApplicationSettingsData } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  settings: TalentApplicationSettingsData;
+}
+
+const { lang, settings } = Astro.props;
+const t = useTranslations(lang);
+
+const EXPERIENCE_LEVELS = ["beginner", "some_experience", "experienced", "professional"] as const;
+
+const STEP_TITLES = [1, 2, 3, 4, 5].map((n) => t(`talentApplication.step.${n}.title` as UiKey));
+const clientStrings = {
+  progress: t("talentApplication.progress"),
+  stepTitles: STEP_TITLES,
+  navBack: t("talentApplication.nav.back"),
+  navContinue: t("talentApplication.nav.continue"),
+  navSubmit: t("talentApplication.nav.submit"),
+  navSubmitting: t("talentApplication.nav.submitting"),
+  navRetry: t("talentApplication.nav.retry"),
+  photoChoose: t("talentApplication.photo.choose"),
+  photoReplace: t("talentApplication.photo.replace"),
+  photoUploading: t("talentApplication.photo.uploading"),
+  photoUploaded: t("talentApplication.photo.uploaded"),
+  photoRetry: t("talentApplication.photo.retry"),
+  photoError: t("talentApplication.photo.error"),
+  photoInvalidType: t("talentApplication.photo.invalidType"),
+  photoTooLarge: t("talentApplication.photo.tooLarge"),
+  errorGeneric: t("talentApplication.error.generic"),
+  errorValidation: t("talentApplication.error.validation"),
+  errorClosed: t("talentApplication.error.closed"),
+  reviewEdit: t("talentApplication.review.edit"),
+};
+
+/**
+ * Formulaire en une seule page, 5 étapes affichées/masquées en JS (jamais
+ * de rechargement entre étapes) — c'est ce qui permet de conserver les
+ * réponses en mémoire sans jamais toucher à localStorage (voir
+ * scripts/talent-application/form.ts). Le serveur revalide tout : ce
+ * balisage ne fait que guider la saisie.
+ */
+---
+
+<form
+  id="talent-application-form"
+  novalidate
+  data-minors-allowed={String(settings.minorsAllowed)}
+  data-minors-message={settings.minorsMessage ?? t("talentApplication.minors.title")}
+  data-confirmation-message={settings.confirmationMessage ?? ""}
+  data-privacy-notice-version={settings.privacyNoticeVersion}
+  data-i18n={JSON.stringify(clientStrings)}
+>
+  <!-- Progression -->
+  <div class="mb-10" data-reveal>
+    <p class="label-tracked text-(--color-paper)/50" data-step-progress></p>
+    <div class="mt-3 h-[2px] w-full bg-(--color-line)">
+      <div class="h-full bg-(--color-gold) transition-[width] duration-300" data-step-bar style="width:20%"></div>
+    </div>
+    <h2 class="font-display mt-4 text-2xl text-(--color-paper)" data-step-title></h2>
+  </div>
+
+  <!-- Étape 1 — Profil -->
+  <fieldset data-step="1" class="space-y-6">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <label for="firstName" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.firstName")}</label>
+        <input id="firstName" name="firstName" type="text" required autocomplete="given-name" class="form-input" />
+      </div>
+      <div>
+        <label for="lastName" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.lastName")}</label>
+        <input id="lastName" name="lastName" type="text" required autocomplete="family-name" class="form-input" />
+      </div>
+    </div>
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <label for="birthDate" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.birthDate")}</label>
+        <input id="birthDate" name="birthDate" type="date" required autocomplete="bday" class="form-input" data-birth-date />
+      </div>
+      <div></div>
+    </div>
+    <p hidden data-minor-block class="border border-(--color-line) bg-(--color-ink-soft) p-5 text-(--color-paper)/80"></p>
+    <div data-minor-gated>
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <label for="city" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.city")}</label>
+          <input id="city" name="city" type="text" required autocomplete="address-level2" class="form-input" />
+        </div>
+        <div>
+          <label for="country" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.country")}</label>
+          <input id="country" name="country" type="text" required autocomplete="country-name" class="form-input" />
+        </div>
+      </div>
+      <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <label for="email" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.email")}</label>
+          <input id="email" name="email" type="email" required autocomplete="email" class="form-input" />
+        </div>
+        <div>
+          <label for="phone" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.phone")}</label>
+          <input id="phone" name="phone" type="tel" required autocomplete="tel" class="form-input" />
+        </div>
+      </div>
+      <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div>
+          <label for="instagram" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.instagram")}</label>
+          <input id="instagram" name="instagram" type="text" class="form-input" />
+        </div>
+        <div>
+          <label for="languages" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.languages")}</label>
+          <input id="languages" name="languages" type="text" class="form-input" />
+        </div>
+      </div>
+
+      <div hidden data-guardian-fields class="mt-8 space-y-6 border-t border-(--color-line) pt-6">
+        <p class="text-sm text-(--color-paper)/70">{t("talentApplication.minorGuardianNotice")}</p>
+        <div>
+          <label for="legalGuardianName" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.legalGuardianName")}</label>
+          <input id="legalGuardianName" name="legalGuardianName" type="text" class="form-input" data-guardian-required />
+        </div>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <label for="legalGuardianEmail" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.legalGuardianEmail")}</label>
+            <input id="legalGuardianEmail" name="legalGuardianEmail" type="email" class="form-input" data-guardian-required />
+          </div>
+          <div>
+            <label for="legalGuardianPhone" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.legalGuardianPhone")}</label>
+            <input id="legalGuardianPhone" name="legalGuardianPhone" type="tel" class="form-input" data-guardian-required />
+          </div>
+        </div>
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- Étape 2 — Mensurations -->
+  <fieldset data-step="2" hidden class="space-y-6">
+    <p class="text-sm text-(--color-paper)/60">{t("talentApplication.field.measurementsNote")}</p>
+    <div class="grid grid-cols-2 gap-6 sm:grid-cols-4">
+      {(["heightCm", "chestCm", "waistCm", "hipsCm"] as const).map((field) => (
+        <div>
+          <label for={field} class="label-tracked text-(--color-paper)/70">{t(`talentApplication.field.${field}` as UiKey)}</label>
+          <input id={field} name={field} type="text" inputmode="decimal" class="form-input" data-decimal />
+        </div>
+      ))}
+    </div>
+    <div class="grid grid-cols-2 gap-6 sm:grid-cols-3">
+      <div>
+        <label for="shoeSize" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.shoeSize")}</label>
+        <input id="shoeSize" name="shoeSize" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="shoeSystem" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.shoeSystem")}</label>
+        <input id="shoeSystem" name="shoeSystem" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="clothingSize" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.clothingSize")}</label>
+        <input id="clothingSize" name="clothingSize" type="text" class="form-input" />
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-6 sm:grid-cols-3">
+      <div>
+        <label for="inseamCm" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.inseamCm")}</label>
+        <input id="inseamCm" name="inseamCm" type="text" inputmode="decimal" class="form-input" data-decimal />
+      </div>
+      <div>
+        <label for="hairColor" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.hairColor")}</label>
+        <input id="hairColor" name="hairColor" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="eyeColor" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.eyeColor")}</label>
+        <input id="eyeColor" name="eyeColor" type="text" class="form-input" />
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- Étape 3 — Expérience et portfolio -->
+  <fieldset data-step="3" hidden class="space-y-6">
+    <div>
+      <label for="experienceLevel" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.experienceLevel")}</label>
+      <select id="experienceLevel" name="experienceLevel" required class="form-input">
+        <option value="" disabled selected></option>
+        {EXPERIENCE_LEVELS.map((level) => <option value={level}>{t(`talentApplication.experienceLevel.${level}` as UiKey)}</option>)}
+      </select>
+    </div>
+    <div>
+      <label for="pastMissions" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.pastMissions")}</label>
+      <textarea id="pastMissions" name="pastMissions" rows="3" class="form-input resize-none"></textarea>
+    </div>
+
+    <div>
+      <p class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.projects")}</p>
+      <div data-projects-container class="mt-4 space-y-4"></div>
+      <button type="button" data-add-project class="mt-4 label-tracked border-b border-(--color-line) pb-1 text-(--color-paper)/60 hover:border-(--color-gold) hover:text-(--color-gold)">
+        + {t("talentApplication.addProject")}
+      </button>
+      <template data-project-template>
+        <div class="grid grid-cols-1 gap-4 border border-(--color-line) p-5 sm:grid-cols-3" data-project-entry>
+          <input type="text" placeholder={t("talentApplication.field.projectName")} class="form-input" data-project-name />
+          <input type="text" placeholder={t("talentApplication.field.projectRole")} class="form-input" data-project-role />
+          <div class="flex gap-3">
+            <input type="text" placeholder={t("talentApplication.field.projectYear")} class="form-input" data-project-year />
+            <button type="button" data-remove-project class="shrink-0 text-(--color-paper)/50 hover:text-(--color-gold)">{t("talentApplication.removeProject")}</button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <label for="currentAgency" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.currentAgency")}</label>
+        <input id="currentAgency" name="currentAgency" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="exclusivity" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.exclusivity")}</label>
+        <input id="exclusivity" name="exclusivity" type="text" class="form-input" />
+      </div>
+    </div>
+    <div>
+      <label for="portfolioLinks" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.portfolioLinks")}</label>
+      <textarea id="portfolioLinks" name="portfolioLinks" rows="3" class="form-input resize-none"></textarea>
+    </div>
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <label for="skills" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.skills")}</label>
+        <input id="skills" name="skills" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="training" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.training")}</label>
+        <input id="training" name="training" type="text" class="form-input" />
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- Étape 4 — Photos et disponibilités -->
+  <fieldset data-step="4" hidden class="space-y-8">
+    <p class="text-sm text-(--color-paper)/60">{t("talentApplication.photo.formats")}</p>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+      {(["portrait", "profile", "full_length"] as const).map((role) => (
+        <div class="photo-slot" data-photo-role={role}>
+          <p class="label-tracked text-(--color-paper)/70">{t(`talentApplication.photo.${role}` as UiKey)}</p>
+          <div class="mt-3 aspect-[3/4] w-full border border-(--color-line) bg-(--color-ink-soft)" data-photo-preview></div>
+          <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" data-photo-input id={`photo-${role}`} />
+          <input type="hidden" data-photo-id-field required />
+          <button type="button" data-photo-trigger class="mt-3 w-full border border-(--color-line) py-3 text-sm text-(--color-paper)/80 hover:border-(--color-gold) hover:text-(--color-gold)">
+            {t("talentApplication.photo.choose")}
+          </button>
+          <p role="status" aria-live="polite" class="mt-2 min-h-[1.25em] text-sm" data-photo-status></p>
+        </div>
+      ))}
+    </div>
+
+    <div>
+      <p class="label-tracked text-(--color-paper)/70">{t("talentApplication.photo.extra")}</p>
+      <div data-extra-photos-container class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3"></div>
+      <button type="button" data-add-extra-photo class="mt-4 label-tracked border-b border-(--color-line) pb-1 text-(--color-paper)/60 hover:border-(--color-gold) hover:text-(--color-gold)">
+        + {t("talentApplication.photo.addExtra")}
+      </button>
+      <template data-extra-photo-template>
+        <div class="photo-slot" data-photo-role="extra" data-extra-entry>
+          <div class="mt-3 aspect-[3/4] w-full border border-(--color-line) bg-(--color-ink-soft)" data-photo-preview></div>
+          <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" data-photo-input />
+          <input type="hidden" data-photo-id-field />
+          <button type="button" data-photo-trigger class="mt-3 w-full border border-(--color-line) py-3 text-sm text-(--color-paper)/80 hover:border-(--color-gold) hover:text-(--color-gold)">
+            {t("talentApplication.photo.choose")}
+          </button>
+          <p role="status" aria-live="polite" class="mt-2 min-h-[1.25em] text-sm" data-photo-status></p>
+          <button type="button" data-remove-extra class="mt-2 text-sm text-(--color-paper)/50 hover:text-(--color-gold)">{t("talentApplication.photo.removeExtra")}</button>
+        </div>
+      </template>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <label for="availability" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.availability")}</label>
+        <input id="availability" name="availability" type="text" class="form-input" />
+      </div>
+      <div>
+        <label for="mobility" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.mobility")}</label>
+        <input id="mobility" name="mobility" type="text" class="form-input" />
+      </div>
+    </div>
+    <div>
+      <label for="desiredProjects" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.desiredProjects")}</label>
+      <input id="desiredProjects" name="desiredProjects" type="text" class="form-input" />
+    </div>
+    <div>
+      <label for="motivation" class="label-tracked text-(--color-paper)/70">{t("talentApplication.field.motivation")}</label>
+      <textarea id="motivation" name="motivation" rows="4" class="form-input resize-none"></textarea>
+    </div>
+  </fieldset>
+
+  <!-- Étape 5 — Vérification et envoi -->
+  <fieldset data-step="5" hidden class="space-y-8">
+    <div>
+      <h3 class="label-tracked text-(--color-gold)">{t("talentApplication.review.title")}</h3>
+      <dl class="mt-4 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-(--color-line) pt-6 sm:grid-cols-2" data-review-list></dl>
+    </div>
+
+    {settings.privacyNoticeHtml && (
+      <div class="border border-(--color-line) p-6">
+        <p class="label-tracked text-(--color-gold)">{t("talentApplication.privacyNotice.title")}</p>
+        <div class="prose-weblack mt-4 max-w-none text-sm" set:html={settings.privacyNoticeHtml} />
+      </div>
+    )}
+
+    <label class="flex items-start gap-3">
+      <input type="checkbox" name="accuracyConfirmed" required class="mt-1 h-5 w-5 shrink-0 border border-(--color-line) bg-transparent accent-(--color-gold)" />
+      <span class="text-(--color-paper)/80">{t("talentApplication.field.accuracyConfirmed")}</span>
+    </label>
+    <label class="flex items-start gap-3">
+      <input type="checkbox" name="privacyNoticeAccepted" required class="mt-1 h-5 w-5 shrink-0 border border-(--color-line) bg-transparent accent-(--color-gold)" />
+      <span class="text-(--color-paper)/80">{t("talentApplication.field.privacyNoticeAccepted")}</span>
+    </label>
+
+    <!-- Leurre anti-robot : masqué visuellement et pour un lecteur d'écran, jamais rempli par une personne. Même principe que functions/api/newsletter.ts. -->
+    <div class="absolute -left-[9999px]" aria-hidden="true">
+      <label for="company">Company</label>
+      <input type="text" id="company" name="company" tabindex="-1" autocomplete="off" />
+    </div>
+  </fieldset>
+
+  <!-- Succès -->
+  <div hidden data-success-panel class="space-y-4" data-reveal>
+    <h2 class="font-display text-3xl text-(--color-paper)">{t("talentApplication.success.title")}</h2>
+    <p class="text-(--color-paper)/70" data-success-message></p>
+    <p class="label-tracked text-(--color-gold)">{t("talentApplication.success.reference")} : <span data-success-reference></span></p>
+  </div>
+
+  <!-- Navigation -->
+  <div data-nav-controls class="mt-12 flex items-center justify-between gap-6 border-t border-(--color-line) pt-8">
+    <button type="button" data-nav-back class="label-tracked text-(--color-paper)/60 hover:text-(--color-gold)" hidden>
+      &larr; {t("talentApplication.nav.back")}
+    </button>
+    <button
+      type="button"
+      data-nav-continue
+      class="ml-auto inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright) disabled:opacity-60 disabled:hover:translate-y-0"
+    >
+      {t("talentApplication.nav.continue")}
+    </button>
+  </div>
+
+  <p role="status" aria-live="polite" class="mt-4 min-h-[1.25em] text-sm" data-form-status></p>
+</form>
+
+<script>
+  import { initTalentApplicationForm } from "../../scripts/talent-application/form";
+  initTalentApplicationForm();
+</script>

@@ -1243,3 +1243,76 @@ export async function getBoutiqueSettings(lang: Lang): Promise<BoutiqueSettingsD
     seoDescription: localized(lang, doc?.seoDescriptionFr, doc?.seoDescriptionEn) || undefined,
   };
 }
+
+// --- Candidature Talent (singleton "talentApplicationSettings") -----------
+//
+// Contenu public et non sensible uniquement (textes, FAQ, notice de
+// confidentialité, bascule d'ouverture). Les candidatures elles-mêmes ne
+// sont JAMAIS lues ni écrites via ce client Sanity — elles vivent dans
+// Cloudflare D1 + KV (voir functions/api/talent-application/, functions/
+// api/admin/), précisément parce que ce dataset est lisible sans
+// authentification (confirmé lors de l'audit Agenda de cette session).
+
+export interface TalentFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface TalentApplicationSettingsData {
+  applicationsOpen: boolean;
+  minorsAllowed: boolean;
+  navigationLabel: string;
+  internalNotificationEmail?: string;
+  intro?: string;
+  closedMessage?: string;
+  minorsMessage?: string;
+  confirmationMessage?: string;
+  faqItems: TalentFaqItem[];
+  privacyNoticeHtml: string;
+  privacyNoticeVersion: string;
+  seoTitle?: string;
+  seoDescription?: string;
+}
+
+let talentApplicationSettingsDocPromise: Promise<any> | undefined;
+function fetchTalentApplicationSettingsDoc(): Promise<any> {
+  if (!talentApplicationSettingsDocPromise) {
+    talentApplicationSettingsDocPromise = sanityClient.fetch(
+      `*[_id == "talentApplicationSettings"][0]{
+        applicationsOpen, minorsAllowed, navigationLabelFr, navigationLabelEn, internalNotificationEmail,
+        introFr, introEn, closedMessageFr, closedMessageEn, minorsMessageFr, minorsMessageEn,
+        confirmationMessageFr, confirmationMessageEn,
+        faqItems[]{ questionFr, questionEn, answerFr, answerEn },
+        privacyNoticeFr, privacyNoticeEn, privacyNoticeVersion,
+        seoTitleFr, seoTitleEn, seoDescriptionFr, seoDescriptionEn
+      }`,
+    );
+  }
+  return talentApplicationSettingsDocPromise;
+}
+
+export async function getTalentApplicationSettings(lang: Lang): Promise<TalentApplicationSettingsData> {
+  const doc = await fetchTalentApplicationSettingsDoc();
+  const faqItems: TalentFaqItem[] = (doc?.faqItems ?? [])
+    .map((item: any) => ({
+      question: localized(lang, item?.questionFr, item?.questionEn),
+      answer: localized(lang, item?.answerFr, item?.answerEn),
+    }))
+    .filter((item: TalentFaqItem) => item.question && item.answer);
+
+  return {
+    applicationsOpen: doc?.applicationsOpen === true,
+    minorsAllowed: doc?.minorsAllowed === true,
+    navigationLabel: localized(lang, doc?.navigationLabelFr, doc?.navigationLabelEn) || (lang === "en" ? "Apply now" : "Proposer ma candidature"),
+    internalNotificationEmail: doc?.internalNotificationEmail || undefined,
+    intro: localized(lang, doc?.introFr, doc?.introEn) || undefined,
+    closedMessage: localized(lang, doc?.closedMessageFr, doc?.closedMessageEn) || undefined,
+    minorsMessage: localized(lang, doc?.minorsMessageFr, doc?.minorsMessageEn) || undefined,
+    confirmationMessage: localized(lang, doc?.confirmationMessageFr, doc?.confirmationMessageEn) || undefined,
+    faqItems,
+    privacyNoticeHtml: toHtmlSafe(lang === "en" ? doc?.privacyNoticeEn : doc?.privacyNoticeFr) || "",
+    privacyNoticeVersion: doc?.privacyNoticeVersion || "non-definie",
+    seoTitle: localized(lang, doc?.seoTitleFr, doc?.seoTitleEn) || undefined,
+    seoDescription: localized(lang, doc?.seoDescriptionFr, doc?.seoDescriptionEn) || undefined,
+  };
+}

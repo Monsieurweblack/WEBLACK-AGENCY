@@ -1,0 +1,65 @@
+---
+import "../../styles/global.css";
+
+/**
+ * Outil interne, pas une page publique : aucun Header/Footer/bannière de
+ * consentement du site (cette page ne collecte pas de cookies visiteur,
+ * elle les requiert pour SA PROPRE session admin — un concept distinct).
+ * Jamais indexée (voir astro.config.mjs NOINDEX_PATHS + la balise ci-dessous).
+ *
+ * Toute la page est pilotée côté client (scripts/admin/candidatures.ts) :
+ * rien n'est rendu au build, les candidatures n'existent pas dans le
+ * dataset Sanity que ce build lit — elles vivent dans Cloudflare D1/KV,
+ * interrogées en direct au chargement via /api/admin/*.
+ */
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Candidatures Talent — Administration WEBLACK</title>
+  </head>
+  <body class="min-h-screen bg-(--color-ink) text-(--color-paper)">
+    <div id="admin-root" class="mx-auto max-w-5xl px-6 py-16 md:px-10">
+      <h1 class="font-display text-3xl">Candidatures Talent</h1>
+
+      <!-- Connexion -->
+      <form id="login-form" class="mt-10 max-w-sm space-y-4">
+        <div>
+          <label for="password" class="label-tracked text-(--color-paper)/70">Mot de passe</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" class="form-input" />
+        </div>
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) hover:bg-(--color-gold-bright)">
+          Se connecter
+        </button>
+        <p id="login-status" role="status" aria-live="polite" class="min-h-[1.25em] text-sm text-red-400"></p>
+      </form>
+
+      <!-- Tableau de bord -->
+      <div id="dashboard" hidden class="mt-10">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-(--color-line) pb-4">
+          <div class="flex flex-wrap gap-2" id="status-filters"></div>
+          <button id="logout-button" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Déconnexion</button>
+        </div>
+
+        <div id="list-view">
+          <ul id="applications-list" class="mt-6 divide-y divide-(--color-line)"></ul>
+          <p id="list-empty" hidden class="mt-10 text-(--color-paper)/60">Aucun dossier pour ce filtre.</p>
+        </div>
+
+        <div id="detail-view" hidden class="mt-6">
+          <button id="back-to-list" class="label-tracked text-(--color-paper)/60 hover:text-(--color-gold)">&larr; Retour à la liste</button>
+          <div id="detail-content" class="mt-6"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { initAdminCandidatures } from "../../scripts/admin/candidatures";
+      initAdminCandidatures();
+    </script>
+  </body>
+</html>

@@ -229,6 +229,28 @@
     font-optical-sizing: auto;
   }
 
+  /* Champ de saisie du formulaire de candidature Talent — texte à 16px
+     minimum (text-base) : sous ce seuil, Safari iOS zoome automatiquement
+     la page au focus, ce qui casse la mise en page en une colonne exigée
+     sur mobile pour ce formulaire. */
+  .form-input {
+    margin-top: 0.5rem;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--color-line);
+    background-color: transparent;
+    padding-block: 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    color: var(--color-paper);
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 3rem;
+  }
+  .form-input:focus {
+    border-color: var(--color-gold);
+  }
+
   /* Label institutionnel : trace le langage typographique du logo
      ("TALENTS · CRÉATIVITÉ · IMPACT") sur le reste du site */
   .label-tracked {

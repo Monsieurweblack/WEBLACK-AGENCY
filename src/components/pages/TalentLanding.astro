@@ -51,7 +51,7 @@ const t = useTranslations(lang);
 const roster = talent.filter((entry) => entry.data.status === "active");
 const categories = [...new Set(roster.map((person) => person.data.category))];
 
-const applyHref = localizedPath(lang, "/talent/apply");
+const applyHref = localizedPath(lang, "/talent/candidature");
 const workHref = localizedPath(lang, "/selected-work");
 const contactHref = localizedPath(lang, "/contact");
 

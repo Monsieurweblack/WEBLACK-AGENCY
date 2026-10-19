@@ -1,0 +1,62 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import TalentApplicationForm from "../../../components/forms/TalentApplicationForm.astro";
+import { useTranslations, localizedPath } from "../../../i18n/utils";
+import { getTalentApplicationSettings } from "../../../lib/content";
+
+const lang = "en" as const;
+const t = useTranslations(lang);
+
+const settings = await getTalentApplicationSettings(lang);
+---
+
+<BaseLayout lang={lang} title={settings.seoTitle || t("talentApplication.seo.title")} description={settings.seoDescription || t("talentApplication.seo.title")}>
+  <section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="mx-auto max-w-3xl">
+      <a
+        href={localizedPath(lang, "/talent")}
+        class="label-tracked text-(--color-paper)/60 transition-colors hover:text-(--color-gold)"
+      >
+        &larr; {t("talentApplication.back")}
+      </a>
+
+      {
+        settings.applicationsOpen ? (
+          <>
+            {settings.intro && (
+              <p class="mt-8 max-w-2xl text-(--color-paper)/70" data-reveal>
+                {settings.intro}
+              </p>
+            )}
+            <div class="mt-14" data-reveal data-reveal-delay="0.1">
+              <TalentApplicationForm lang={lang} settings={settings} />
+            </div>
+            {settings.faqItems.length > 0 && (
+              <div class="mt-20 border-t border-(--color-line) pt-12" data-reveal>
+                <h2 class="font-display text-2xl text-(--color-paper)">FAQ</h2>
+                <dl class="mt-6 space-y-6">
+                  {settings.faqItems.map((item) => (
+                    <div>
+                      <dt class="text-(--color-paper)">{item.question}</dt>
+                      <dd class="mt-2 text-(--color-paper)/70">{item.answer}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
+          </>
+        ) : (
+          <div class="mt-14" data-reveal>
+            <h1 class="font-display text-3xl text-(--color-paper)">{t("talentApplication.closed.title")}</h1>
+            {settings.closedMessage && <p class="mt-6 text-(--color-paper)/70">{settings.closedMessage}</p>}
+          </div>
+        )
+      }
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../../../scripts/gsap/scroll-choreography";
+  initScrollChoreography();
+</script>
