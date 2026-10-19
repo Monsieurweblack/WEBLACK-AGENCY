@@ -29,13 +29,7 @@ export function driveConfigured(env: DriveEnv): boolean {
 }
 
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-/**
- * URI de redirection enregistrée dans Google Cloud (client OAuth « Application
- * Web ») — Google exige une correspondance exacte : https, domaine nu, pas de
- * barre finale. Servie par functions/api/admin/google-drive/callback.ts.
- */
-export const DRIVE_OAUTH_REDIRECT_URI = "https://weblack.fr/api/admin/google-drive/callback";
-export const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const API = "https://www.googleapis.com/drive/v3";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3";
 const FOLDER_MIME = "application/vnd.google-apps.folder";

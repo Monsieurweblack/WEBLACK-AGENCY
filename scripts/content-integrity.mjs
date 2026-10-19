@@ -561,4 +561,8 @@ if (!draftClient) {
   );
 }
 
-process.exit(computeExitCode(findings));
+// exitCode plutôt que process.exit() : sous Windows, quitter de force pendant
+// que des connexions fetch se ferment déclenche une assertion libuv
+// (« UV_HANDLE_CLOSING ») et fait échouer `npm run build` (code 127) après
+// un contrôle pourtant réussi.
+process.exitCode = computeExitCode(findings);

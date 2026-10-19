@@ -9,15 +9,21 @@ import { checkYoutubeVideo } from "./live-youtube.ts";
 // qu'on suppose qu'elle renvoie. La vidéo utilisée est réelle et publique :
 // ZE DÉFILÉ by WAXFASHION, la diffusion WEBLACK déjà en production.
 
-test("une vidéo réelle et publique est reconnue disponible, avec son titre réel", async () => {
+// Réseau coupé ou trop lent : le test est signalé « ignoré », jamais compté
+// comme réussi (un ID inexistant passerait à tort) ni comme une régression.
+const UNREACHABLE = "YouTube injoignable depuis cette machine (réseau) — vérification non effectuée";
+
+test("une vidéo réelle et publique est reconnue disponible, avec son titre réel", async (t) => {
   const result = await checkYoutubeVideo("Kcs4n93lS60");
+  if (result.unreachable) return t.skip(UNREACHABLE);
   assert.equal(result.available, true);
   assert.ok(result.title && result.title.length > 0);
   assert.equal(result.authorName, "WAXFASHION | ZE DEFILE");
 });
 
-test("un ID de vidéo inexistant est reconnu indisponible, sans jamais planter", async () => {
+test("un ID de vidéo inexistant est reconnu indisponible, sans jamais planter", async (t) => {
   const result = await checkYoutubeVideo("thisIsNotARealVideoId9999");
+  if (result.unreachable) return t.skip(UNREACHABLE);
   assert.equal(result.available, false);
 });
 

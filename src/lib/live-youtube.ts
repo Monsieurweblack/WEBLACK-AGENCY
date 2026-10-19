@@ -15,6 +15,12 @@ export interface YoutubeOembedResult {
   title?: string;
   authorName?: string;
   thumbnailUrl?: string;
+  /**
+   * YouTube n'a pas répondu (réseau, délai dépassé) : on ne sait rien de la
+   * vidéo. `available` reste false — prudence côté build — mais l'appelant
+   * peut distinguer « indisponible » de « injoignable ».
+   */
+  unreachable?: true;
 }
 
 export async function checkYoutubeVideo(videoId: string): Promise<YoutubeOembedResult> {
@@ -26,6 +32,6 @@ export async function checkYoutubeVideo(videoId: string): Promise<YoutubeOembedR
     const data = (await response.json()) as { title?: string; author_name?: string; thumbnail_url?: string };
     return { available: true, title: data.title, authorName: data.author_name, thumbnailUrl: data.thumbnail_url };
   } catch {
-    return { available: false };
+    return { available: false, unreachable: true };
   }
 }
