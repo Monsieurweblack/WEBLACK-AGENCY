@@ -205,6 +205,15 @@ export function parseApplication(raw: unknown, minorsAllowed: boolean, today = n
   const lang = input.lang === "en" ? "en" : input.lang === "fr" ? "fr" : undefined;
   if (!lang) fail("lang", input.lang === undefined ? "required" : "invalid");
 
+  // Identifiant d'envoi tiré par le navigateur : rend la soumission
+  // idempotente (double clic, reprise réseau). Facultatif pour qu'une page
+  // restée ouverte depuis une version antérieure puisse encore envoyer.
+  let submissionId: string | null = null;
+  if (input.submissionId !== undefined && input.submissionId !== null) {
+    if (typeof input.submissionId !== "string" || !PHOTO_ID_RE.test(input.submissionId)) fail("submissionId", "format");
+    else submissionId = input.submissionId;
+  }
+
   const firstName = requiredText("firstName", TEXT_LIMITS.name);
   const lastName = requiredText("lastName", TEXT_LIMITS.name);
   const city = requiredText("city", TEXT_LIMITS.city);
@@ -349,6 +358,7 @@ export function parseApplication(raw: unknown, minorsAllowed: boolean, today = n
     ok: true,
     value: {
       lang,
+      submissionId,
       firstName,
       lastName,
       birthDate,

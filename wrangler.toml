@@ -11,6 +11,13 @@ compatibility_date = "2025-01-01"
 [vars]
 SANITY_PROJECT_ID = "pzpm4xjp"
 SANITY_DATASET = "production"
+# Expéditeur des e-mails de candidature (functions/lib/talentOutbox.ts).
+# Pas un secret : c'est l'adresse visible par le destinataire. Le domaine
+# weblack.fr porte la clé DKIM Resend (resend._domainkey.weblack.fr) ; si
+# Resend refusait l'envoi, le refus est consigné dans email_outbox et visible
+# dans l'administration — la candidature, elle, reste enregistrée. La clé API
+# reste le secret NEWSLETTER_API_KEY, jamais ici.
+RESEND_FROM = "WEBLACK TALENTS <talents@weblack.fr>"
 
 # Dossiers de candidature Talent — jamais dans le dataset Sanity public
 # (lisible anonymement, voir editorial-engine/EDITORIAL_ENGINE.md / audit

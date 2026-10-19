@@ -1,0 +1,53 @@
+---
+import { useTranslations, type Lang } from "../../i18n/utils";
+import { CONTACT_EMAIL } from "../../lib/contact";
+
+interface Props {
+  lang: Lang;
+}
+
+/**
+ * Voie alternative au formulaire en ligne : deux PDF remplissables
+ * (scripts/talent-pdf/generate.mjs → public/downloads/). Proposée sans
+ * obliger à commencer le formulaire, mais présentée pour ce qu'elle est :
+ * un envoi par e-mail, sans confirmation automatique.
+ *
+ * Chaque lien est libellé dans la langue du document qu'il ouvre
+ * (attribut lang), quelle que soit la langue de la page.
+ */
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const text = t("talentApplication.pdf.text").replace("{email}", CONTACT_EMAIL);
+const [before, after] = text.split(CONTACT_EMAIL);
+const documents = [
+  { href: "/downloads/weblack-talents-candidature-fr.pdf", label: t("talentApplication.pdf.downloadFr"), docLang: "fr" },
+  { href: "/downloads/weblack-talents-application-en.pdf", label: t("talentApplication.pdf.downloadEn"), docLang: "en" },
+];
+const ordered = lang === "fr" ? documents : [...documents].reverse();
+---
+
+<aside class="border border-(--color-line) p-6 md:p-8" aria-labelledby="talent-pdf-title">
+  <h2 id="talent-pdf-title" class="font-display text-xl text-(--color-paper)">{t("talentApplication.pdf.title")}</h2>
+  <p class="mt-3 text-sm text-(--color-paper)/70">
+    {before}<a href={`mailto:${CONTACT_EMAIL}`} class="text-(--color-gold) underline underline-offset-4">{CONTACT_EMAIL}</a>{after}
+  </p>
+  <p class="mt-3 text-sm text-(--color-paper)/50">{t("talentApplication.pdf.note")}</p>
+  <ul class="mt-5 flex flex-col gap-3 sm:flex-row sm:gap-6">
+    {
+      ordered.map((doc) => (
+        <li>
+          <a
+            href={doc.href}
+            hreflang={doc.docLang}
+            lang={doc.docLang}
+            download
+            class="label-tracked inline-flex min-h-12 items-center gap-2 text-(--color-gold) transition-colors hover:text-(--color-gold-bright)"
+          >
+            {doc.label}
+            <span class="text-(--color-paper)/40" lang={lang}>· {t("talentApplication.pdf.size")}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</aside>

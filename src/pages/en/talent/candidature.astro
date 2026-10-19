@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import TalentApplicationForm from "../../../components/forms/TalentApplicationForm.astro";
+import TalentApplicationPdfLinks from "../../../components/forms/TalentApplicationPdfLinks.astro";
 import { useTranslations, localizedPath } from "../../../i18n/utils";
 import { getTalentApplicationSettings } from "../../../lib/content";
 
@@ -23,11 +24,17 @@ const settings = await getTalentApplicationSettings(lang);
       {
         settings.applicationsOpen ? (
           <>
+            <h1 class="font-display mt-8 text-4xl text-(--color-paper) sm:text-5xl" data-reveal>
+              {t("talentApplication.heading")}
+            </h1>
             {settings.intro && (
               <p class="mt-8 max-w-2xl text-(--color-paper)/70" data-reveal>
                 {settings.intro}
               </p>
             )}
+            <div class="mt-10" data-reveal>
+              <TalentApplicationPdfLinks lang={lang} />
+            </div>
             <div class="mt-14" data-reveal data-reveal-delay="0.1">
               <TalentApplicationForm lang={lang} settings={settings} />
             </div>

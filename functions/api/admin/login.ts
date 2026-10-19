@@ -1,6 +1,6 @@
 import { json } from "../../lib/json.ts";
 import { checkRateLimit } from "../../lib/rateLimit.ts";
-import { createSessionCookie } from "../../lib/adminSession.ts";
+import { createSessionCookie, secretsMatch } from "../../lib/adminSession.ts";
 
 interface Env {
   PHOTOS: KVNamespace;
@@ -8,13 +8,6 @@ interface Env {
   ADMIN_PASSWORD?: string;
   /** Généré une fois à la mise en place, jamais saisi par un humain. */
   ADMIN_SESSION_SECRET?: string;
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -34,8 +27,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ ok: false, reason: "invalid" }, 400);
   }
 
-  const password = typeof payload.password === "string" ? payload.password : "";
-  if (!timingSafeEqual(password, env.ADMIN_PASSWORD)) {
+  const password = typeof payload.password === "string" ? payload.password.slice(0, 512) : "";
+  if (!(await secretsMatch(password, env.ADMIN_PASSWORD))) {
     return json({ ok: false, reason: "invalid_credentials" }, 401);
   }
 

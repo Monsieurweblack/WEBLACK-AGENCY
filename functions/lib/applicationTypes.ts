@@ -26,6 +26,8 @@ export type SubmissionLang = "fr" | "en";
  */
 export interface ValidApplication {
   lang: SubmissionLang;
+  /** UUID tiré par le navigateur pour ce formulaire ; null pour un client antérieur à migrations/0003. */
+  submissionId: string | null;
 
   firstName: string;
   lastName: string;
@@ -118,4 +120,6 @@ export interface ApplicationRecord {
   experience_duration: string | null;
   languages_other: string | null;
   submission_lang: string | null;
+  // migrations/0003
+  submission_id: string | null;
 }

@@ -4,12 +4,13 @@ import { APPLICATION_STATUSES, type ApplicationRecord } from "../../lib/applicat
 
 interface Env {
   DB: D1Database;
+  PHOTOS: KVNamespace;
   ADMIN_SESSION_SECRET?: string;
 }
 
 /** Liste allégée pour l'écran principal de l'admin — jamais les mesures ni les textes longs, seulement ce qui permet de trier/filtrer un dossier avant de l'ouvrir. */
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  const denied = await requireAdmin(request, env.ADMIN_SESSION_SECRET);
+  const denied = await requireAdmin(request, env.ADMIN_SESSION_SECRET, env.PHOTOS);
   if (denied) return denied;
 
   const url = new URL(request.url);

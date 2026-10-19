@@ -163,3 +163,13 @@ test("utilitaires : décimales, âge, URL", () => {
   assert.equal(isHttpUrl("https://example.com"), true);
   assert.equal(isHttpUrl("ftp://example.com"), false);
 });
+
+// Idempotence — identifiant d'envoi tiré par le navigateur
+test("submissionId : un UUID est conservé, un format libre est refusé, l'absence reste tolérée (page antérieure)", () => {
+  const id = "44444444-4444-4444-8444-444444444444";
+  const accepted = parseApplication(validPayload({ submissionId: id }), false, TODAY);
+  assert.equal(accepted.ok && accepted.value.submissionId, id);
+  assert.ok(hasError(errorsOf(validPayload({ submissionId: "1; DROP TABLE applications" })), "submissionId", "format"));
+  const legacy = parseApplication(validPayload(), false, TODAY);
+  assert.equal(legacy.ok && legacy.value.submissionId, null);
+});

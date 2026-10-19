@@ -45,6 +45,8 @@ interface Strings {
   languagesSelected: string;
   charactersLeft: string;
   successDefault: string;
+  successEmailSent: string;
+  successEmailPending: string;
   errors: Record<
     | "required"
     | "email"
@@ -64,7 +66,10 @@ interface Strings {
     | "rateLimited"
     | "generic"
     | "validation"
-    | "closed",
+    | "closed"
+    | "unavailable"
+    | "network"
+    | "photoReused",
     string
   >;
 }
@@ -104,6 +109,9 @@ export function initTalentApplicationForm() {
   let dirty = false;
   let submitted = false;
   let pendingUploads = 0;
+  // Tiré une fois pour ce formulaire : chaque nouvel essai d'envoi porte le
+  // même identifiant, le serveur reconnaît un dossier déjà enregistré.
+  const submissionId = crypto.randomUUID();
 
   // --- Utilitaires de champ ---------------------------------------------------
 
@@ -704,6 +712,7 @@ export function initTalentApplicationForm() {
     const model = isModelCategory();
     return {
       honeypot: value("company"),
+      submissionId,
       lang: config.lang,
       firstName: value("firstName"),
       lastName: value("lastName"),
@@ -771,20 +780,37 @@ export function initTalentApplicationForm() {
     return i18n.errors.validation;
   }
 
+  let sending = false;
+
   async function submitApplication() {
+    // Un seul envoi à la fois : le bouton est désactivé, et ce verrou couvre
+    // aussi un double déclenchement avant que le navigateur ait repeint.
+    if (sending) return;
+    sending = true;
     continueBtn.disabled = true;
+    continueBtn.setAttribute("aria-busy", "true");
     continueBtn.textContent = i18n.navSubmitting;
     statusEl.textContent = "";
-    let data: { ok: boolean; reference?: string; reason?: string; errors?: { field: string; reason: string }[] } | undefined;
+    let data:
+      | { ok: boolean; reference?: string; reason?: string; confirmationEmail?: string; errors?: { field: string; reason: string }[] }
+      | undefined;
+    let networkFailure = false;
     try {
       const response = await fetch("/api/talent-application/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
+        // Une requête qui ne répond jamais ne doit pas bloquer l'écran : le
+        // candidat peut réessayer, le même submissionId évite tout doublon.
+        signal: AbortSignal.timeout(45_000),
       });
       data = await response.json();
     } catch {
+      networkFailure = true;
       data = undefined;
+    } finally {
+      sending = false;
+      continueBtn.removeAttribute("aria-busy");
     }
 
     // Le succès n'est affiché que sur la confirmation explicite du serveur,
@@ -800,6 +826,9 @@ export function initTalentApplicationForm() {
       panel.hidden = false;
       q<HTMLElement>("[data-success-message]")!.textContent = config.confirmationMessage || i18n.successDefault;
       q<HTMLElement>("[data-success-reference]")!.textContent = data.reference;
+      // Le navigateur ne dit « e-mail envoyé » que si le fournisseur l'a accepté.
+      q<HTMLElement>("[data-success-email]")!.textContent =
+        data.confirmationEmail === "sent" ? i18n.successEmailSent : i18n.successEmailPending;
       panel.focus();
       panel.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -827,8 +856,17 @@ export function initTalentApplicationForm() {
       statusEl.textContent = i18n.errors.photoExpired;
       return;
     }
-    statusEl.textContent =
-      data?.reason === "closed" ? i18n.errors.closed : data?.reason === "rate_limited" ? i18n.errors.rateLimited : i18n.errors.generic;
+    if (data?.reason === "photo_already_used") {
+      showStep(4, false);
+      statusEl.textContent = i18n.errors.photoReused;
+      return;
+    }
+    const messages: Record<string, string> = {
+      closed: i18n.errors.closed,
+      rate_limited: i18n.errors.rateLimited,
+      unavailable: i18n.errors.unavailable,
+    };
+    statusEl.textContent = networkFailure ? i18n.errors.network : (messages[data?.reason ?? ""] ?? i18n.errors.generic);
   }
 
   // --- Câblage --------------------------------------------------------------------------

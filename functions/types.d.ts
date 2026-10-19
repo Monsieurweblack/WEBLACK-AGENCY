@@ -48,6 +48,8 @@ interface PagesFunctionContext<Env> {
   request: Request;
   env: Env;
   params: Record<string, string | string[]>;
+  /** Prolonge l'exécution après l'envoi de la réponse (absent dans les tests). */
+  waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 type PagesFunction<Env = Record<string, unknown>> = (context: PagesFunctionContext<Env>) => Promise<Response>;

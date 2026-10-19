@@ -45,6 +45,12 @@ import "../../styles/global.css";
           <button id="logout-button" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Déconnexion</button>
         </div>
 
+        <!-- E-mails de candidature : « dossier enregistré » et « e-mail envoyé » sont suivis séparément -->
+        <div id="email-panel" class="mt-4 flex flex-wrap items-center gap-4 text-sm text-(--color-paper)/60">
+          <p id="email-summary" role="status" aria-live="polite"></p>
+          <button id="email-retry" hidden class="label-tracked min-h-10 text-(--color-gold) hover:text-(--color-gold-bright)">Relancer les e-mails en attente</button>
+        </div>
+
         <div id="list-view">
           <ul id="applications-list" class="mt-6 divide-y divide-(--color-line)"></ul>
           <p id="list-empty" hidden class="mt-10 text-(--color-paper)/60">Aucun dossier pour ce filtre.</p>

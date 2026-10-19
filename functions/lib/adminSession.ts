@@ -1,8 +1,8 @@
 /**
- * Session admin — un cookie signé (HMAC-SHA256), sans état côté serveur :
- * rien à stocker, rien à révoquer individuellement (une rotation de
- * ADMIN_SESSION_SECRET invalide toutes les sessions d'un coup, ce qui
- * suffit pour une équipe restreinte).
+ * Session admin — un cookie signé (HMAC-SHA256), valable 12 h. Seul état
+ * côté serveur : la liste des sessions fermées par « Se déconnecter »
+ * (KV, jusqu'à leur expiration naturelle). Une rotation de
+ * ADMIN_SESSION_SECRET invalide toutes les sessions d'un coup.
  *
  * Le mot de passe lui-même (ADMIN_PASSWORD) n'est comparé qu'une fois, à la
  * connexion (login.ts) — ce fichier ne le connaît pas, il ne signe qu'un
@@ -53,25 +53,65 @@ function readCookie(request: Request, name: string): string | undefined {
   return undefined;
 }
 
-export async function isValidAdminSession(request: Request, secret: string): Promise<boolean> {
+/** Session lue depuis le cookie, signature et âge vérifiés ; `undefined` sinon. */
+async function readSession(request: Request, secret: string): Promise<{ nonce: string; expiresAt: number } | undefined> {
   const value = readCookie(request, SESSION_COOKIE);
-  if (!value) return false;
+  if (!value) return undefined;
 
   const parts = value.split(".");
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) return undefined;
   const [issuedAt, nonce, signature] = parts as [string, string, string];
 
   const age = Date.now() - Number(issuedAt);
-  if (!Number.isFinite(age) || age < 0 || age > SESSION_TTL_SECONDS * 1000) return false;
+  if (!Number.isFinite(age) || age < 0 || age > SESSION_TTL_SECONDS * 1000) return undefined;
 
   const expected = await hmac(secret, `${issuedAt}.${nonce}`);
-  return timingSafeEqual(expected, signature);
+  if (!timingSafeEqual(expected, signature)) return undefined;
+  return { nonce, expiresAt: Number(issuedAt) + SESSION_TTL_SECONDS * 1000 };
+}
+
+/**
+ * Révocation à la déconnexion : le jeton reste signé, mais son nonce est
+ * inscrit dans KV jusqu'à son expiration naturelle — un cookie copié avant
+ * la déconnexion ne rouvre plus la session.
+ */
+const revokedKey = (nonce: string) => `admin-session-revoked:${nonce}`;
+
+export async function isValidAdminSession(request: Request, secret: string, kv?: KVNamespace): Promise<boolean> {
+  const session = await readSession(request, secret);
+  if (!session) return false;
+  if (kv && (await kv.get(revokedKey(session.nonce))) !== null) return false;
+  return true;
+}
+
+export async function revokeAdminSession(request: Request, secret: string, kv: KVNamespace): Promise<void> {
+  const session = await readSession(request, secret);
+  if (!session) return;
+  // KV impose un TTL d'au moins 60 s.
+  const ttl = Math.max(60, Math.ceil((session.expiresAt - Date.now()) / 1000));
+  await kv.put(revokedKey(session.nonce), "1", { expirationTtl: ttl });
 }
 
 /** Garde commune à toute route admin : renvoie `undefined` si la session est valide, sinon la réponse 401/503 à retourner directement. */
-export async function requireAdmin(request: Request, secret: string | undefined): Promise<Response | undefined> {
-  if (!secret) return new Response(JSON.stringify({ ok: false, reason: "unconfigured" }), { status: 503 });
-  const valid = await isValidAdminSession(request, secret);
-  if (!valid) return new Response(JSON.stringify({ ok: false, reason: "unauthorized" }), { status: 401 });
+export async function requireAdmin(request: Request, secret: string | undefined, kv?: KVNamespace): Promise<Response | undefined> {
+  const headers = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
+  if (!secret) return new Response(JSON.stringify({ ok: false, reason: "unconfigured" }), { status: 503, headers });
+  const valid = await isValidAdminSession(request, secret, kv);
+  if (!valid) return new Response(JSON.stringify({ ok: false, reason: "unauthorized" }), { status: 401, headers });
   return undefined;
 }
+
+/**
+ * Comparaison de deux secrets sans fuite de longueur ni de préfixe : on
+ * compare leurs empreintes SHA-256, de longueur fixe, à temps constant.
+ */
+export async function secretsMatch(candidate: string, expected: string): Promise<boolean> {
+  const digest = async (value: string) =>
+    Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  return timingSafeEqual(await digest(candidate), await digest(expected));
+}
+
+/** Identifiants générés par crypto.randomUUID() — tout autre format est refusé avant d'interroger D1/KV. */
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

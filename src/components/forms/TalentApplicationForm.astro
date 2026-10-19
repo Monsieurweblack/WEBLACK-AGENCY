@@ -77,6 +77,8 @@ const clientStrings = {
   languagesSelected: k("talentApplication.languagesSelected"),
   charactersLeft: k("talentApplication.charactersLeft"),
   successDefault: k("talentApplication.success.default"),
+  successEmailSent: k("talentApplication.success.emailSent"),
+  successEmailPending: k("talentApplication.success.emailPending"),
   errors: {
     required: k("talentApplication.error.required"),
     email: k("talentApplication.error.email"),
@@ -97,6 +99,9 @@ const clientStrings = {
     generic: k("talentApplication.error.generic"),
     validation: k("talentApplication.error.validation"),
     closed: k("talentApplication.error.closed"),
+    unavailable: k("talentApplication.error.unavailable"),
+    network: k("talentApplication.error.network"),
+    photoReused: k("talentApplication.error.photoReused"),
   },
 };
 
@@ -475,7 +480,8 @@ const measureFields = [
   <div hidden data-success-panel class="space-y-4" tabindex="-1">
     <h2 class="font-display text-3xl text-(--color-paper)">{k("talentApplication.success.title")}</h2>
     <p class="text-(--color-paper)/70" data-success-message></p>
-    <p class="label-tracked text-(--color-gold)">{k("talentApplication.success.reference")} : <span data-success-reference></span></p>
+    <p class="label-tracked text-(--color-gold)">{k("talentApplication.success.reference")}{lang === "fr" ? " :" : ":"} <span data-success-reference></span></p>
+    <p class="text-sm text-(--color-paper)/60" data-success-email></p>
   </div>
 
   <div data-nav-controls class="mt-12 flex items-center justify-between gap-6 border-t border-(--color-line) pt-8">

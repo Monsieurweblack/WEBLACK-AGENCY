@@ -3,24 +3,19 @@ import { checkRateLimit } from "../../lib/rateLimit.ts";
 import { demotePhoto, getPhoto, promotePhoto } from "../../lib/photos.ts";
 import { parseApplication } from "../../lib/validation.ts";
 import { fetchTalentApplicationSettings } from "../../lib/sanity.ts";
-import { sendEmail } from "../../lib/email.ts";
+import { deliverOutbox, outboxInserts, referenceFor, type OutboxEnv } from "../../lib/talentOutbox.ts";
 import type { ValidApplication } from "../../lib/applicationTypes.ts";
 
-interface Env {
-  DB: D1Database;
+interface Env extends OutboxEnv {
   PHOTOS: KVNamespace;
   SANITY_PROJECT_ID?: string;
   SANITY_DATASET?: string;
-  /** Même clé Resend que la newsletter (functions/api/newsletter.ts) — pas un nouveau secret. */
-  NEWSLETTER_API_KEY?: string;
-  /** Expéditeur déjà vérifié dans Resend. Sans lui, aucun e-mail n'est tenté. */
-  RESEND_FROM?: string;
-  /** Destinataire de la notification interne. */
-  TALENT_APPLICATION_NOTIFY_EMAIL?: string;
 }
 
 /** Une candidature complète tient en quelques Ko (les photos passent par upload.ts) : au-delà, ce n'est pas un formulaire. */
 const MAX_BODY_BYTES = 64 * 1024;
+
+type ConfirmationState = "sent" | "pending";
 
 /**
  * Service armé ? Sonde lue par le formulaire — jamais de secret dans la
@@ -28,10 +23,19 @@ const MAX_BODY_BYTES = 64 * 1024;
  */
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const settings = await fetchTalentApplicationSettings(env);
-  return json({ configured: Boolean(env.DB && env.PHOTOS), open: settings.applicationsOpen, minorsAllowed: settings.minorsAllowed }, 200);
+  return json(
+    {
+      configured: Boolean(env.DB && env.PHOTOS),
+      available: settings.available,
+      open: settings.applicationsOpen,
+      minorsAllowed: settings.minorsAllowed,
+    },
+    200,
+  );
 };
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
   const rate = await checkRateLimit(env.PHOTOS, request, "submit", 10, 60 * 60);
   if (!rate.allowed) return json({ ok: false, reason: "rate_limited" }, 429);
 
@@ -53,12 +57,30 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (typeof honeypot === "string" && honeypot.trim() !== "") return json({ ok: true, reference: "0000000" }, 200);
   }
 
+  // L'ouverture de la campagne ne se décide qu'ici, à partir de Sanity.
   const settings = await fetchTalentApplicationSettings(env);
+  if (!settings.available) return json({ ok: false, reason: "unavailable" }, 503);
   if (!settings.applicationsOpen) return json({ ok: false, reason: "closed" }, 403);
 
   const parsed = parseApplication(body, settings.minorsAllowed);
   if (!parsed.ok) return json({ ok: false, reason: "validation", errors: parsed.errors }, 422);
   const app = parsed.value;
+
+  // Double clic, reprise après coupure, requête rejouée : le dossier déjà
+  // enregistré pour ce formulaire est renvoyé tel quel — ni second dossier,
+  // ni second e-mail, et surtout aucune opération sur ses photos.
+  if (app.submissionId) {
+    const existing = await findBySubmissionId(env.DB, app.submissionId);
+    if (existing) {
+      return json({ ok: true, reference: referenceFor(existing), duplicate: true, confirmationEmail: await confirmationState(env.DB, existing) }, 200);
+    }
+  }
+
+  // Une photo déjà rattachée à un dossier ne peut pas en rejoindre un autre.
+  const alreadyLinked = await env.DB.prepare(`SELECT id FROM application_photos WHERE id IN (${app.photoIds.map(() => "?").join(", ")}) LIMIT 1`)
+    .bind(...app.photoIds.map((p) => p.id))
+    .first<{ id: string }>();
+  if (alreadyLinked) return json({ ok: false, reason: "photo_already_used" }, 409);
 
   // Chaque photo référencée doit exister réellement — pas expirée, pas inventée.
   const contentTypes = new Map<string, string>();
@@ -73,8 +95,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   // Ordre délibéré : promotion des photos AVANT l'écriture D1. Si la
   // promotion venait après et échouait, le dossier pointerait vers des
-  // photos qui expirent dans deux heures. Si c'est l'écriture D1 qui échoue,
-  // les photos sont rétrogradées : elles expirent d'elles-mêmes.
+  // photos qui expirent dans deux heures.
   const promoted: string[] = [];
   try {
     for (const { id: photoId } of app.photoIds) {
@@ -82,49 +103,82 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       promoted.push(photoId);
     }
   } catch {
-    for (const photoId of promoted) await demotePhoto(env.PHOTOS, photoId);
+    await demoteIfUnlinked(env, promoted);
     return json({ ok: false, reason: "storage" }, 500);
   }
 
   try {
-    // batch() = une transaction : le dossier et ses références photo sont
-    // écrits ensemble, ou pas du tout.
-    await env.DB.batch([buildApplicationInsert(env.DB, id, now, app), ...buildPhotoInserts(env.DB, id, now, app, contentTypes)]);
+    // batch() = une transaction : le dossier, ses références photo et les
+    // e-mails à envoyer sont écrits ensemble, ou pas du tout.
+    await env.DB.batch([
+      buildApplicationInsert(env.DB, id, now, app),
+      ...buildPhotoInserts(env.DB, id, now, app, contentTypes),
+      ...outboxInserts(env.DB, id, now),
+    ]);
   } catch {
-    for (const photoId of promoted) await demotePhoto(env.PHOTOS, photoId);
+    // Deux envois simultanés du même formulaire : l'autre a gagné (index
+    // unique sur submission_id). Ses photos sont les mêmes — surtout ne pas
+    // les rétrograder ; on renvoie sa référence.
+    if (app.submissionId) {
+      const winner = await findBySubmissionId(env.DB, app.submissionId).catch(() => undefined);
+      if (winner) return json({ ok: true, reference: referenceFor(winner), duplicate: true, confirmationEmail: "pending" }, 200);
+    }
+    await demoteIfUnlinked(env, promoted);
     return json({ ok: false, reason: "storage" }, 500);
   }
 
-  const reference = id.slice(0, 8).toUpperCase();
-
-  // E-mails : au mieux. Le dossier est déjà enregistré ; un échec d'envoi
-  // ne transforme jamais une candidature réussie en échec.
-  if (env.NEWSLETTER_API_KEY && env.RESEND_FROM) {
-    const candidate = candidateEmail(app, reference);
-    await sendEmail({ apiKey: env.NEWSLETTER_API_KEY, from: env.RESEND_FROM, to: app.email, ...candidate });
-    if (env.TALENT_APPLICATION_NOTIFY_EMAIL) {
-      await sendEmail({
-        apiKey: env.NEWSLETTER_API_KEY,
-        from: env.RESEND_FROM,
-        to: env.TALENT_APPLICATION_NOTIFY_EMAIL,
-        subject: `Nouvelle candidature Talent — ${app.firstName} ${app.lastName} (${reference})`,
-        text: [
-          "Nouvelle candidature reçue.",
-          "",
-          `Référence : ${reference}`,
-          `Nom : ${app.firstName} ${app.lastName}`,
-          `Ville : ${app.city} (${app.country})`,
-          `Catégorie : ${app.category}${app.categoryOther ? ` — ${app.categoryOther}` : ""}`,
-          `Niveau : ${app.experienceLevel} · Expérience : ${app.experienceDuration}`,
-          "",
-          "Dossier complet et photos dans l'administration : /admin/candidatures",
-        ].join("\n"),
-      });
-    }
+  // Le dossier est enregistré. Les e-mails sont tentés maintenant ; leur
+  // échec éventuel reste consigné dans email_outbox, jamais renvoyé comme un
+  // échec de candidature.
+  let confirmationEmail: ConfirmationState = "pending";
+  try {
+    const report = await deliverOutbox(env, { applicationIds: [id], sanityNotifyEmail: settings.internalNotificationEmail });
+    if (report.outcomes[`${id}:candidate_confirmation`] === "sent") confirmationEmail = "sent";
+  } catch {
+    // Lignes restées en attente : relancées plus tard.
   }
 
-  return json({ ok: true, reference }, 200);
+  // Au passage, quelques e-mails en retard d'autres dossiers (panne passée
+  // du fournisseur) — après la réponse, sans la retarder.
+  const backlog = deliverOutbox(env, { limit: 3, sanityNotifyEmail: settings.internalNotificationEmail }).catch(() => undefined);
+  if (context.waitUntil) context.waitUntil(backlog);
+  else await backlog;
+
+  return json({ ok: true, reference: referenceFor(id), confirmationEmail }, 200);
 };
+
+async function findBySubmissionId(db: D1Database, submissionId: string): Promise<string | undefined> {
+  const row = await db.prepare(`SELECT id FROM applications WHERE submission_id = ?`).bind(submissionId).first<{ id: string }>();
+  return row?.id;
+}
+
+async function confirmationState(db: D1Database, applicationId: string): Promise<ConfirmationState> {
+  const row = await db
+    .prepare(`SELECT status FROM email_outbox WHERE application_id = ? AND kind = 'candidate_confirmation'`)
+    .bind(applicationId)
+    .first<{ status: string }>();
+  return row?.status === "sent" ? "sent" : "pending";
+}
+
+/**
+ * Rétrograde (TTL 2 h) les photos promues pour un dossier qui n'a pas été
+ * écrit — UNIQUEMENT celles qu'aucun dossier ne référence. Si D1 ne répond
+ * pas, on ne rétrograde rien : mieux vaut une photo orpheline permanente
+ * qu'une photo d'un dossier réellement enregistré qui expire.
+ */
+async function demoteIfUnlinked(env: Env, photoIds: string[]): Promise<void> {
+  if (photoIds.length === 0) return;
+  let linked: Set<string>;
+  try {
+    const { results } = await env.DB.prepare(`SELECT id FROM application_photos WHERE id IN (${photoIds.map(() => "?").join(", ")})`)
+      .bind(...photoIds)
+      .all<{ id: string }>();
+    linked = new Set((results ?? []).map((r) => r.id));
+  } catch {
+    return;
+  }
+  for (const photoId of photoIds) if (!linked.has(photoId)) await demotePhoto(env.PHOTOS, photoId);
+}
 
 function buildApplicationInsert(db: D1Database, id: string, now: string, app: ValidApplication): D1PreparedStatement {
   const columns: [string, unknown][] = [
@@ -169,6 +223,7 @@ function buildApplicationInsert(db: D1Database, id: string, now: string, app: Va
     ["accuracy_confirmed", 1],
     ["privacy_notice_version", app.privacyNoticeVersion],
     ["submission_lang", app.lang],
+    ["submission_id", app.submissionId],
   ];
   const names = columns.map(([name]) => name).join(", ");
   const placeholders = columns.map(() => "?").join(", ");
@@ -190,17 +245,4 @@ function buildPhotoInserts(
       .prepare(`INSERT INTO application_photos (id, application_id, role, content_type, created_at) VALUES (?, ?, ?, ?, ?)`)
       .bind(id, applicationId, role, contentTypes.get(id) ?? "image/jpeg", now),
   );
-}
-
-function candidateEmail(app: ValidApplication, reference: string): { subject: string; text: string } {
-  if (app.lang === "en") {
-    return {
-      subject: "WEBLACK Talent — Your application has been received",
-      text: `Hello ${app.firstName},\n\nYour application has been received. Reference: ${reference}.\nOur team reviews every application and will get back to you if your profile matches our current searches.\n\nWEBLACK Talent`,
-    };
-  }
-  return {
-    subject: "WEBLACK Talent — Votre candidature a été reçue",
-    text: `Bonjour ${app.firstName},\n\nVotre candidature a été reçue. Référence : ${reference}.\nNotre équipe examine chaque candidature et revient vers vous si votre profil correspond à nos recherches actuelles.\n\nWEBLACK Talent`,
-  };
 }

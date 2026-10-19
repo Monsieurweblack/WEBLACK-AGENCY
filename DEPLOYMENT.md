@@ -87,6 +87,23 @@ Une fois les deux étapes faites, toute publication dans le Studio republie le s
 
 ---
 
+## Candidatures WEBLACK TALENTS — e-mails et dossiers PDF
+
+**Ouverture de la campagne** : uniquement `applicationsOpen` du document Sanity `talentApplicationSettings`. `minorsAllowed` doit rester `false`. Si Sanity ne répond pas, le formulaire refuse l'envoi (« service momentanément indisponible ») — jamais ouvert par défaut.
+
+**Migrations D1** (`migrations/`) : toujours additives, appliquées en production AVANT de pousser le code qui en dépend, avec un point de restauration relevé au préalable (`npx wrangler d1 time-travel info weblack-talent-applications`).
+
+**E-mails** (Resend, même compte que la newsletter) :
+- Clé : secret Cloudflare `NEWSLETTER_API_KEY` (jamais dans le dépôt).
+- Expéditeur : `RESEND_FROM` dans `wrangler.toml` — doit appartenir à un domaine **vérifié** dans Resend (weblack.fr).
+- Notification équipe : champ `internalNotificationEmail` du document Sanity (ou secret `TALENT_APPLICATION_NOTIFY_EMAIL`, prioritaire s'il existe).
+- Chaque dossier écrit, dans la même transaction, deux lignes `email_outbox` (confirmation candidat, notification équipe). Un échec du fournisseur ne fait jamais perdre la candidature : la ligne passe en « Échec » avec un code technique (ex. `http_403:validation_error`), visible dans `/admin/candidatures/`, avec un bouton « Relancer les e-mails en attente ». 5 tentatives maximum par e-mail ; clé d'idempotence Resend = identifiant de la ligne (pas de doublon chez le destinataire).
+- « Accepté par le fournisseur » ne prouve pas la réception en boîte de réception : vérifier ponctuellement sur une adresse de test, et ajouter un enregistrement DMARC à weblack.fr (absent au 19/10/2026) pour la délivrabilité.
+
+**Dossiers PDF** (`public/downloads/`) : générés par `node --experimental-strip-types scripts/talent-pdf/generate.mjs` à partir des libellés de `src/i18n/ui.ts` — à relancer après toute modification de ces libellés (le test `scripts/lib/talentPdf.test.mjs` échoue tant que les PDF publiés ne correspondent pas). Les dossiers PDF arrivent par e-mail à l'adresse de contact, avec l'objet « Candidature PDF — … » / « PDF application — … » : aucun traitement automatique ni confirmation ; un filtre Gmail sur ces objets permet de les isoler (libellé « WEBLACK TALENTS / PDF »).
+
+---
+
 ## Relancer le site en local
 
 ```bash

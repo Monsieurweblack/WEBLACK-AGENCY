@@ -80,7 +80,50 @@ export function initAdminCandidatures() {
     dashboard!.hidden = false;
     renderFilters();
     void loadList();
+    void loadEmailSummary();
   }
+
+  // --- Suivi des e-mails ------------------------------------------------------
+  const emailSummary = document.getElementById("email-summary");
+  const emailRetry = document.getElementById("email-retry") as HTMLButtonElement | null;
+
+  async function loadEmailSummary() {
+    if (!emailSummary || !emailRetry) return;
+    const response = await fetch("/api/admin/emails");
+    if (!response.ok) return;
+    const data = (await response.json()) as { configured: boolean; summary: { kind: string; status: string; last_error: string | null; count: number }[] };
+    const count = (status: string) => data.summary.filter((r) => r.status === status).reduce((n, r) => n + r.count, 0);
+    const waiting = count("pending") + count("failed") + count("sending");
+    const errors = [...new Set(data.summary.filter((r) => r.last_error).map((r) => r.last_error))];
+    emailSummary.textContent = [
+      `E-mails envoyés : ${count("sent")}`,
+      `en attente ou en échec : ${waiting}`,
+      data.configured ? "" : "envoi non configuré",
+      errors.length ? `dernier motif : ${errors.join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    emailRetry.hidden = waiting === 0;
+  }
+
+  emailRetry?.addEventListener("click", async () => {
+    emailRetry.disabled = true;
+    const response = await fetch("/api/admin/emails", { method: "POST" });
+    emailRetry.disabled = false;
+    if (response.status === 401) return showLogin();
+    await loadEmailSummary();
+  });
+
+  const EMAIL_KIND_LABELS: Record<string, string> = {
+    candidate_confirmation: "Confirmation au candidat",
+    admin_notification: "Notification à l'équipe",
+  };
+  const EMAIL_STATUS_LABELS: Record<string, string> = {
+    pending: "En attente",
+    sending: "Envoi en cours",
+    sent: "Accepté par le fournisseur",
+    failed: "Échec",
+  };
 
   function showLogin() {
     loginForm!.hidden = false;
@@ -189,12 +232,32 @@ export function initAdminCandidatures() {
       showLogin();
       return;
     }
-    const data = (await response.json()) as { ok: boolean; application?: ApplicationDetail; photos?: PhotoRef[] };
+    const data = (await response.json()) as { ok: boolean; application?: ApplicationDetail; photos?: PhotoRef[]; emails?: EmailRow[] };
     if (!data.ok || !data.application) return;
 
     listView!.hidden = true;
     detailView!.hidden = false;
-    renderDetail(id, data.application, data.photos ?? []);
+    renderDetail(id, data.application, data.photos ?? [], data.emails ?? []);
+  }
+
+  interface EmailRow {
+    kind: string;
+    status: string;
+    attempts: number;
+    last_error: string | null;
+    sent_at: string | null;
+  }
+
+  function emailsHtml(emails: EmailRow[]): string {
+    if (emails.length === 0) return "";
+    const rows = emails
+      .map((e) => {
+        const when = e.sent_at ? ` le ${new Date(e.sent_at).toLocaleString("fr-FR")}` : "";
+        const detail = e.status === "sent" ? when : ` — ${e.attempts} tentative(s)${e.last_error ? `, motif : ${e.last_error}` : ""}`;
+        return `<li class="text-(--color-paper)">${escapeHtml(EMAIL_KIND_LABELS[e.kind] ?? e.kind)} : <span class="text-(--color-gold)">${escapeHtml(EMAIL_STATUS_LABELS[e.status] ?? e.status)}</span>${escapeHtml(detail)}</li>`;
+      })
+      .join("");
+    return `<div class="mt-8"><h3 class="label-tracked text-(--color-gold)">E-mails</h3><ul class="mt-3 space-y-1 text-sm">${rows}</ul></div>`;
   }
 
   // Les colonnes des premiers dossiers (missions, compétences, formations,
@@ -263,7 +326,7 @@ export function initAdminCandidatures() {
 
   const translate = (key: string) => (ui.fr as Record<string, string>)[key];
 
-  function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[]) {
+  function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[], emails: EmailRow[]) {
     const sections = FIELD_GROUPS.map((group) => {
       const rows = group.fields
         .map(([key, label]) => [label, formatApplicationField(key, application[key], translate)] as const)
@@ -291,9 +354,11 @@ export function initAdminCandidatures() {
         : "";
 
     detailContent!.innerHTML = `
+      <p class="label-tracked text-(--color-paper)/50">Référence ${escapeHtml(id.slice(0, 8).toUpperCase())}</p>
       ${sections}
       ${projects}
       ${photosHtml}
+      ${emailsHtml(emails)}
       <div class="mt-8 border-t border-(--color-line) pt-6">
         <label class="label-tracked text-(--color-paper)/70">Statut</label>
         <select id="detail-status" class="form-input mt-2 max-w-xs">
