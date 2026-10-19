@@ -1,0 +1,17 @@
+name = "weblack"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-01-01"
+
+# Dossiers de candidature Talent — jamais dans le dataset Sanity public
+# (lisible anonymement, voir editorial-engine/EDITORIAL_ENGINE.md / audit
+# Agenda). D1 pour les données, KV pour les photos (R2 non activé sur ce
+# compte au moment de l'implémentation — migration triviale le jour venu,
+# voir functions/lib/photos.ts).
+[[d1_databases]]
+binding = "DB"
+database_name = "weblack-talent-applications"
+database_id = "7bc900c3-e38b-4ead-842e-97f629b30202"
+
+[[kv_namespaces]]
+binding = "PHOTOS"
+id = "e31fd4cefea0458cae8511ae59d1a737"

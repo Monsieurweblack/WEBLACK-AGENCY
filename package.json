@@ -12,7 +12,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "integrity": "node --experimental-strip-types scripts/content-integrity.mjs",
-    "test": "node --experimental-strip-types --test \"src/lib/*.test.ts\" \"scripts/lib/*.test.mjs\"",
+    "test": "node --experimental-strip-types --test \"src/lib/*.test.ts\" \"scripts/lib/*.test.mjs\" \"functions/lib/*.test.ts\"",
     "editorial:run": "node --experimental-strip-types editorial-engine/cli.ts run",
     "editorial:dry-run": "node --experimental-strip-types editorial-engine/cli.ts run --dry-run",
     "editorial:source": "node --experimental-strip-types editorial-engine/cli.ts source",
