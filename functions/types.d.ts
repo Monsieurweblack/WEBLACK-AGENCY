@@ -40,6 +40,8 @@ interface D1PreparedStatement {
 
 interface D1Database {
   prepare(query: string): D1PreparedStatement;
+  /** Exécute les instructions dans une seule transaction : tout ou rien. */
+  batch(statements: D1PreparedStatement[]): Promise<D1Result[]>;
 }
 
 interface PagesFunctionContext<Env> {

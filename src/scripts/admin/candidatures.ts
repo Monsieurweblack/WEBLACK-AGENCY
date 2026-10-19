@@ -5,6 +5,8 @@
  * au formulaire de connexion, y compris au premier chargement (sert aussi
  * de vérification de session sans endpoint dédié).
  */
+import { ui } from "../../i18n/ui";
+import { formatApplicationField } from "../../lib/talent-application-display";
 
 const STATUSES = [
   { value: "RECEIVED", label: "Reçue" },
@@ -24,6 +26,7 @@ interface ApplicationListItem {
   city: string;
   country: string;
   experience_level: string;
+  talent_category: string | null;
   is_minor: number;
 }
 
@@ -167,7 +170,7 @@ export function initAdminCandidatures() {
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p class="text-(--color-paper)">${escapeHtml(app.first_name)} ${escapeHtml(app.last_name)} ${app.is_minor ? "<span class=\"text-xs text-(--color-gold)\">(mineur·e)</span>" : ""}</p>
-            <p class="text-sm text-(--color-paper)/50">${escapeHtml(app.city)}, ${escapeHtml(app.country)} — ${escapeHtml(app.experience_level)}</p>
+            <p class="text-sm text-(--color-paper)/50">${escapeHtml(app.city)}, ${escapeHtml(formatApplicationField("country", app.country, translate))} — ${escapeHtml(formatApplicationField(app.talent_category ? "talent_category" : "experience_level", app.talent_category ?? app.experience_level, translate))}</p>
           </div>
           <div class="text-right">
             <p class="label-tracked text-(--color-gold)">${statusLabel(app.status)}</p>
@@ -194,6 +197,9 @@ export function initAdminCandidatures() {
     renderDetail(id, data.application, data.photos ?? []);
   }
 
+  // Les colonnes des premiers dossiers (missions, compétences, formations,
+  // disponibilité) restent listées : elles ne s'affichent que si elles
+  // portent une valeur, donc jamais pour les dossiers récents.
   const FIELD_GROUPS: { title: string; fields: [string, string][] }[] = [
     {
       title: "Profil",
@@ -205,11 +211,26 @@ export function initAdminCandidatures() {
         ["country", "Pays"],
         ["email", "E-mail"],
         ["phone", "Téléphone"],
-        ["instagram", "Instagram"],
-        ["languages", "Langues"],
+        ["submission_lang", "Langue du formulaire"],
         ["legal_guardian_name", "Représentant légal"],
         ["legal_guardian_email", "E-mail représentant légal"],
         ["legal_guardian_phone", "Téléphone représentant légal"],
+      ],
+    },
+    {
+      title: "Profil professionnel",
+      fields: [
+        ["talent_category", "Catégorie"],
+        ["talent_category_other", "Précision catégorie"],
+        ["experience_level", "Niveau déclaré"],
+        ["experience_duration", "Durée d'expérience"],
+        ["portfolio_links", "Liens portfolio"],
+        ["instagram", "Instagram"],
+        ["current_agency", "Agence actuelle"],
+        ["exclusivity", "Exclusivité"],
+        ["past_missions", "Missions réalisées"],
+        ["skills", "Compétences"],
+        ["training", "Formations"],
       ],
     },
     {
@@ -217,44 +238,37 @@ export function initAdminCandidatures() {
       fields: [
         ["height_cm", "Taille (cm)"],
         ["chest_cm", "Poitrine (cm)"],
-        ["waist_cm", "Taille (cm)"],
+        ["waist_cm", "Tour de taille (cm)"],
         ["hips_cm", "Hanches (cm)"],
-        ["shoe_size", "Pointure"],
-        ["shoe_system", "Système"],
-        ["clothing_size", "Taille vêtements"],
         ["inseam_cm", "Entrejambe (cm)"],
-        ["hair_color", "Cheveux"],
+        ["shoe_size", "Pointure"],
+        ["shoe_system", "Système de pointure"],
+        ["clothing_size", "Taille vêtements"],
         ["eye_color", "Yeux"],
-      ],
-    },
-    {
-      title: "Expérience",
-      fields: [
-        ["experience_level", "Niveau"],
-        ["past_missions", "Missions réalisées"],
-        ["current_agency", "Agence actuelle"],
-        ["exclusivity", "Exclusivité"],
-        ["portfolio_links", "Liens portfolio"],
-        ["skills", "Compétences"],
-        ["training", "Formations"],
+        ["hair_color", "Cheveux"],
       ],
     },
     {
       title: "Disponibilités",
       fields: [
-        ["availability", "Disponibilité"],
+        ["languages", "Langues"],
+        ["languages_other", "Autre langue"],
         ["mobility", "Mobilité"],
-        ["desired_projects", "Projets souhaités"],
-        ["motivation", "Motivation"],
+        ["desired_projects", "Projets recherchés"],
+        ["motivation", "Présentation"],
+        ["availability", "Disponibilité"],
       ],
     },
   ];
 
+  const translate = (key: string) => (ui.fr as Record<string, string>)[key];
+
   function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[]) {
     const sections = FIELD_GROUPS.map((group) => {
       const rows = group.fields
-        .filter(([key]) => application[key] !== null && application[key] !== undefined && application[key] !== "")
-        .map(([key, label]) => `<div><dt class="label-tracked text-(--color-paper)/40">${label}</dt><dd class="mt-1 text-(--color-paper)">${escapeHtml(String(application[key]))}</dd></div>`)
+        .map(([key, label]) => [label, formatApplicationField(key, application[key], translate)] as const)
+        .filter(([, text]) => text !== "")
+        .map(([label, text]) => `<div><dt class="label-tracked text-(--color-paper)/40">${label}</dt><dd class="mt-1 break-words text-(--color-paper)">${escapeHtml(text)}</dd></div>`)
         .join("");
       return rows ? `<div class="mt-8"><h3 class="label-tracked text-(--color-gold)">${group.title}</h3><dl class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">${rows}</dl></div>` : "";
     }).join("");

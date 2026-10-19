@@ -1,25 +1,33 @@
 /**
- * Formulaire de candidature Talent — une seule page, 5 étapes
- * affichées/masquées en JS. Rien n'est jamais retiré du DOM entre deux
- * étapes : c'est ce qui permet de conserver les réponses sans jamais
- * recourir à localStorage (interdit par le cahier des charges) — tant que
- * l'onglet reste ouvert, les valeurs survivent nativement dans les champs.
+ * Formulaire de candidature Talent — une seule page, 5 étapes affichées et
+ * masquées en JS. Rien n'est retiré du DOM entre deux étapes : les réponses
+ * survivent nativement dans les champs, sans localStorage. Seul un départ de
+ * la page les perdrait : une confirmation est alors demandée (beforeunload).
  *
- * Chaque photo est réencodée via <canvas> avant l'envoi : au-delà de
- * garantir un format uniforme et une taille raisonnable, cela retire déjà
- * toute métadonnée EXIF côté client (aucun canal de métadonnées sur des
- * pixels de canvas). Le serveur revérifie quand même (functions/lib/
- * exif.ts) — jamais de confiance aveugle dans ce que le client affirme.
+ * Les messages d'erreur sont écrits ici, dans la langue de la page — jamais
+ * par la bulle de validation native du navigateur, qui suit la langue du
+ * système et mélangerait français et anglais. Ce contrôle guide la saisie ;
+ * la validation qui fait foi reste celle du serveur (functions/lib/validation.ts),
+ * dont les erreurs sont reprises champ par champ.
  */
 
-const TOTAL_STEPS = 5;
-const MAX_IMAGE_DIMENSION = 1600;
-const JPEG_QUALITY = 0.85;
+interface Config {
+  lang: "fr" | "en";
+  minorsAllowed: boolean;
+  minorsMessage: string;
+  confirmationMessage: string;
+  privacyNoticeVersion: string;
+  dialCodes: Record<string, string>;
+  modelCategories: string[];
+  measurementLimits: Record<string, [number, number]>;
+  shoeSizeLimits: [number, number];
+  textLimits: Record<string, number>;
+  upload: { originalMaxBytes: number; maxDimension: number; acceptedTypes: string[] };
+}
 
-interface ClientStrings {
+interface Strings {
   progress: string;
   stepTitles: string[];
-  navBack: string;
   navContinue: string;
   navSubmit: string;
   navSubmitting: string;
@@ -32,11 +40,42 @@ interface ClientStrings {
   photoError: string;
   photoInvalidType: string;
   photoTooLarge: string;
-  errorGeneric: string;
-  errorValidation: string;
-  errorClosed: string;
   reviewEdit: string;
+  reviewPhotos: string;
+  languagesSelected: string;
+  charactersLeft: string;
+  successDefault: string;
+  errors: Record<
+    | "required"
+    | "email"
+    | "phone"
+    | "country"
+    | "date"
+    | "url"
+    | "instagram"
+    | "range"
+    | "tooLong"
+    | "invalidChoice"
+    | "languages"
+    | "photoRequired"
+    | "photoPending"
+    | "photoExpired"
+    | "shoeSystem"
+    | "rateLimited"
+    | "generic"
+    | "validation"
+    | "closed",
+    string
+  >;
 }
+
+type FieldControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+const TOTAL_STEPS = 5;
+const JPEG_QUALITY = 0.85;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const E164_RE = /^\+[1-9]\d{6,14}$/;
+const INSTAGRAM_RE = /^(@?[A-Za-z0-9._]{1,30}|https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?)$/;
 
 let initialized = false;
 
@@ -44,189 +83,302 @@ export function initTalentApplicationForm() {
   if (initialized) return;
   initialized = true;
 
-  const form = document.getElementById("talent-application-form") as HTMLFormElement | null;
-  if (!form) return;
+  const formEl = document.getElementById("talent-application-form") as HTMLFormElement | null;
+  if (!formEl) return;
+  const form: HTMLFormElement = formEl;
 
-  const i18n = JSON.parse(form.dataset.i18n || "{}") as ClientStrings;
-  const minorsAllowed = form.dataset.minorsAllowed === "true";
-  const minorsMessage = form.dataset.minorsMessage || "";
-  const confirmationMessage = form.dataset.confirmationMessage || "";
-  const privacyNoticeVersion = form.dataset.privacyNoticeVersion || "";
+  const config = JSON.parse(form.dataset.config || "{}") as Config;
+  const i18n = JSON.parse(form.dataset.i18n || "{}") as Strings;
 
+  const q = <T extends Element>(selector: string) => form.querySelector<T>(selector);
   const steps = Array.from(form.querySelectorAll<HTMLFieldSetElement>("fieldset[data-step]"));
-  const progressEl = form.querySelector<HTMLElement>("[data-step-progress]");
-  const barEl = form.querySelector<HTMLElement>("[data-step-bar]");
-  const titleEl = form.querySelector<HTMLElement>("[data-step-title]");
-  const backBtn = form.querySelector<HTMLButtonElement>("[data-nav-back]");
-  const continueBtn = form.querySelector<HTMLButtonElement>("[data-nav-continue]");
-  const statusEl = form.querySelector<HTMLElement>("[data-form-status]");
-  const successPanel = form.querySelector<HTMLElement>("[data-success-panel]");
-  const successMessageEl = form.querySelector<HTMLElement>("[data-success-message]");
-  const successReferenceEl = form.querySelector<HTMLElement>("[data-success-reference]");
-  const navControls = form.querySelector<HTMLElement>("[data-nav-controls]");
-  if (!progressEl || !barEl || !titleEl || !backBtn || !continueBtn || !statusEl) return;
+  const progressEl = q<HTMLElement>("[data-step-progress]")!;
+  const barEl = q<HTMLElement>("[data-step-bar]")!;
+  const titleEl = q<HTMLElement>("[data-step-title]")!;
+  const backBtn = q<HTMLButtonElement>("[data-nav-back]")!;
+  const continueBtn = q<HTMLButtonElement>("[data-nav-continue]")!;
+  const statusEl = q<HTMLElement>("[data-form-status]")!;
+  const navControls = q<HTMLElement>("[data-nav-controls]")!;
 
   let currentStep = 1;
-  const photoFiles = new Map<HTMLElement, File>();
+  let dirty = false;
+  let submitted = false;
+  let pendingUploads = 0;
 
-  // --- Navigation entre étapes --------------------------------------------
+  // --- Utilitaires de champ ---------------------------------------------------
 
-  function showStep(step: number) {
-    currentStep = step;
-    for (const fieldset of steps) {
-      const n = Number(fieldset.dataset.step);
-      fieldset.hidden = n !== step;
+  /**
+   * Toujours un élément, jamais une RadioNodeList : pour un groupe de cases
+   * (langues, projets, mobilité), namedItem() renvoie la liste entière, qui
+   * n'a ni focus() ni setAttribute() — on prend alors sa première case.
+   */
+  const control = (name: string): FieldControl | null => {
+    const named = form.elements.namedItem(name);
+    if (named instanceof RadioNodeList) return (named[0] as FieldControl | undefined) ?? null;
+    return (named as FieldControl | null) ?? form.querySelector<FieldControl>(`#${CSS.escape(name)}`);
+  };
+
+  const value = (name: string): string => {
+    const element = form.elements.namedItem(name);
+    if (element instanceof RadioNodeList) return element.value;
+    return (element as FieldControl | null)?.value.trim() ?? "";
+  };
+
+  const checkedValues = (name: string): string[] =>
+    Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`)).map((input) => input.value);
+
+  /** L'élément qui reçoit le focus et aria-invalid pour un nom d'erreur donné. */
+  function focusTargetFor(name: string): HTMLElement | null {
+    if (name === "phone") return q("#phoneNumber");
+    if (name === "country") return q("#countrySearch");
+    if (name === "languages") return q("#languagesSearch");
+    if (name === "mobility") return q('input[name="mobility"]');
+    if (name.startsWith("photo.")) return q(`.photo-slot[data-photo-role="${name.slice(6)}"] [data-photo-trigger]`);
+    return control(name);
+  }
+
+  function setError(name: string, message: string) {
+    const target = q<HTMLElement>(`[data-error-for="${name}"]`);
+    if (target) {
+      target.textContent = message;
+      target.hidden = false;
     }
-    progressEl!.textContent = i18n.progress.replace("{n}", String(step));
-    titleEl!.textContent = i18n.stepTitles[step - 1] ?? "";
-    barEl!.style.width = `${(step / TOTAL_STEPS) * 100}%`;
-    backBtn!.hidden = step === 1;
-    continueBtn!.textContent = step === TOTAL_STEPS ? i18n.navSubmit : i18n.navContinue;
-    statusEl!.textContent = "";
-    if (step === TOTAL_STEPS) buildReview();
-    form!.scrollIntoView({ behavior: "smooth", block: "start" });
+    focusTargetFor(name)?.setAttribute("aria-invalid", "true");
+    if (name === "phone") q("#phoneDialCode")?.setAttribute("aria-invalid", "true");
   }
 
-  function currentFieldset(): HTMLFieldSetElement | undefined {
-    return steps.find((s) => Number(s.dataset.step) === currentStep);
-  }
-
-  /** Validation native scopée à l'étape visible — les champs requis des autres étapes, masqués, ne bloquent jamais ceci. */
-  function validateCurrentStep(): boolean {
-    const fieldset = currentFieldset();
-    if (!fieldset) return true;
-    const fields = Array.from(fieldset.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input, select, textarea"));
-    for (const field of fields) {
-      if (field.closest("[hidden]") && field.closest("[hidden]") !== fieldset) continue; // champ dans une section repliée (ex. représentant légal masqué)
-      if (!field.checkValidity()) {
-        field.reportValidity();
-        return false;
-      }
+  function clearError(name: string) {
+    const target = q<HTMLElement>(`[data-error-for="${name}"]`);
+    if (target) {
+      target.textContent = "";
+      target.hidden = true;
     }
-    if (currentStep === 1 && !validateMinorGate()) return false;
-    if (currentStep === 2 && !validateDecimalFields()) return false;
-    if (currentStep === 4 && !validateRequiredPhotos()) return false;
-    return true;
+    focusTargetFor(name)?.removeAttribute("aria-invalid");
+    if (name === "phone") q("#phoneDialCode")?.removeAttribute("aria-invalid");
   }
 
-  // --- Étape 1 : mineur ----------------------------------------------------
+  function clearErrorsIn(scope: ParentNode) {
+    for (const element of scope.querySelectorAll<HTMLElement>("[data-error-for]")) clearError(element.dataset.errorFor!);
+  }
 
-  const birthDateInput = form.querySelector<HTMLInputElement>("[data-birth-date]");
-  const minorBlock = form.querySelector<HTMLElement>("[data-minor-block]");
-  const minorGated = form.querySelector<HTMLElement>("[data-minor-gated]");
-  const guardianFields = form.querySelector<HTMLElement>("[data-guardian-fields]");
+  const rangeMessage = (min: number, max: number) => i18n.errors.range.replace("{min}", String(min)).replace("{max}", String(max));
 
-  function computeAgeClient(iso: string): number | undefined {
+  function parseDecimal(raw: string): number | undefined {
+    const normalized = raw.trim().replace(",", ".");
+    if (!/^\d{1,3}(\.\d{1,2})?$/.test(normalized)) return undefined;
+    return Number(normalized);
+  }
+
+  function isHttpUrl(raw: string): boolean {
+    try {
+      const url = new URL(raw);
+      return (url.protocol === "https:" || url.protocol === "http:") && url.hostname.includes(".");
+    } catch {
+      return false;
+    }
+  }
+
+  function computeAge(iso: string): number | undefined {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
     if (!match) return undefined;
-    const [, y, m, d] = match.map(Number) as unknown as [number, number, number, number];
-    const birth = new Date(y, m - 1, d);
-    if (birth.getFullYear() !== y || birth.getMonth() !== m - 1 || birth.getDate() !== d) return undefined;
+    const y = Number(match[1]);
+    const m = Number(match[2]);
+    const d = Number(match[3]);
+    const birth = new Date(Date.UTC(y, m - 1, d));
+    if (birth.getUTCFullYear() !== y || birth.getUTCMonth() !== m - 1 || birth.getUTCDate() !== d) return undefined;
     const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age -= 1;
+    let age = today.getUTCFullYear() - y;
+    if (today.getUTCMonth() < m - 1 || (today.getUTCMonth() === m - 1 && today.getUTCDate() < d)) age -= 1;
     return age;
   }
 
-  function isMinor(): boolean {
-    const age = birthDateInput ? computeAgeClient(birthDateInput.value) : undefined;
-    return typeof age === "number" && age >= 0 && age < 18;
+  // --- Navigation ---------------------------------------------------------------
+
+  function showStep(step: number, focusTitle = true) {
+    currentStep = step;
+    for (const fieldset of steps) fieldset.hidden = Number(fieldset.dataset.step) !== step;
+    progressEl.textContent = i18n.progress.replace("{n}", String(step));
+    titleEl.textContent = i18n.stepTitles[step - 1] ?? "";
+    barEl.style.width = `${(step / TOTAL_STEPS) * 100}%`;
+    backBtn.hidden = step === 1;
+    continueBtn.textContent = step === TOTAL_STEPS ? i18n.navSubmit : i18n.navContinue;
+    statusEl.textContent = "";
+    if (step === TOTAL_STEPS) buildReview();
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (focusTitle) titleEl.focus({ preventScroll: true });
   }
+
+  const stepOf = (element: Element | null): number => Number(element?.closest<HTMLElement>("fieldset[data-step]")?.dataset.step ?? 0);
+
+  // --- Étape 1 : profil -----------------------------------------------------------
+
+  const birthInput = q<HTMLInputElement>("#birthDate")!;
+  const minorBlock = q<HTMLElement>("[data-minor-block]")!;
+  const minorGated = q<HTMLElement>("[data-minor-gated]")!;
+  const guardianFields = q<HTMLElement>("[data-guardian-fields]")!;
+  // La date du jour bornant le sélecteur : une naissance ne peut pas être future.
+  birthInput.max = new Date().toISOString().slice(0, 10);
+
+  const isMinor = () => {
+    const age = computeAge(birthInput.value);
+    return typeof age === "number" && age >= 0 && age < 18;
+  };
 
   function updateMinorUi() {
-    if (!birthDateInput || !minorBlock || !minorGated) return;
     const minor = isMinor();
-    if (minor && !minorsAllowed) {
-      minorBlock.hidden = false;
-      minorBlock.textContent = minorsMessage;
-      minorGated.hidden = true;
-    } else {
-      minorBlock.hidden = true;
-      minorGated.hidden = false;
-      if (guardianFields) guardianFields.hidden = !minor;
-      for (const field of guardianFields?.querySelectorAll<HTMLInputElement>("[data-guardian-required]") ?? []) {
-        field.required = minor;
-      }
+    const blocked = minor && !config.minorsAllowed;
+    minorBlock.hidden = !blocked;
+    minorBlock.textContent = blocked ? config.minorsMessage : "";
+    minorGated.hidden = blocked;
+    continueBtn.disabled = blocked;
+    guardianFields.hidden = !(minor && config.minorsAllowed);
+  }
+  birthInput.addEventListener("change", updateMinorUi);
+  birthInput.addEventListener("input", updateMinorUi);
+
+  const countrySearch = q<HTMLInputElement>("[data-country-search]")!;
+  const countryCode = q<HTMLInputElement>("[data-country-code]")!;
+  const dialInput = q<HTMLInputElement>("[data-dial-code]")!;
+  const countryOptions = Array.from(form.querySelectorAll<HTMLOptionElement>("#country-options option"));
+
+  function syncCountry() {
+    const typed = countrySearch.value.trim().toLocaleLowerCase(config.lang);
+    const match = countryOptions.find((option) => option.value.toLocaleLowerCase(config.lang) === typed);
+    countryCode.value = match?.dataset.code ?? "";
+    const dial = match ? config.dialCodes[match.dataset.code!] : undefined;
+    // L'indicatif n'est proposé que s'il est certain, et jamais par-dessus
+    // une saisie de la personne : seul un indicatif lui-même proposé est remplacé.
+    if (dial && (dialInput.value === "" || dialInput.dataset.auto === "true")) {
+      dialInput.value = `+${dial}`;
+      dialInput.dataset.auto = "true";
     }
   }
+  countrySearch.addEventListener("input", syncCountry);
+  countrySearch.addEventListener("change", syncCountry);
+  dialInput.addEventListener("input", () => (dialInput.dataset.auto = "false"));
 
-  birthDateInput?.addEventListener("change", updateMinorUi);
-
-  function validateMinorGate(): boolean {
-    if (!birthDateInput) return true;
-    return !(isMinor() && !minorsAllowed);
+  function phoneValue(dialEl: HTMLInputElement | null, numberEl: HTMLInputElement | null): string {
+    const number = (numberEl?.value ?? "").trim();
+    if (number.startsWith("+")) return number.replace(/[\s.\-()]/g, "");
+    const dialDigits = (dialEl?.value ?? "").replace(/\D/g, "");
+    const numberDigits = number.replace(/\D/g, "");
+    return dialDigits && numberDigits ? `+${dialDigits}${numberDigits}` : "";
   }
 
-  // --- Étape 2 : mensurations décimales ------------------------------------
-
-  function validateDecimalFields(): boolean {
-    const fields = form!.querySelectorAll<HTMLInputElement>("[data-decimal]");
-    for (const field of fields) {
-      const raw = field.value.trim();
-      if (raw === "") {
-        field.setCustomValidity("");
-        continue;
-      }
-      const normalized = raw.replace(",", ".");
-      if (!/^\d{1,3}(\.\d{1,2})?$/.test(normalized)) {
-        field.setCustomValidity(i18n.errorValidation);
-        field.reportValidity();
-        return false;
-      }
-      field.setCustomValidity("");
+  function validateStep1(): string[] {
+    const invalid: string[] = [];
+    const fail = (name: string, message: string) => {
+      setError(name, message);
+      invalid.push(name);
+    };
+    for (const name of ["firstName", "lastName"]) if (!value(name)) fail(name, i18n.errors.required);
+    if (!birthInput.value) fail("birthDate", i18n.errors.required);
+    else {
+      const age = computeAge(birthInput.value);
+      if (age === undefined || age < 0 || age > 100) fail("birthDate", i18n.errors.date);
+      else if (age < 18 && !config.minorsAllowed) fail("birthDate", config.minorsMessage);
     }
-    return true;
+    if (minorGated.hidden) return invalid;
+    if (!value("city")) fail("city", i18n.errors.required);
+    syncCountry();
+    if (!countrySearch.value.trim()) fail("country", i18n.errors.required);
+    else if (!countryCode.value) fail("country", i18n.errors.country);
+    const email = value("email");
+    if (!email) fail("email", i18n.errors.required);
+    else if (!EMAIL_RE.test(email)) fail("email", i18n.errors.email);
+    const phoneNumber = q<HTMLInputElement>("#phoneNumber")!;
+    if (!phoneNumber.value.trim()) fail("phone", i18n.errors.required);
+    else if (!E164_RE.test(phoneValue(dialInput, phoneNumber))) fail("phone", i18n.errors.phone);
+    if (!guardianFields.hidden) {
+      if (!value("legalGuardianName")) fail("legalGuardianName", i18n.errors.required);
+      if (!EMAIL_RE.test(value("legalGuardianEmail"))) fail("legalGuardianEmail", i18n.errors.email);
+      if (!E164_RE.test(value("legalGuardianPhone").replace(/[\s.\-()]/g, ""))) fail("legalGuardianPhone", i18n.errors.phone);
+    }
+    return invalid;
   }
 
-  function parseDecimalClient(raw: string): number | undefined {
-    const trimmed = raw.trim();
-    if (trimmed === "") return undefined;
-    const value = Number(trimmed.replace(",", "."));
-    return Number.isFinite(value) ? value : undefined;
+  // --- Étape 2 : profil professionnel --------------------------------------------
+
+  const categorySelect = q<HTMLSelectElement>("[data-category]")!;
+  const categoryOtherBlock = q<HTMLElement>("[data-category-other]")!;
+  const isModelCategory = () => config.modelCategories.includes(categorySelect.value);
+
+  function updateCategoryUi() {
+    categoryOtherBlock.hidden = categorySelect.value !== "other";
+    // Mensurations complètes seulement là où elles servent un casting ; pour
+    // un talent créatif, la taille, les yeux et les cheveux suffisent.
+    const limited = categorySelect.value !== "" && !isModelCategory();
+    for (const block of form.querySelectorAll<HTMLElement>('[data-measure="model"]')) block.hidden = limited;
+    q<HTMLElement>("[data-measurements-limited]")!.hidden = !limited;
+  }
+  categorySelect.addEventListener("change", updateCategoryUi);
+
+  function portfolioLinks(): string[] {
+    return value("portfolioLinks")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
   }
 
-  // --- Étape 3 : projets (répétable, jusqu'à 3) ----------------------------
-
-  const projectsContainer = form.querySelector<HTMLElement>("[data-projects-container]");
-  const projectTemplate = form.querySelector<HTMLTemplateElement>("[data-project-template]");
-  const addProjectBtn = form.querySelector<HTMLButtonElement>("[data-add-project]");
-
-  addProjectBtn?.addEventListener("click", () => {
-    if (!projectsContainer || !projectTemplate) return;
-    if (projectsContainer.children.length >= 3) return;
-    const clone = projectTemplate.content.cloneNode(true) as DocumentFragment;
-    const entry = clone.querySelector<HTMLElement>("[data-project-entry]");
-    entry?.querySelector<HTMLButtonElement>("[data-remove-project]")?.addEventListener("click", () => entry.remove());
-    projectsContainer.append(clone);
-    if (projectsContainer.children.length >= 3) addProjectBtn.hidden = true;
-  });
-
-  // --- Étape 4 : photos -----------------------------------------------------
-
-  function sniffClientType(bytes: Uint8Array): string | undefined {
-    if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
-    if (bytes[0] === 0x89 && bytes[1] === 0x50) return "image/png";
-    return undefined;
+  function validateStep2(): string[] {
+    const invalid: string[] = [];
+    const fail = (name: string, message: string) => {
+      setError(name, message);
+      invalid.push(name);
+    };
+    if (!categorySelect.value) fail("category", i18n.errors.required);
+    if (categorySelect.value === "other" && !value("categoryOther")) fail("categoryOther", i18n.errors.required);
+    if (!value("experienceLevel")) fail("experienceLevel", i18n.errors.required);
+    if (!value("experienceDuration")) fail("experienceDuration", i18n.errors.required);
+    const links = portfolioLinks();
+    if (links.length > config.textLimits.portfolioLinksCount! || !links.every((link) => link.length <= config.textLimits.portfolioLink! && isHttpUrl(link))) {
+      fail("portfolioLinks", i18n.errors.url);
+    }
+    const instagram = value("instagram");
+    if (instagram && !INSTAGRAM_RE.test(instagram)) fail("instagram", i18n.errors.instagram);
+    return invalid;
   }
+
+  // --- Étape 3 : mensurations -------------------------------------------------------
+
+  function validateStep3(): string[] {
+    const invalid: string[] = [];
+    for (const input of form.querySelectorAll<HTMLInputElement>("[data-decimal]")) {
+      if (input.closest<HTMLElement>("[hidden]") || input.value.trim() === "") continue;
+      const parsed = parseDecimal(input.value);
+      const min = Number(input.dataset.min);
+      const max = Number(input.dataset.max);
+      const shoeStep = input.name === "shoeSize" && parsed !== undefined && (parsed * 2) % 1 !== 0;
+      if (parsed === undefined || parsed < min || parsed > max || shoeStep) {
+        setError(input.name, rangeMessage(min, max));
+        invalid.push(input.name);
+      }
+    }
+    if (isModelCategory() && value("shoeSize") && !value("shoeSystem")) {
+      setError("shoeSystem", i18n.errors.shoeSystem);
+      invalid.push("shoeSystem");
+    }
+    return invalid;
+  }
+
+  // --- Étape 4 : photos ----------------------------------------------------------------
 
   async function reencodeToJpeg(file: File): Promise<Blob> {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
-    const width = Math.round(bitmap.width * scale);
-    const height = Math.round(bitmap.height * scale);
+    const scale = Math.min(1, config.upload.maxDimension / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("canvas_unavailable");
-    ctx.drawImage(bitmap, 0, 0, width, height);
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("canvas");
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode_failed"))), "image/jpeg", JPEG_QUALITY);
-    });
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode"))), "image/jpeg", JPEG_QUALITY),
+    );
   }
 
-  function uploadWithProgress(blob: Blob, role: string, onProgress: (pct: number) => void): Promise<{ ok: boolean; photoId?: string }> {
+  function uploadWithProgress(blob: Blob, role: string, onProgress: (pct: number) => void): Promise<{ ok: boolean; photoId?: string; reason?: string }> {
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/talent-application/upload");
@@ -235,13 +387,14 @@ export function initTalentApplicationForm() {
       };
       xhr.onload = () => {
         try {
-          const data = JSON.parse(xhr.responseText) as { ok: boolean; photoId?: string };
-          resolve(xhr.status === 200 && data.ok ? { ok: true, photoId: data.photoId } : { ok: false });
+          const data = JSON.parse(xhr.responseText) as { ok: boolean; photoId?: string; reason?: string };
+          resolve(xhr.status === 200 && data.ok ? { ok: true, photoId: data.photoId } : { ok: false, reason: data.reason });
         } catch {
           resolve({ ok: false });
         }
       };
       xhr.onerror = () => resolve({ ok: false });
+      xhr.onabort = () => resolve({ ok: false });
       const body = new FormData();
       body.set("role", role);
       body.set("photo", blob, "photo.jpg");
@@ -249,300 +402,456 @@ export function initTalentApplicationForm() {
     });
   }
 
+  const photoFiles = new Map<HTMLElement, File>();
+
   function initPhotoSlot(slot: HTMLElement) {
-    const role = (slot.dataset.photoRole || "extra") as string;
-    const input = slot.querySelector<HTMLInputElement>("[data-photo-input]");
-    const idField = slot.querySelector<HTMLInputElement>("[data-photo-id-field]");
-    const trigger = slot.querySelector<HTMLButtonElement>("[data-photo-trigger]");
-    const preview = slot.querySelector<HTMLElement>("[data-photo-preview]");
-    const statusText = slot.querySelector<HTMLElement>("[data-photo-status]");
-    if (!input || !idField || !trigger || !preview || !statusText) return;
-    // Rebinding nécessaire : une déclaration `function` imbriquée (runUpload
-    // ci-dessous) ne conserve pas le rétrécissement de type de la garde
-    // ci-dessus sur les variables d'origine — voir product-gallery.ts pour
-    // la même situation déjà rencontrée dans ce projet.
-    const inputEl = input;
-    const idFieldEl = idField;
-    const triggerEl = trigger;
-    const previewEl = preview;
-    const photoStatusEl = statusText;
+    const role = slot.dataset.photoRole || "extra";
+    const input = slot.querySelector<HTMLInputElement>("[data-photo-input]")!;
+    const idField = slot.querySelector<HTMLInputElement>("[data-photo-id-field]")!;
+    const trigger = slot.querySelector<HTMLButtonElement>("[data-photo-trigger]")!;
+    const preview = slot.querySelector<HTMLElement>("[data-photo-preview]")!;
+    const status = slot.querySelector<HTMLElement>("[data-photo-status]")!;
 
-    triggerEl.addEventListener("click", () => {
-      const existing = photoFiles.get(slot);
-      if (existing && photoStatusEl.dataset.failed === "true") {
-        void runUpload(existing);
-      } else {
-        inputEl.click();
-      }
+    trigger.addEventListener("click", () => {
+      const lastFile = photoFiles.get(slot);
+      if (lastFile && status.dataset.failed === "true") void runUpload(lastFile);
+      else input.click();
     });
-
-    inputEl.addEventListener("change", () => {
-      const file = inputEl.files?.[0];
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
       if (!file) return;
       photoFiles.set(slot, file);
       void runUpload(file);
     });
 
     async function runUpload(file: File) {
-      photoStatusEl.dataset.failed = "false";
-      idFieldEl.value = "";
-      const buffer = new Uint8Array(await file.slice(0, 8).arrayBuffer());
-      if (!sniffClientType(buffer) && !file.type.startsWith("image/")) {
-        photoStatusEl.textContent = i18n.photoInvalidType;
-        photoStatusEl.dataset.failed = "true";
+      if (role !== "extra") clearError(`photo.${role}`);
+      status.dataset.failed = "false";
+      idField.value = "";
+      if (!config.upload.acceptedTypes.includes(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) {
+        status.textContent = i18n.photoInvalidType;
+        status.dataset.failed = "true";
         return;
       }
-      if (file.size > 20 * 1024 * 1024) {
-        photoStatusEl.textContent = i18n.photoTooLarge;
-        photoStatusEl.dataset.failed = "true";
+      if (file.size > config.upload.originalMaxBytes) {
+        status.textContent = i18n.photoTooLarge;
+        status.dataset.failed = "true";
         return;
       }
-
-      photoStatusEl.textContent = i18n.photoUploading;
-      let blob: Blob;
+      pendingUploads += 1;
       try {
-        blob = await reencodeToJpeg(file);
-      } catch {
-        photoStatusEl.textContent = i18n.photoError;
-        photoStatusEl.dataset.failed = "true";
-        return;
-      }
+        status.textContent = i18n.photoUploading;
+        let blob: Blob;
+        try {
+          // Réencodage systématique : format uniforme (y compris HEIC
+          // d'iPhone), taille maîtrisée, et aucune métadonnée conservée
+          // — un canvas ne porte pas d'EXIF.
+          blob = await reencodeToJpeg(file);
+        } catch {
+          status.textContent = i18n.photoInvalidType;
+          status.dataset.failed = "true";
+          return;
+        }
+        // data: et non blob: — la CSP du site n'autorise que data: en img-src.
+        const previewUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.readAsDataURL(blob);
+        });
+        preview.style.backgroundImage = `url(${previewUrl})`;
+        preview.style.backgroundSize = "cover";
+        preview.style.backgroundPosition = "center";
 
-      // data: plutôt que blob: — la CSP du site (public/_headers, img-src)
-      // n'autorise pas le schéma blob:, confirmé par un vrai test navigateur
-      // (violation CSP observée, aperçu resté vide) ; data: y figure déjà.
-      const previewUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.readAsDataURL(blob);
-      });
-      previewEl.style.backgroundImage = `url(${previewUrl})`;
-      previewEl.style.backgroundSize = "cover";
-      previewEl.style.backgroundPosition = "center";
-
-      const result = await uploadWithProgress(blob, role, (pct) => {
-        photoStatusEl.textContent = `${i18n.photoUploading} ${pct}%`;
-      });
-
-      if (result.ok && result.photoId) {
-        idFieldEl.value = result.photoId;
-        photoStatusEl.textContent = i18n.photoUploaded;
-        photoStatusEl.dataset.failed = "false";
-        triggerEl.textContent = i18n.photoReplace;
-      } else {
-        photoStatusEl.textContent = `${i18n.photoError} ${i18n.photoRetry}`;
-        photoStatusEl.dataset.failed = "true";
+        const result = await uploadWithProgress(blob, role, (pct) => (status.textContent = `${i18n.photoUploading} ${pct}%`));
+        if (result.ok && result.photoId) {
+          idField.value = result.photoId;
+          status.textContent = i18n.photoUploaded;
+          trigger.textContent = i18n.photoReplace;
+        } else {
+          status.textContent = result.reason === "invalid_type" ? i18n.photoInvalidType : `${i18n.photoError} ${i18n.photoRetry}`;
+          status.dataset.failed = "true";
+          trigger.textContent = i18n.photoRetry;
+        }
+      } finally {
+        pendingUploads -= 1;
       }
     }
   }
 
   for (const slot of form.querySelectorAll<HTMLElement>(".photo-slot[data-photo-role]")) initPhotoSlot(slot);
 
-  const extraContainer = form.querySelector<HTMLElement>("[data-extra-photos-container]");
-  const extraTemplate = form.querySelector<HTMLTemplateElement>("[data-extra-photo-template]");
-  const addExtraBtn = form.querySelector<HTMLButtonElement>("[data-add-extra-photo]");
-
-  addExtraBtn?.addEventListener("click", () => {
-    if (!extraContainer || !extraTemplate) return;
+  const extraContainer = q<HTMLElement>("[data-extra-photos-container]")!;
+  const extraTemplate = q<HTMLTemplateElement>("[data-extra-photo-template]")!;
+  const addExtraBtn = q<HTMLButtonElement>("[data-add-extra-photo]")!;
+  addExtraBtn.addEventListener("click", () => {
     if (extraContainer.children.length >= 3) return;
-    const clone = extraTemplate.content.cloneNode(true) as DocumentFragment;
-    const entry = clone.querySelector<HTMLElement>("[data-extra-entry]");
-    if (entry) {
-      initPhotoSlot(entry);
-      entry.querySelector<HTMLButtonElement>("[data-remove-extra]")?.addEventListener("click", () => {
-        photoFiles.delete(entry);
-        entry.remove();
-        if (extraContainer.children.length < 3 && addExtraBtn) addExtraBtn.hidden = false;
-      });
-    }
-    extraContainer.append(clone);
-    if (extraContainer.children.length >= 3) addExtraBtn.hidden = true;
+    const fragment = extraTemplate.content.cloneNode(true) as DocumentFragment;
+    const entry = fragment.querySelector<HTMLElement>("[data-extra-entry]")!;
+    initPhotoSlot(entry);
+    entry.querySelector<HTMLButtonElement>("[data-remove-extra]")!.addEventListener("click", () => {
+      photoFiles.delete(entry);
+      entry.remove();
+      addExtraBtn.hidden = extraContainer.children.length >= 3;
+    });
+    extraContainer.append(fragment);
+    addExtraBtn.hidden = extraContainer.children.length >= 3;
+    entry.querySelector<HTMLButtonElement>("[data-photo-trigger]")!.focus();
   });
 
-  function validateRequiredPhotos(): boolean {
+  const photoIdOf = (role: string) => q<HTMLInputElement>(`.photo-slot[data-photo-role="${role}"]:not([data-extra-entry]) [data-photo-id-field]`)?.value ?? "";
+  const extraPhotoIds = () =>
+    Array.from(extraContainer.querySelectorAll<HTMLInputElement>("[data-photo-id-field]"))
+      .map((field) => field.value)
+      .filter(Boolean);
+
+  function validateStep4(): string[] {
+    if (pendingUploads > 0) {
+      statusEl.textContent = i18n.errors.photoPending;
+      return ["photoPending"];
+    }
+    const invalid: string[] = [];
     for (const role of ["portrait", "profile", "full_length"]) {
-      const slot = form!.querySelector<HTMLElement>(`.photo-slot[data-photo-role="${role}"]`);
-      const idField = slot?.querySelector<HTMLInputElement>("[data-photo-id-field]");
-      if (!idField?.value) {
-        const statusText = slot?.querySelector<HTMLElement>("[data-photo-status]");
-        if (statusText) statusText.textContent = i18n.errorValidation;
-        return false;
+      if (!photoIdOf(role)) {
+        setError(`photo.${role}`, i18n.errors.photoRequired);
+        invalid.push(`photo.${role}`);
       }
     }
-    return true;
+    return invalid;
   }
 
-  // --- Étape 5 : récapitulatif ----------------------------------------------
+  // --- Étape 5 : disponibilités et confirmation ---------------------------------------
 
-  const REVIEW_FIELD_IDS = [
-    "firstName",
-    "lastName",
-    "birthDate",
-    "city",
-    "country",
-    "email",
-    "phone",
-    "instagram",
-    "languages",
-    "experienceLevel",
-    "currentAgency",
-    "availability",
-    "mobility",
-  ];
+  const languagesSearch = q<HTMLInputElement>("[data-languages-search]")!;
+  const languagesCount = q<HTMLElement>("[data-languages-count]")!;
+  languagesSearch.addEventListener("input", () => {
+    const term = languagesSearch.value.trim().toLocaleLowerCase(config.lang);
+    for (const option of form.querySelectorAll<HTMLElement>("[data-language-option]")) {
+      option.hidden = term !== "" && !option.dataset.search!.includes(term);
+    }
+  });
+  const updateLanguagesCount = () => {
+    const count = checkedValues("languages").length;
+    languagesCount.textContent = count ? `${count} ${i18n.languagesSelected}` : "";
+  };
+  q<HTMLElement>("[data-languages-list]")!.addEventListener("change", updateLanguagesCount);
+
+  const motivation = q<HTMLTextAreaElement>("#motivation")!;
+  const motivationCount = q<HTMLElement>("[data-motivation-count]")!;
+  const updateMotivationCount = () => {
+    const left = config.textLimits.motivation! - motivation.value.length;
+    motivationCount.textContent = `${left} ${i18n.charactersLeft}`;
+  };
+  motivation.addEventListener("input", updateMotivationCount);
+  updateMotivationCount();
+
+  function validateStep5(): string[] {
+    const invalid: string[] = [];
+    const fail = (name: string, message: string) => {
+      setError(name, message);
+      invalid.push(name);
+    };
+    if (checkedValues("languages").length === 0 && !value("languagesOther")) fail("languages", i18n.errors.languages);
+    if (!value("mobility")) fail("mobility", i18n.errors.required);
+    if (motivation.value.length > config.textLimits.motivation!) fail("motivation", i18n.errors.tooLong);
+    if (!(control("accuracyConfirmed") as HTMLInputElement).checked) fail("accuracyConfirmed", i18n.errors.required);
+    if (!(control("privacyNoticeAccepted") as HTMLInputElement).checked) fail("privacyNoticeAccepted", i18n.errors.required);
+    return invalid;
+  }
+
+  // --- Récapitulatif ------------------------------------------------------------------
+
+  /** Libellé visible d'un champ, lu dans le DOM — aucune seconde copie des traductions. */
+  function labelText(name: string): string {
+    const element = q<HTMLElement>(`label[for="${name}"]`) ?? q<HTMLElement>(`#${name}-label`);
+    if (!element) return name;
+    const clone = element.cloneNode(true) as HTMLElement;
+    for (const extra of clone.querySelectorAll("[data-label-extra]")) extra.remove();
+    return (clone.textContent ?? "").trim();
+  }
+
+  /** Un bloc de mensuration masqué parce que la catégorie ne l'utilise pas — distinct d'une étape simplement non affichée. */
+  const isMeasureHidden = (element: Element | null) => Boolean(element?.closest<HTMLElement>("[data-measure]")?.hidden);
+
+  function selectedText(name: string): string {
+    const select = control(name);
+    return select instanceof HTMLSelectElement && select.value ? (select.selectedOptions[0]?.textContent ?? "") : "";
+  }
+
+  function checkedLabels(name: string): string[] {
+    return Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`)).map(
+      (input) => input.closest("label")?.querySelector("span")?.textContent?.trim() ?? input.value,
+    );
+  }
 
   function buildReview() {
-    const list = form!.querySelector<HTMLElement>("[data-review-list]");
-    if (!list) return;
-    list.innerHTML = "";
-    for (const id of REVIEW_FIELD_IDS) {
-      const field = form!.querySelector<HTMLInputElement | HTMLSelectElement>(`#${id}`);
-      const label = form!.querySelector<HTMLLabelElement>(`label[for="${id}"]`);
-      if (!field || !label || !field.value) continue;
-      const value = field instanceof HTMLSelectElement ? field.selectedOptions[0]?.textContent ?? field.value : field.value;
-      const dt = document.createElement("dt");
-      dt.className = "label-tracked text-(--color-paper)/40";
-      dt.textContent = label.textContent ?? "";
-      const dd = document.createElement("dd");
-      dd.className = "mt-1 text-(--color-paper)";
-      dd.textContent = value;
-      list.append(dt, dd);
+    const container = q<HTMLElement>("[data-review]")!;
+    container.replaceChildren();
+    const sections: { step: number; rows: [string, string][] }[] = [
+      {
+        step: 1,
+        rows: [
+          [labelText("firstName"), `${value("firstName")} ${value("lastName")}`.trim()],
+          [labelText("birthDate"), birthInput.value ? new Date(`${birthInput.value}T00:00:00Z`).toLocaleDateString(config.lang, { timeZone: "UTC" }) : ""],
+          [labelText("city"), [value("city"), countrySearch.value.trim()].filter(Boolean).join(", ")],
+          [labelText("email"), value("email")],
+          [labelText("phone"), phoneValue(dialInput, q("#phoneNumber"))],
+        ],
+      },
+      {
+        step: 2,
+        rows: [
+          [labelText("category"), [selectedText("category"), value("categoryOther")].filter(Boolean).join(" — ")],
+          [labelText("experienceLevel"), selectedText("experienceLevel")],
+          [labelText("experienceDuration"), selectedText("experienceDuration")],
+          [labelText("portfolioLinks"), portfolioLinks().join(", ")],
+          [labelText("instagram"), value("instagram")],
+        ],
+      },
+      {
+        step: 3,
+        rows: ["heightCm", "chestCm", "waistCm", "hipsCm", "inseamCm"]
+          .filter((name) => !isMeasureHidden(control(name)))
+          .map((name): [string, string] => [labelText(name), value(name)])
+          .concat([
+            [labelText("shoeSize"), isMeasureHidden(control("shoeSize")) ? "" : [value("shoeSize"), value("shoeSystem")].filter(Boolean).join(" ")],
+            [labelText("eyeColor"), selectedText("eyeColor")],
+            [labelText("hairColor"), selectedText("hairColor")],
+          ]),
+      },
+      {
+        step: 4,
+        rows: [[i18n.stepTitles[3] ?? "", `${[photoIdOf("portrait"), photoIdOf("profile"), photoIdOf("full_length"), ...extraPhotoIds()].filter(Boolean).length} ${i18n.reviewPhotos}`]],
+      },
+      {
+        step: 5,
+        rows: [
+          [labelText("languages"), [...checkedLabels("languages"), value("languagesOther")].filter(Boolean).join(", ")],
+          [labelText("mobility"), checkedLabels("mobility").join("")],
+          [labelText("projects"), checkedLabels("desiredProjects").join(", ")],
+        ],
+      },
+    ];
+
+    for (const section of sections) {
+      const rows = section.rows.filter(([, text]) => text);
+      if (!rows.length) continue;
+      const block = document.createElement("div");
+      const header = document.createElement("div");
+      header.className = "flex items-baseline justify-between gap-4";
+      const heading = document.createElement("p");
+      heading.className = "label-tracked text-(--color-paper)/60";
+      heading.textContent = i18n.stepTitles[section.step - 1] ?? "";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "min-h-11 text-sm text-(--color-gold) underline underline-offset-4";
+      edit.textContent = i18n.reviewEdit;
+      edit.addEventListener("click", () => showStep(section.step));
+      header.append(heading, edit);
+      const list = document.createElement("dl");
+      list.className = "mt-2 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2";
+      for (const [label, text] of rows) {
+        const dt = document.createElement("dt");
+        dt.className = "text-sm text-(--color-paper)/40";
+        dt.textContent = label;
+        const dd = document.createElement("dd");
+        dd.className = "text-(--color-paper) break-words";
+        dd.textContent = text;
+        list.append(dt, dd);
+      }
+      block.append(header, list);
+      container.append(block);
     }
   }
 
-  // --- Collecte du payload et envoi -----------------------------------------
+  // --- Validation par étape -----------------------------------------------------------
 
-  function collectPhotoIds(role: string): string[] {
-    const slot = form!.querySelector<HTMLElement>(`.photo-slot[data-photo-role="${role}"]`);
-    const value = slot?.querySelector<HTMLInputElement>("[data-photo-id-field]")?.value;
-    return value ? [value] : [];
+  const validators: Record<number, () => string[]> = { 1: validateStep1, 2: validateStep2, 3: validateStep3, 4: validateStep4, 5: validateStep5 };
+
+  function validateCurrentStep(): boolean {
+    const fieldset = steps.find((s) => Number(s.dataset.step) === currentStep);
+    if (fieldset) clearErrorsIn(fieldset);
+    const invalid = validators[currentStep]?.() ?? [];
+    if (invalid.length === 0) return true;
+    focusTargetFor(invalid[0]!)?.focus();
+    if (invalid[0] !== "photoPending") statusEl.textContent = i18n.errors.validation;
+    return false;
   }
 
-  function collectExtraPhotoIds(): string[] {
-    return Array.from(extraContainer?.querySelectorAll<HTMLInputElement>("[data-photo-id-field]") ?? [])
-      .map((f) => f.value)
-      .filter(Boolean);
-  }
+  // Une correction efface son message d'erreur au fil de la saisie.
+  form.addEventListener("input", (event) => {
+    dirty = true;
+    const target = event.target as FieldControl;
+    const name = target.name || (target.id === "phoneNumber" || target.id === "phoneDialCode" ? "phone" : target.id === "countrySearch" ? "country" : "");
+    if (name) clearError(name);
+  });
+  form.addEventListener("change", (event) => {
+    dirty = true;
+    const target = event.target as HTMLInputElement;
+    if (target.name) clearError(target.name);
+  });
 
-  function collectProjects(): { name: string; role: string; year: string }[] {
-    return Array.from(projectsContainer?.querySelectorAll<HTMLElement>("[data-project-entry]") ?? [])
-      .map((entry) => ({
-        name: entry.querySelector<HTMLInputElement>("[data-project-name]")?.value ?? "",
-        role: entry.querySelector<HTMLInputElement>("[data-project-role]")?.value ?? "",
-        year: entry.querySelector<HTMLInputElement>("[data-project-year]")?.value ?? "",
-      }))
-      .filter((p) => p.name || p.role || p.year);
-  }
+  // --- Payload et envoi ---------------------------------------------------------------
 
-  function field(name: string): string {
-    return (form!.elements.namedItem(name) as HTMLInputElement | null)?.value ?? "";
-  }
-
-  function checked(name: string): boolean {
-    return (form!.elements.namedItem(name) as HTMLInputElement | null)?.checked ?? false;
-  }
+  const numberOrUndefined = (name: string) => {
+    const element = control(name);
+    if (!element || isMeasureHidden(element) || !element.value.trim()) return undefined;
+    return parseDecimal(element.value);
+  };
+  const textOrUndefined = (name: string) => value(name) || undefined;
 
   function buildPayload() {
     const minor = isMinor();
+    const model = isModelCategory();
     return {
-      honeypot: field("company"),
-      firstName: field("firstName"),
-      lastName: field("lastName"),
-      birthDate: field("birthDate"),
-      city: field("city"),
-      country: field("country"),
-      email: field("email"),
-      phone: field("phone"),
-      instagram: field("instagram") || undefined,
-      languages: field("languages") || undefined,
-      legalGuardianName: minor ? field("legalGuardianName") : undefined,
-      legalGuardianEmail: minor ? field("legalGuardianEmail") : undefined,
-      legalGuardianPhone: minor ? field("legalGuardianPhone") : undefined,
-      heightCm: parseDecimalClient(field("heightCm")),
-      chestCm: parseDecimalClient(field("chestCm")),
-      waistCm: parseDecimalClient(field("waistCm")),
-      hipsCm: parseDecimalClient(field("hipsCm")),
-      shoeSize: field("shoeSize") || undefined,
-      shoeSystem: field("shoeSystem") || undefined,
-      clothingSize: field("clothingSize") || undefined,
-      inseamCm: parseDecimalClient(field("inseamCm")),
-      hairColor: field("hairColor") || undefined,
-      eyeColor: field("eyeColor") || undefined,
-      experienceLevel: field("experienceLevel"),
-      pastMissions: field("pastMissions") || undefined,
-      projects: collectProjects(),
-      currentAgency: field("currentAgency") || undefined,
-      exclusivity: field("exclusivity") || undefined,
-      portfolioLinks: field("portfolioLinks") || undefined,
-      skills: field("skills") || undefined,
-      training: field("training") || undefined,
+      honeypot: value("company"),
+      lang: config.lang,
+      firstName: value("firstName"),
+      lastName: value("lastName"),
+      birthDate: birthInput.value,
+      city: value("city"),
+      country: countryCode.value,
+      email: value("email"),
+      phone: phoneValue(dialInput, q("#phoneNumber")),
+      legalGuardianName: minor ? value("legalGuardianName") : undefined,
+      legalGuardianEmail: minor ? value("legalGuardianEmail") : undefined,
+      legalGuardianPhone: minor ? value("legalGuardianPhone") : undefined,
+      category: categorySelect.value,
+      categoryOther: categorySelect.value === "other" ? value("categoryOther") : undefined,
+      experienceLevel: value("experienceLevel"),
+      experienceDuration: value("experienceDuration"),
+      portfolioLinks: portfolioLinks(),
+      instagram: textOrUndefined("instagram"),
+      currentAgency: textOrUndefined("currentAgency"),
+      exclusivity: textOrUndefined("exclusivity"),
+      heightCm: numberOrUndefined("heightCm"),
+      chestCm: model ? numberOrUndefined("chestCm") : undefined,
+      waistCm: model ? numberOrUndefined("waistCm") : undefined,
+      hipsCm: model ? numberOrUndefined("hipsCm") : undefined,
+      inseamCm: model ? numberOrUndefined("inseamCm") : undefined,
+      shoeSize: model ? numberOrUndefined("shoeSize") : undefined,
+      shoeSystem: model ? textOrUndefined("shoeSystem") : undefined,
+      clothingSize: model ? textOrUndefined("clothingSize") : undefined,
+      eyeColor: textOrUndefined("eyeColor"),
+      hairColor: textOrUndefined("hairColor"),
       photoIds: {
-        portrait: collectPhotoIds("portrait"),
-        profile: collectPhotoIds("profile"),
-        full_length: collectPhotoIds("full_length"),
-        extra: collectExtraPhotoIds(),
+        portrait: [photoIdOf("portrait")].filter(Boolean),
+        profile: [photoIdOf("profile")].filter(Boolean),
+        full_length: [photoIdOf("full_length")].filter(Boolean),
+        extra: extraPhotoIds(),
       },
-      availability: field("availability") || undefined,
-      mobility: field("mobility") || undefined,
-      desiredProjects: field("desiredProjects") || undefined,
-      motivation: field("motivation") || undefined,
-      accuracyConfirmed: checked("accuracyConfirmed"),
-      privacyNoticeAccepted: checked("privacyNoticeAccepted"),
-      privacyNoticeVersion,
+      languages: checkedValues("languages"),
+      languagesOther: textOrUndefined("languagesOther"),
+      mobility: value("mobility"),
+      desiredProjects: checkedValues("desiredProjects"),
+      motivation: textOrUndefined("motivation"),
+      accuracyConfirmed: (control("accuracyConfirmed") as HTMLInputElement).checked,
+      privacyNoticeAccepted: (control("privacyNoticeAccepted") as HTMLInputElement).checked,
+      privacyNoticeVersion: config.privacyNoticeVersion,
     };
   }
 
-  async function submitApplication() {
-    continueBtn!.disabled = true;
-    continueBtn!.textContent = i18n.navSubmitting;
-    statusEl!.textContent = "";
+  /** Message localisé pour une erreur renvoyée par le serveur — jamais le texte brut de l'API. */
+  function serverMessage(field: string, reason: string): string {
+    if (reason === "minors_not_accepted") return config.minorsMessage;
+    if (reason === "required") return field.startsWith("photo.") ? i18n.errors.photoRequired : i18n.errors.required;
+    if (reason === "too_long") return i18n.errors.tooLong;
+    if (reason === "out_of_range") {
+      const limits = field === "shoeSize" ? config.shoeSizeLimits : config.measurementLimits[field];
+      return limits ? rangeMessage(limits[0], limits[1]) : i18n.errors.validation;
+    }
+    if (reason === "format" || reason === "implausible" || reason === "too_many") {
+      if (field === "email" || field === "legalGuardianEmail") return i18n.errors.email;
+      if (field === "phone" || field === "legalGuardianPhone") return i18n.errors.phone;
+      if (field === "birthDate") return i18n.errors.date;
+      if (field === "portfolioLinks") return i18n.errors.url;
+      if (field === "instagram") return i18n.errors.instagram;
+    }
+    if (field === "country") return i18n.errors.country;
+    if (reason === "invalid" || reason === "duplicate") return i18n.errors.invalidChoice;
+    return i18n.errors.validation;
+  }
 
+  async function submitApplication() {
+    continueBtn.disabled = true;
+    continueBtn.textContent = i18n.navSubmitting;
+    statusEl.textContent = "";
+    let data: { ok: boolean; reference?: string; reason?: string; errors?: { field: string; reason: string }[] } | undefined;
     try {
       const response = await fetch("/api/talent-application/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
       });
-      const data = (await response.json()) as { ok: boolean; reference?: string; reason?: string };
-
-      if (data.ok) {
-        navControls!.hidden = true;
-        for (const fieldset of steps) fieldset.hidden = true;
-        progressEl!.textContent = "";
-        titleEl!.textContent = "";
-        if (successPanel && successReferenceEl) {
-          successPanel.hidden = false;
-          if (successMessageEl) successMessageEl.textContent = confirmationMessage;
-          successReferenceEl.textContent = data.reference ?? "";
-        }
-        return;
-      }
-
-      statusEl!.textContent = data.reason === "closed" ? i18n.errorClosed : data.reason === "validation" ? i18n.errorValidation : i18n.errorGeneric;
-      continueBtn!.disabled = false;
-      continueBtn!.textContent = i18n.navRetry;
+      data = await response.json();
     } catch {
-      statusEl!.textContent = i18n.errorGeneric;
-      continueBtn!.disabled = false;
-      continueBtn!.textContent = i18n.navRetry;
+      data = undefined;
     }
+
+    // Le succès n'est affiché que sur la confirmation explicite du serveur,
+    // référence comprise — jamais sur une simple absence d'erreur réseau.
+    if (data?.ok && data.reference) {
+      submitted = true;
+      navControls.hidden = true;
+      for (const fieldset of steps) fieldset.hidden = true;
+      progressEl.textContent = "";
+      titleEl.textContent = "";
+      barEl.style.width = "100%";
+      const panel = q<HTMLElement>("[data-success-panel]")!;
+      panel.hidden = false;
+      q<HTMLElement>("[data-success-message]")!.textContent = config.confirmationMessage || i18n.successDefault;
+      q<HTMLElement>("[data-success-reference]")!.textContent = data.reference;
+      panel.focus();
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    continueBtn.disabled = false;
+    continueBtn.textContent = i18n.navRetry;
+
+    if (data?.reason === "validation" && data.errors?.length) {
+      for (const error of data.errors) setError(error.field, serverMessage(error.field, error.reason));
+      // Retour à l'étape qui porte la première erreur, focus sur le champ.
+      const first = data.errors.find((error) => focusTargetFor(error.field)) ?? data.errors[0]!;
+      const target = focusTargetFor(first.field);
+      const step = stepOf(target);
+      if (step && step !== currentStep) {
+        showStep(step, false);
+        for (const error of data.errors) setError(error.field, serverMessage(error.field, error.reason));
+      }
+      target?.focus();
+      statusEl.textContent = i18n.errors.validation;
+      return;
+    }
+    if (data?.reason === "photo_missing_or_expired") {
+      showStep(4, false);
+      statusEl.textContent = i18n.errors.photoExpired;
+      return;
+    }
+    statusEl.textContent =
+      data?.reason === "closed" ? i18n.errors.closed : data?.reason === "rate_limited" ? i18n.errors.rateLimited : i18n.errors.generic;
   }
 
-  // --- Câblage des boutons ---------------------------------------------------
+  // --- Câblage --------------------------------------------------------------------------
 
   backBtn.addEventListener("click", () => {
     if (currentStep > 1) showStep(currentStep - 1);
   });
-
   continueBtn.addEventListener("click", () => {
     if (!validateCurrentStep()) return;
-    if (currentStep < TOTAL_STEPS) {
-      showStep(currentStep + 1);
-    } else {
-      void submitApplication();
-    }
+    if (currentStep < TOTAL_STEPS) showStep(currentStep + 1);
+    else void submitApplication();
   });
-
   form.addEventListener("submit", (event) => event.preventDefault());
 
-  showStep(1);
+  // Changer de langue ou quitter la page recharge le formulaire : sans
+  // stockage local (exclu volontairement), seule une confirmation évite de
+  // perdre des réponses saisies.
+  window.addEventListener("beforeunload", (event) => {
+    if (!dirty || submitted) return;
+    event.preventDefault();
+  });
+
+  updateMinorUi();
+  updateCategoryUi();
+  showStep(1, false);
 }

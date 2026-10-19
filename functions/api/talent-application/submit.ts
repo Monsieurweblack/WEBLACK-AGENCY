@@ -1,10 +1,10 @@
 import { json } from "../../lib/json.ts";
 import { checkRateLimit } from "../../lib/rateLimit.ts";
-import { getPhoto, promotePhoto } from "../../lib/photos.ts";
-import { validateApplication, computeAge } from "../../lib/validation.ts";
+import { demotePhoto, getPhoto, promotePhoto } from "../../lib/photos.ts";
+import { parseApplication } from "../../lib/validation.ts";
 import { fetchTalentApplicationSettings } from "../../lib/sanity.ts";
 import { sendEmail } from "../../lib/email.ts";
-import { REQUIRED_PHOTO_ROLES, type ApplicationPayload, type PhotoRole } from "../../lib/applicationTypes.ts";
+import type { ValidApplication } from "../../lib/applicationTypes.ts";
 
 interface Env {
   DB: D1Database;
@@ -13,17 +13,18 @@ interface Env {
   SANITY_DATASET?: string;
   /** Même clé Resend que la newsletter (functions/api/newsletter.ts) — pas un nouveau secret. */
   NEWSLETTER_API_KEY?: string;
-  /** Expéditeur déjà vérifié dans Resend. À définir côté Cloudflare Pages ; sans lui, aucun e-mail n'est tenté. */
+  /** Expéditeur déjà vérifié dans Resend. Sans lui, aucun e-mail n'est tenté. */
   RESEND_FROM?: string;
-  /** Destinataire de la notification interne — weblackconsulting@gmail.com par défaut, voir fiche de livraison. */
+  /** Destinataire de la notification interne. */
   TALENT_APPLICATION_NOTIFY_EMAIL?: string;
 }
 
+/** Une candidature complète tient en quelques Ko (les photos passent par upload.ts) : au-delà, ce n'est pas un formulaire. */
+const MAX_BODY_BYTES = 64 * 1024;
+
 /**
- * Service armé ? Lu par le formulaire avant d'afficher quoi que ce soit —
- * jamais de formulaire actif qui échouerait silencieusement à la soumission.
- * Reprend l'idiome déjà établi par newsletter.ts (onRequestGet = sonde,
- * aucun secret dans la réponse).
+ * Service armé ? Sonde lue par le formulaire — jamais de secret dans la
+ * réponse, même idiome que newsletter.ts.
  */
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const settings = await fetchTalentApplicationSettings(env);
@@ -31,132 +32,175 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const rate = await checkRateLimit(env.PHOTOS, request, "submit", 5, 60 * 60);
+  const rate = await checkRateLimit(env.PHOTOS, request, "submit", 10, 60 * 60);
   if (!rate.allowed) return json({ ok: false, reason: "rate_limited" }, 429);
 
-  let payload: ApplicationPayload;
+  const declaredLength = Number(request.headers.get("Content-Length") ?? "0");
+  if (declaredLength > MAX_BODY_BYTES) return json({ ok: false, reason: "too_large" }, 413);
+
+  let body: unknown;
   try {
-    payload = (await request.json()) as ApplicationPayload;
+    const text = await request.text();
+    if (text.length > MAX_BODY_BYTES) return json({ ok: false, reason: "too_large" }, 413);
+    body = JSON.parse(text);
   } catch {
     return json({ ok: false, reason: "invalid_json" }, 400);
   }
 
-  // Leurre anti-robot : traité comme un succès silencieux, même logique que newsletter.ts.
-  if (typeof payload.honeypot === "string" && payload.honeypot.trim() !== "") {
-    return json({ ok: true, reference: "0000000" }, 200);
+  // Leurre anti-robot : succès silencieux, même logique que newsletter.ts.
+  if (typeof body === "object" && body !== null) {
+    const honeypot = (body as Record<string, unknown>).honeypot;
+    if (typeof honeypot === "string" && honeypot.trim() !== "") return json({ ok: true, reference: "0000000" }, 200);
   }
 
   const settings = await fetchTalentApplicationSettings(env);
   if (!settings.applicationsOpen) return json({ ok: false, reason: "closed" }, 403);
 
-  const errors = validateApplication(payload, settings.minorsAllowed);
-  if (errors.length > 0) return json({ ok: false, reason: "validation", errors }, 422);
+  const parsed = parseApplication(body, settings.minorsAllowed);
+  if (!parsed.ok) return json({ ok: false, reason: "validation", errors: parsed.errors }, 422);
+  const app = parsed.value;
 
-  // Chaque photoId référencé doit réellement exister (pas expiré, pas
-  // inventé côté client) — vérifié ici, pas seulement dans validateApplication
-  // qui ne regarde que la forme du payload.
-  const allPhotoIds: { role: PhotoRole; id: string }[] = [];
-  for (const role of REQUIRED_PHOTO_ROLES) {
-    allPhotoIds.push({ role, id: payload.photoIds[role]![0]! });
-  }
-  for (const id of payload.photoIds.extra ?? []) allPhotoIds.push({ role: "extra", id });
-
-  for (const { id } of allPhotoIds) {
-    const existing = await getPhoto(env.PHOTOS, id);
-    if (!existing) return json({ ok: false, reason: "photo_missing_or_expired" }, 422);
+  // Chaque photo référencée doit exister réellement — pas expirée, pas inventée.
+  const contentTypes = new Map<string, string>();
+  for (const { id } of app.photoIds) {
+    const photo = await getPhoto(env.PHOTOS, id);
+    if (!photo) return json({ ok: false, reason: "photo_missing_or_expired" }, 422);
+    contentTypes.set(id, photo.contentType);
   }
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const age = computeAge(payload.birthDate);
-  const isMinor = typeof age === "number" && age < 18;
 
-  await env.DB.prepare(
-    `INSERT INTO applications (
-      id, created_at, updated_at, status,
-      first_name, last_name, birth_date, city, country, email, phone, instagram, languages,
-      is_minor, legal_guardian_name, legal_guardian_email, legal_guardian_phone,
-      height_cm, chest_cm, waist_cm, hips_cm, shoe_size, shoe_system, clothing_size, inseam_cm, hair_color, eye_color,
-      experience_level, past_missions, projects_json, current_agency, exclusivity, portfolio_links, skills, training,
-      availability, mobility, desired_projects, motivation,
-      accuracy_confirmed, privacy_notice_version
-    ) VALUES (?,?,?,?, ?,?,?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?,?,?, ?,?,?,?, ?,?)`,
-  )
-    .bind(
-      id,
-      now,
-      now,
-      "RECEIVED",
-      payload.firstName,
-      payload.lastName,
-      payload.birthDate,
-      payload.city,
-      payload.country,
-      payload.email,
-      payload.phone,
-      payload.instagram ?? null,
-      payload.languages ?? null,
-      isMinor ? 1 : 0,
-      payload.legalGuardianName ?? null,
-      payload.legalGuardianEmail ?? null,
-      payload.legalGuardianPhone ?? null,
-      payload.heightCm ?? null,
-      payload.chestCm ?? null,
-      payload.waistCm ?? null,
-      payload.hipsCm ?? null,
-      payload.shoeSize ?? null,
-      payload.shoeSystem ?? null,
-      payload.clothingSize ?? null,
-      payload.inseamCm ?? null,
-      payload.hairColor ?? null,
-      payload.eyeColor ?? null,
-      payload.experienceLevel,
-      payload.pastMissions ?? null,
-      payload.projects ? JSON.stringify(payload.projects) : null,
-      payload.currentAgency ?? null,
-      payload.exclusivity ?? null,
-      payload.portfolioLinks ?? null,
-      payload.skills ?? null,
-      payload.training ?? null,
-      payload.availability ?? null,
-      payload.mobility ?? null,
-      payload.desiredProjects ?? null,
-      payload.motivation ?? null,
-      payload.accuracyConfirmed ? 1 : 0,
-      payload.privacyNoticeVersion,
-    )
-    .run();
+  // Ordre délibéré : promotion des photos AVANT l'écriture D1. Si la
+  // promotion venait après et échouait, le dossier pointerait vers des
+  // photos qui expirent dans deux heures. Si c'est l'écriture D1 qui échoue,
+  // les photos sont rétrogradées : elles expirent d'elles-mêmes.
+  const promoted: string[] = [];
+  try {
+    for (const { id: photoId } of app.photoIds) {
+      if (!(await promotePhoto(env.PHOTOS, photoId))) throw new Error("promotion");
+      promoted.push(photoId);
+    }
+  } catch {
+    for (const photoId of promoted) await demotePhoto(env.PHOTOS, photoId);
+    return json({ ok: false, reason: "storage" }, 500);
+  }
 
-  for (const { role, id: photoId } of allPhotoIds) {
-    const existing = await getPhoto(env.PHOTOS, photoId);
-    await env.DB.prepare(
-      `INSERT INTO application_photos (id, application_id, role, content_type, created_at) VALUES (?,?,?,?,?)`,
-    )
-      .bind(photoId, id, role, existing?.contentType ?? "application/octet-stream", now)
-      .run();
-    await promotePhoto(env.PHOTOS, photoId);
+  try {
+    // batch() = une transaction : le dossier et ses références photo sont
+    // écrits ensemble, ou pas du tout.
+    await env.DB.batch([buildApplicationInsert(env.DB, id, now, app), ...buildPhotoInserts(env.DB, id, now, app, contentTypes)]);
+  } catch {
+    for (const photoId of promoted) await demotePhoto(env.PHOTOS, photoId);
+    return json({ ok: false, reason: "storage" }, 500);
   }
 
   const reference = id.slice(0, 8).toUpperCase();
 
+  // E-mails : au mieux. Le dossier est déjà enregistré ; un échec d'envoi
+  // ne transforme jamais une candidature réussie en échec.
   if (env.NEWSLETTER_API_KEY && env.RESEND_FROM) {
-    await sendEmail({
-      apiKey: env.NEWSLETTER_API_KEY,
-      from: env.RESEND_FROM,
-      to: payload.email,
-      subject: "WEBLACK Talent — Votre candidature a été reçue",
-      text: `Bonjour ${payload.firstName},\n\nVotre candidature a été reçue. Référence : ${reference}.\nNotre équipe l'examine ; nous revenons vers vous si elle correspond à nos recherches actuelles.\n\nWEBLACK Talent`,
-    });
+    const candidate = candidateEmail(app, reference);
+    await sendEmail({ apiKey: env.NEWSLETTER_API_KEY, from: env.RESEND_FROM, to: app.email, ...candidate });
     if (env.TALENT_APPLICATION_NOTIFY_EMAIL) {
       await sendEmail({
         apiKey: env.NEWSLETTER_API_KEY,
         from: env.RESEND_FROM,
         to: env.TALENT_APPLICATION_NOTIFY_EMAIL,
-        subject: `Nouvelle candidature Talent — ${payload.firstName} ${payload.lastName} (${reference})`,
-        text: `Nouvelle candidature reçue.\n\nRéférence : ${reference}\nNom : ${payload.firstName} ${payload.lastName}\nVille : ${payload.city}, ${payload.country}\nNiveau d'expérience : ${payload.experienceLevel}\n\nConsulter le dossier complet dans l'administration des candidatures (/admin/candidatures).`,
+        subject: `Nouvelle candidature Talent — ${app.firstName} ${app.lastName} (${reference})`,
+        text: [
+          "Nouvelle candidature reçue.",
+          "",
+          `Référence : ${reference}`,
+          `Nom : ${app.firstName} ${app.lastName}`,
+          `Ville : ${app.city} (${app.country})`,
+          `Catégorie : ${app.category}${app.categoryOther ? ` — ${app.categoryOther}` : ""}`,
+          `Niveau : ${app.experienceLevel} · Expérience : ${app.experienceDuration}`,
+          "",
+          "Dossier complet et photos dans l'administration : /admin/candidatures",
+        ].join("\n"),
       });
     }
   }
 
   return json({ ok: true, reference }, 200);
 };
+
+function buildApplicationInsert(db: D1Database, id: string, now: string, app: ValidApplication): D1PreparedStatement {
+  const columns: [string, unknown][] = [
+    ["id", id],
+    ["created_at", now],
+    ["updated_at", now],
+    ["status", "RECEIVED"],
+    ["first_name", app.firstName],
+    ["last_name", app.lastName],
+    ["birth_date", app.birthDate],
+    ["city", app.city],
+    ["country", app.country],
+    ["email", app.email],
+    ["phone", app.phone],
+    ["instagram", app.instagram],
+    ["languages", JSON.stringify(app.languages)],
+    ["languages_other", app.languagesOther],
+    ["is_minor", app.isMinor ? 1 : 0],
+    ["legal_guardian_name", app.guardian?.name ?? null],
+    ["legal_guardian_email", app.guardian?.email ?? null],
+    ["legal_guardian_phone", app.guardian?.phone ?? null],
+    ["height_cm", app.heightCm],
+    ["chest_cm", app.chestCm],
+    ["waist_cm", app.waistCm],
+    ["hips_cm", app.hipsCm],
+    ["inseam_cm", app.inseamCm],
+    ["shoe_size", app.shoeSize === null ? null : String(app.shoeSize)],
+    ["shoe_system", app.shoeSystem],
+    ["clothing_size", app.clothingSize],
+    ["hair_color", app.hairColor],
+    ["eye_color", app.eyeColor],
+    ["talent_category", app.category],
+    ["talent_category_other", app.categoryOther],
+    ["experience_level", app.experienceLevel],
+    ["experience_duration", app.experienceDuration],
+    ["current_agency", app.currentAgency],
+    ["exclusivity", app.exclusivity],
+    ["portfolio_links", app.portfolioLinks.length ? app.portfolioLinks.join("\n") : null],
+    ["mobility", app.mobility],
+    ["desired_projects", JSON.stringify(app.desiredProjects)],
+    ["motivation", app.motivation],
+    ["accuracy_confirmed", 1],
+    ["privacy_notice_version", app.privacyNoticeVersion],
+    ["submission_lang", app.lang],
+  ];
+  const names = columns.map(([name]) => name).join(", ");
+  const placeholders = columns.map(() => "?").join(", ");
+  return db.prepare(`INSERT INTO applications (${names}) VALUES (${placeholders})`).bind(...columns.map(([, value]) => value));
+}
+
+function buildPhotoInserts(
+  db: D1Database,
+  applicationId: string,
+  now: string,
+  app: ValidApplication,
+  contentTypes: Map<string, string>,
+): D1PreparedStatement[] {
+  // Type réel tel que vérifié par upload.ts (octets, pas en-tête déclaré)
+  // et conservé dans les métadonnées KV — la référence D1 reste cohérente
+  // avec le fichier stocké.
+  return app.photoIds.map(({ role, id }) =>
+    db
+      .prepare(`INSERT INTO application_photos (id, application_id, role, content_type, created_at) VALUES (?, ?, ?, ?, ?)`)
+      .bind(id, applicationId, role, contentTypes.get(id) ?? "image/jpeg", now),
+  );
+}
+
+function candidateEmail(app: ValidApplication, reference: string): { subject: string; text: string } {
+  if (app.lang === "en") {
+    return {
+      subject: "WEBLACK Talent — Your application has been received",
+      text: `Hello ${app.firstName},\n\nYour application has been received. Reference: ${reference}.\nOur team reviews every application and will get back to you if your profile matches our current searches.\n\nWEBLACK Talent`,
+    };
+  }
+  return {
+    subject: "WEBLACK Talent — Votre candidature a été reçue",
+    text: `Bonjour ${app.firstName},\n\nVotre candidature a été reçue. Référence : ${reference}.\nNotre équipe examine chaque candidature et revient vers vous si votre profil correspond à nos recherches actuelles.\n\nWEBLACK Talent`,
+  };
+}

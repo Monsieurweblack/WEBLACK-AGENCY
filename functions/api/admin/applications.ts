@@ -20,10 +20,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   const query = statusFilter
     ? env.DB.prepare(
-        `SELECT id, created_at, status, first_name, last_name, city, country, experience_level, is_minor FROM applications WHERE status = ? ORDER BY created_at DESC`,
+        `SELECT id, created_at, status, first_name, last_name, city, country, experience_level, talent_category, is_minor FROM applications WHERE status = ? ORDER BY created_at DESC`,
       ).bind(statusFilter)
     : env.DB.prepare(
-        `SELECT id, created_at, status, first_name, last_name, city, country, experience_level, is_minor FROM applications ORDER BY created_at DESC`,
+        `SELECT id, created_at, status, first_name, last_name, city, country, experience_level, talent_category, is_minor FROM applications ORDER BY created_at DESC`,
       );
 
   const { results } = await query.all();

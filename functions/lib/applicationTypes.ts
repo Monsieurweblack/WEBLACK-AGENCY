@@ -9,68 +9,63 @@ export const APPLICATION_STATUSES: ApplicationStatus[] = [
   "ARCHIVED",
 ];
 
-export type ExperienceLevel = "beginner" | "some_experience" | "experienced" | "professional";
-
-export const EXPERIENCE_LEVELS: ExperienceLevel[] = ["beginner", "some_experience", "experienced", "professional"];
+import type { ExperienceDuration, ExperienceLevel, Mobility, ProjectType, TalentCategory } from "./talentOptions.ts";
 
 export type PhotoRole = "portrait" | "profile" | "full_length" | "extra";
 
 export const REQUIRED_PHOTO_ROLES: PhotoRole[] = ["portrait", "profile", "full_length"];
 export const MAX_EXTRA_PHOTOS = 3;
 
-export interface ProjectEntry {
-  name: string;
-  role: string;
-  year: string;
-}
+export type SubmissionLang = "fr" | "en";
 
-/** Forme exacte attendue en entrée de submit.ts — tout le reste est rejeté par applyValidation(). */
-export interface ApplicationPayload {
-  honeypot?: string;
+/**
+ * Candidature après validation serveur (validation.ts → parseApplication) :
+ * chaînes nettoyées, téléphone normalisé, nombres vérifiés, listes réduites
+ * aux seules valeurs autorisées. submit.ts n'écrit en D1 que cette forme —
+ * jamais le corps de requête brut.
+ */
+export interface ValidApplication {
+  lang: SubmissionLang;
 
   firstName: string;
   lastName: string;
   birthDate: string; // YYYY-MM-DD
+  isMinor: boolean;
   city: string;
-  country: string;
+  country: string; // ISO 3166-1 alpha-2
   email: string;
-  phone: string;
-  instagram?: string;
-  languages?: string;
+  phone: string; // E.164, ex. +221771234567
+  /** Renseigné uniquement si le parcours mineur est ouvert dans Sanity et que la personne est mineure. */
+  guardian: { name: string; email: string; phone: string } | null;
 
-  legalGuardianName?: string;
-  legalGuardianEmail?: string;
-  legalGuardianPhone?: string;
-
-  heightCm?: number;
-  chestCm?: number;
-  waistCm?: number;
-  hipsCm?: number;
-  shoeSize?: string;
-  shoeSystem?: string;
-  clothingSize?: string;
-  inseamCm?: number;
-  hairColor?: string;
-  eyeColor?: string;
-
+  category: TalentCategory;
+  categoryOther: string | null;
   experienceLevel: ExperienceLevel;
-  pastMissions?: string;
-  projects?: ProjectEntry[];
-  currentAgency?: string;
-  exclusivity?: string;
-  portfolioLinks?: string;
-  skills?: string;
-  training?: string;
+  experienceDuration: ExperienceDuration;
+  portfolioLinks: string[];
+  instagram: string | null;
+  currentAgency: string | null;
+  exclusivity: string | null;
 
-  photoIds: Record<PhotoRole, string[]>;
+  heightCm: number | null;
+  chestCm: number | null;
+  waistCm: number | null;
+  hipsCm: number | null;
+  inseamCm: number | null;
+  shoeSize: number | null;
+  shoeSystem: string | null;
+  clothingSize: string | null;
+  hairColor: string | null;
+  eyeColor: string | null;
 
-  availability?: string;
-  mobility?: string;
-  desiredProjects?: string;
-  motivation?: string;
+  photoIds: { role: PhotoRole; id: string }[];
 
-  accuracyConfirmed: boolean;
-  privacyNoticeAccepted: boolean;
+  languages: string[];
+  languagesOther: string | null;
+  mobility: Mobility;
+  desiredProjects: ProjectType[];
+  motivation: string | null;
+
   privacyNoticeVersion: string;
 }
 
@@ -117,4 +112,10 @@ export interface ApplicationRecord {
   accuracy_confirmed: number;
   privacy_notice_version: string;
   notes: string | null;
+  // migrations/0002 — nullables : absents des dossiers antérieurs.
+  talent_category: string | null;
+  talent_category_other: string | null;
+  experience_duration: string | null;
+  languages_other: string | null;
+  submission_lang: string | null;
 }

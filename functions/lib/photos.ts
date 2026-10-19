@@ -52,6 +52,20 @@ export async function promotePhoto(kv: KVNamespace, photoId: string): Promise<bo
   return true;
 }
 
+/**
+ * Inverse de promotePhoto : remet le TTL d'upload. Appelé par submit.ts si
+ * l'écriture D1 échoue après promotion — la photo redevient temporaire et
+ * expire d'elle-même, au lieu de rester stockée sans dossier qui la référence.
+ */
+export async function demotePhoto(kv: KVNamespace, photoId: string): Promise<void> {
+  const existing = await getPhoto(kv, photoId);
+  if (!existing) return;
+  await kv.put(keyFor(photoId), existing.bytes, {
+    expirationTtl: UPLOAD_TTL_SECONDS,
+    metadata: { contentType: existing.contentType },
+  });
+}
+
 export async function deletePhoto(kv: KVNamespace, photoId: string): Promise<void> {
   await kv.delete(keyFor(photoId));
 }

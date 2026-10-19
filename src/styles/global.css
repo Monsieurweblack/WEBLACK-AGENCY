@@ -250,6 +250,18 @@
   .form-input:focus {
     border-color: var(--color-gold);
   }
+  .form-input[aria-invalid="true"] {
+    border-color: #f87171;
+  }
+  /* Message d'erreur sous un champ — rendu par le formulaire dans la langue
+     de la page, jamais par la bulle native du navigateur (qui suit la
+     langue du système et mélangerait français et anglais). */
+  .field-error {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #fca5a5;
+  }
 
   /* Label institutionnel : trace le langage typographique du logo
      ("TALENTS · CRÉATIVITÉ · IMPACT") sur le reste du site */
