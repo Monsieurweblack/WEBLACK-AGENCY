@@ -2,6 +2,16 @@ name = "weblack"
 pages_build_output_dir = "dist"
 compatibility_date = "2025-01-01"
 
+# Non sensibles — déjà publics (le site les expose lui-même côté client à
+# chaque requête Sanity). Nécessaires ici explicitement : la présence de ce
+# fichier fait passer Cloudflare Pages en résolution de variables pilotée
+# par wrangler.toml, ce qui a cessé de lire les variables jusqu'ici
+# configurées dans le dashboard (constaté : build en échec, "SANITY_PROJECT_ID
+# / SANITY_DATASET not set", alors qu'aucun code n'y touchait).
+[vars]
+SANITY_PROJECT_ID = "pzpm4xjp"
+SANITY_DATASET = "production"
+
 # Dossiers de candidature Talent — jamais dans le dataset Sanity public
 # (lisible anonymement, voir editorial-engine/EDITORIAL_ENGINE.md / audit
 # Agenda). D1 pour les données, KV pour les photos (R2 non activé sur ce
