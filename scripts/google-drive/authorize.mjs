@@ -3,10 +3,13 @@
  * À lancer UNE fois, sur la machine du propriétaire, après avoir créé le
  * client OAuth (voir docs/google-drive.md) :
  *
- *   PowerShell :
- *     $env:GOOGLE_OAUTH_CLIENT_ID="…apps.googleusercontent.com"
- *     $env:GOOGLE_OAUTH_CLIENT_SECRET="…"
- *     node scripts/google-drive/authorize.mjs
+ *     node scripts/google-drive/authorize.mjs --dry-run   (test, rien n'est enregistré)
+ *     node scripts/google-drive/authorize.mjs             (enregistre les secrets)
+ *
+ * L'ID client et le code secret sont DEMANDÉS par le script (le code secret
+ * en saisie masquée) : jamais tapés dans une commande, donc jamais conservés
+ * dans l'historique PowerShell. Les variables d'environnement
+ * GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET restent acceptées.
  *
  * Ce que fait le script :
  *  1. ouvre la page de consentement Google (flux « application de bureau »,
@@ -24,6 +27,7 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
+import { createInterface } from "node:readline";
 
 const EXPECTED_ACCOUNT = "weblackconsulting@gmail.com";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -31,10 +35,37 @@ const SCOPES = ["openid", "email", DRIVE_SCOPE];
 const PROJECT = "weblack";
 const dryRun = process.argv.includes("--dry-run");
 
-const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
-const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
-if (!clientId || !clientSecret) {
-  console.error("Définissez GOOGLE_OAUTH_CLIENT_ID et GOOGLE_OAUTH_CLIENT_SECRET (client OAuth de type « Application de bureau »).");
+/** Question dans le terminal ; `hidden` : rien n'est affiché pendant la frappe ou le collage. */
+function ask(question, hidden = false) {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    if (hidden) {
+      rl._writeToOutput = (text) => {
+        if (text.startsWith(question)) process.stdout.write(question);
+      };
+    }
+    rl.question(question, (answer) => {
+      rl.close();
+      if (hidden) process.stdout.write("\n");
+      resolve(answer.trim());
+    });
+  });
+}
+
+let clientId = process.env.GOOGLE_OAUTH_CLIENT_ID?.trim();
+let clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
+if ((!clientId || !clientSecret) && !process.stdin.isTTY) {
+  console.error("Lancez le script dans un terminal interactif (il vous demandera l'ID client et le code secret).");
+  process.exit(1);
+}
+if (!clientId) clientId = await ask("ID client OAuth (…apps.googleusercontent.com) : ");
+if (!clientSecret) clientSecret = await ask("Code secret du client (saisie masquée, collez puis Entrée) : ", true);
+if (!/^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+  console.error("L'ID client ne ressemble pas à un ID Google (il doit se terminer par .apps.googleusercontent.com). Vérifiez l'étape 4 du guide.");
+  process.exit(1);
+}
+if (clientSecret.length < 10) {
+  console.error("Code secret vide ou incomplet. Copiez-le depuis la fiche du client OAuth (étape 4 du guide).");
   process.exit(1);
 }
 

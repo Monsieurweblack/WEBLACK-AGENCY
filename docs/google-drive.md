@@ -36,13 +36,26 @@ Pas de compte de service (il n'a pas d'espace dans un Drive personnel). Les secr
    - Accès aux données : ajouter `…/auth/drive.file`, `openid`, `email` (aucune de ces permissions n'impose une vérification Google).
    - Audience : **Publier l'application** (statut « En production »). En mode « Test », Google fait expirer le jeton au bout de 7 jours et l'archivage s'arrêterait (`oauth_invalid_grant`). Un écran « application non validée » peut s'afficher à la connexion : c'est attendu pour une application interne, continuer.
 4. **Identifiants** : « Clients » → Créer un client → type **Application de bureau** → noter l'ID client et le code secret.
-5. **Autoriser et enregistrer les secrets** (terminal, dans le dossier du site, wrangler déjà connecté) :
+5. **Autoriser et enregistrer les secrets** (terminal PowerShell, dans le dossier du site, wrangler déjà connecté) :
    ```powershell
-   $env:GOOGLE_OAUTH_CLIENT_ID="…apps.googleusercontent.com"
-   $env:GOOGLE_OAUTH_CLIENT_SECRET="…"
+   node scripts/google-drive/authorize.mjs --dry-run
+   ```
+   Le script **demande** l'ID client puis le code secret (saisie masquée : collez, puis Entrée). Ne les tapez pas dans une commande `$env:…="…"` : PowerShell conserverait le code secret en clair dans son historique. Il ouvre ensuite la page Google (choisir weblackconsulting@gmail.com ; sur « application non validée » → « Paramètres avancés » → « Accéder à … »), vérifie le compte et la permission, teste l'accès Drive. Résultat attendu : `Compte vérifié : weblackconsulting@gmail.com. Permission : drive.file. Accès Drive testé : OK.`
+
+   Puis, pour enregistrer réellement les trois secrets dans Cloudflare (jamais affichés) :
+   ```powershell
    node scripts/google-drive/authorize.mjs
    ```
-   Le script ouvre la page Google, vérifie le compte et la permission, teste l'accès Drive, puis enregistre les trois secrets Cloudflare sans les afficher.
+   Résultat attendu : trois lignes `Secret Cloudflare enregistré : …`.
+
+   | Message | Correction |
+   |---|---|
+   | « L'ID client ne ressemble pas à un ID Google » | Recopier l'ID complet (se termine par `.apps.googleusercontent.com`) |
+   | « Compte autorisé inattendu » | Relancer en choisissant weblackconsulting@gmail.com |
+   | « La permission Google Drive (drive.file) n'a pas été accordée » | Relancer et cocher l'accès à Drive |
+   | « Accès Drive refusé (HTTP 403) » | API Drive non activée (étape 2) ou mauvais projet sélectionné |
+   | « Google n'a pas fourni de jeton de renouvellement » | Retirer l'accès sur https://myaccount.google.com/permissions, relancer |
+   | `redirect_uri_mismatch` | Client créé en « Application Web » : refaire l'étape 4 en « Application de bureau » |
 6. **Redéployer** (les secrets s'appliquent au déploiement suivant) : pousser un commit sur `main`, ou « Réessayer le déploiement » dans le tableau de bord Cloudflare Pages.
 7. **Vérifier** dans `/admin/candidatures/` : « Tester la connexion Drive » → « connexion vérifiée », puis « Relancer l'archivage en attente » pour les dossiers reçus avant l'autorisation.
 
