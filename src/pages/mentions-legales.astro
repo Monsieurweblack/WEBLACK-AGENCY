@@ -15,11 +15,11 @@ const t = useTranslations(lang);
       <h2>Éditeur du site</h2>
       <p>
         WEBLACK AFRICA<br />
-        Société au capital social de 100 000 €<br />
-        Siège social : Paris, France
+        Entreprise individuelle<br />
+        Paris, France
       </p>
       <p>
-        Téléphone : <a href="tel:+330743700063">+33 07 43 70 00 63</a><br />
+        Téléphone : <a href="tel:+33743700063">+33 7 43 70 00 63</a><br />
         E-mail : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
       </p>
       <p>
@@ -71,7 +71,7 @@ const t = useTranslations(lang);
       </p>
       <p>
         Pour toute question relative au traitement de vos données personnelles ou à l'exercice de vos
-        droits, vous pouvez nous contacter à l'adresse : <a href="mailto:weblackmedias@gmail.com">weblackmedias@gmail.com</a>
+        droits, vous pouvez nous contacter à l'adresse : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
       </p>
 
       <h2>Propriété intellectuelle et contrefaçons</h2>
@@ -97,7 +97,7 @@ const t = useTranslations(lang);
         <a href={localizedPath(lang, "/politique-de-confidentialite")}>Politique de confidentialité</a>.
       </p>
 
-      <p class="text-sm text-(--color-ink)/50">Dernière mise à jour : août 2026</p>
+      <p class="text-sm text-(--color-ink)/50">Dernière mise à jour : 20 octobre 2026</p>
     </div>
   </section>
 </BaseLayout>

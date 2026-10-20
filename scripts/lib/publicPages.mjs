@@ -44,7 +44,6 @@ export const SECRET_PATTERNS = [
 export const BRAND_EXCEPTIONS = [
   { path: "/mentions-legales/", reason: "mentions légales (règle CLAUDE.md)" },
   { path: "/talent/candidature/", reason: "notice de confidentialité Sanity : identification légale du responsable du traitement" },
-  { path: "/deo-gratias-kpodo/", reason: "biographie du fondateur rédigée par l'agence, antérieure — à arbitrer par le propriétaire" },
 ];
 
 function fileFor(dist, path) {
@@ -107,6 +106,9 @@ export function checkPublicPages(dist) {
     const content = readFileSync(file, "utf8");
     const rel = `/${relative(dist, file).split(sep).join("/")}`;
     for (const [pattern, label] of SECRET_PATTERNS) if (pattern.test(content)) problems.push(`${rel} : ${label} détecté`);
+    // Contact données personnelles unique : weblackconsulting@gmail.com (décision du responsable,
+    // 20/10/2026). security.txt (signalement de failles, fonction distincte) n'est pas une page HTML.
+    if (rel.endsWith(".html") && /weblackmedias@gmail\.com/.test(content)) problems.push(`${rel} : ancienne adresse de contact weblackmedias@gmail.com`);
     // Marque : la raison sociale n'apparaît que dans les mentions légales (CLAUDE.md).
     if (rel.endsWith(".html") && !BRAND_EXCEPTIONS.some(({ path }) => rel.includes(path)) && /WEBLACK AFRICA/.test(textOf(content))) {
       problems.push(`${rel} : « WEBLACK AFRICA » hors des mentions légales`);

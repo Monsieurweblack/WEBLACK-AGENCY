@@ -61,7 +61,16 @@ test("secret publié ou raison sociale hors mentions légales : bloquant", () =>
   writeFileSync(join(dist, "fuite.json"), '{"t":"1//0gAbCdEfGhIjKlMnOpQrStUvWxYz"}');
   mkdirSync(join(dist, "journal"), { recursive: true });
   writeFileSync(join(dist, "journal", "index.html"), "<html><body>WEBLACK AFRICA</body></html>");
+  mkdirSync(join(dist, "deo-gratias-kpodo"), { recursive: true });
+  writeFileSync(join(dist, "deo-gratias-kpodo", "index.html"), "<html><body>Fondateur de WEBLACK AFRICA</body></html>");
+  mkdirSync(join(dist, "contact"), { recursive: true });
+  writeFileSync(join(dist, "contact", "index.html"), '<a href="mailto:weblackmedias@gmail.com">x</a>');
+  mkdirSync(join(dist, ".well-known"), { recursive: true });
+  writeFileSync(join(dist, ".well-known", "security.txt"), "Contact: mailto:weblackmedias@gmail.com");
   const problems = checkPublicPages(dist);
+  assert.ok(problems.some((p) => p.includes("/deo-gratias-kpodo/") && p.includes("WEBLACK AFRICA")), "la page fondateur n'est plus une exception");
+  assert.ok(problems.some((p) => p.includes("/contact/index.html") && p.includes("weblackmedias")));
+  assert.ok(!problems.some((p) => p.includes("security.txt")), "security.txt : fonction distincte, non concerné");
   assert.ok(problems.some((p) => p.includes("/_astro/app.js") && p.includes("OAuth")));
   assert.ok(problems.some((p) => p.includes("/fuite.json") && p.includes("renouvellement")));
   assert.ok(problems.some((p) => p.includes("/journal/index.html") && p.includes("WEBLACK AFRICA")));
