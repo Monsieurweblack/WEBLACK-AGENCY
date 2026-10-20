@@ -229,6 +229,7 @@ const translations = {
     "talent.finalCta.talent.title": "Vous êtes un talent",
     "talent.finalCta.talent.body": "Présentez-vous à l'équipe WEBLACK — mannequin, créateur·rice, artiste ou autre profil créatif.",
     "talent.finalCta.talent.cta": "Proposer ma candidature",
+    "talent.finalCta.talent.platform": "Fonctionnement de la plateforme et confidentialité",
     "talent.finalCta.other.title": "Vous représentez une marque, un média, un projet",
     "talent.finalCta.other.body": "Dites-nous qui vous êtes — WEBLACK vous oriente vers le bon contact.",
     "talent.finalCta.other.brand": "Une marque",
@@ -427,6 +428,7 @@ const translations = {
     "talentApplication.pdf.downloadFr": "Dossier PDF en français",
     "talentApplication.pdf.downloadEn": "PDF form in English",
     "talentApplication.pdf.size": "PDF remplissable",
+    "talentApplication.platformLink": "Fonctionnement de la plateforme WEBLACK TALENTS et confidentialité",
 
     "creative.hero.eyebrow": "Créatif",
     "creative.hero.title": "Campagnes, contenus, production, expériences et direction créative.",
@@ -999,6 +1001,7 @@ const translations = {
     "talent.finalCta.talent.title": "You are a talent",
     "talent.finalCta.talent.body": "Introduce yourself to the WEBLACK team — model, creator, artist or another creative profile.",
     "talent.finalCta.talent.cta": "Apply now",
+    "talent.finalCta.talent.platform": "How the platform works and privacy",
     "talent.finalCta.other.title": "You represent a brand, a media outlet, a project",
     "talent.finalCta.other.body": "Tell us who you are — WEBLACK will route you to the right contact.",
     "talent.finalCta.other.brand": "A brand",
@@ -1197,6 +1200,7 @@ const translations = {
     "talentApplication.pdf.downloadFr": "Dossier PDF en français",
     "talentApplication.pdf.downloadEn": "PDF form in English",
     "talentApplication.pdf.size": "Fillable PDF",
+    "talentApplication.platformLink": "How the WEBLACK TALENTS platform works and privacy",
 
     "creative.hero.eyebrow": "Creative",
     "creative.hero.title": "Direction, campaigns, content, production and experiences.",

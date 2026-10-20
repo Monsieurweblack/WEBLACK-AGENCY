@@ -1,0 +1,115 @@
+---
+/**
+ * Page d'accueil publique de l'application WEBLACK TALENTS — celle déclarée
+ * dans Google Auth Platform (« Page d'accueil de l'application »). Lisible
+ * sans compte ni session : elle explique ce que fait l'application, quelles
+ * données elle traite, pourquoi elle utilise l'API Google Drive, et renvoie
+ * vers la politique de confidentialité. Chaque affirmation correspond au code
+ * (functions/api/talent-application/, functions/lib/driveSync.ts, googleDrive.ts).
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { localizedPath } from "../../i18n/utils";
+import { CONTACT_EMAIL } from "../../lib/contact";
+
+const lang = "fr" as const;
+const privacy = localizedPath(lang, "/politique-de-confidentialite");
+---
+
+<BaseLayout
+  lang={lang}
+  title="WEBLACK TALENTS — plateforme de candidature"
+  description="WEBLACK TALENTS permet aux talents de 18 ans et plus de déposer leur candidature auprès de l'agence WEBLACK, et à l'équipe habilitée de l'examiner et de l'archiver de façon privée."
+>
+  <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
+      <p class="label-tracked text-(--color-ink)/60">WEBLACK · Talent</p>
+      <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">WEBLACK TALENTS — plateforme de candidature</h1>
+
+      <p class="text-lg">
+        WEBLACK est une agence créative indépendante fondée en 2010, organisée en trois divisions — Talent, Creative et
+        Consulting. <strong>WEBLACK TALENTS</strong> est l'application qui permet aux talents (mannequins, modèles,
+        profils créatifs) de déposer une candidature auprès de la division Talent, et à l'équipe WEBLACK habilitée
+        d'examiner ces candidatures.
+      </p>
+      <p>
+        <a href={localizedPath(lang, "/talent/candidature")}>Accéder au formulaire de candidature</a> ·
+        <a href={privacy}>Politique de confidentialité</a> ·
+        <a href={localizedPath(lang, "/mentions-legales")}>Mentions légales</a>
+      </p>
+
+      <h2>Ce que fait l'application</h2>
+      <ul>
+        <li>
+          <strong>Pour les candidats</strong> : un formulaire public en cinq étapes, en français et en anglais, sans
+          création de compte ni connexion. Il est réservé aux personnes de 18 ans et plus ; l'âge est vérifié par le
+          serveur.
+        </li>
+        <li>
+          <strong>Après l'envoi</strong> : le dossier est enregistré, une référence unique est affichée et un e-mail de
+          confirmation est adressé au candidat.
+        </li>
+        <li>
+          <strong>Pour l'équipe WEBLACK</strong> : un espace d'administration protégé par mot de passe permet aux seules
+          personnes habilitées de consulter les dossiers et les photographies, d'en suivre le statut et de les supprimer.
+        </li>
+        <li>
+          <strong>Archivage</strong> : une copie de chaque dossier est rangée dans le Google Drive de l'agence (voir
+          ci-dessous).
+        </li>
+      </ul>
+
+      <h2>Informations demandées et pourquoi</h2>
+      <ul>
+        <li>Identité et coordonnées (nom, prénom, date de naissance, ville, pays, e-mail, téléphone) : identifier le candidat, vérifier sa majorité, le recontacter.</li>
+        <li>Profil professionnel (catégorie, niveau et durée d'expérience, liens de portfolio, agence éventuelle) : évaluer la candidature.</li>
+        <li>Mensurations, facultatives et jamais éliminatoires : utiles aux castings de mannequins.</li>
+        <li>Trois photographies obligatoires (portrait, profil, en pied habillée) et jusqu'à trois complémentaires : évaluer le profil. Les données de localisation des photos sont retirées.</li>
+        <li>Langues, mobilité, types de projets recherchés, présentation facultative : orienter le candidat vers les opportunités pertinentes.</li>
+      </ul>
+      <p>
+        Ces informations ne sont ni publiées, ni vendues, ni utilisées à des fins publicitaires. Le détail des traitements,
+        des prestataires, des durées de conservation et des droits figure dans la
+        <a href={privacy}>politique de confidentialité</a>.
+      </p>
+
+      <h2>Utilisation de Google Drive</h2>
+      <p>
+        L'application utilise l'API Google Drive pour une seule finalité : <strong>archiver chaque candidature</strong>
+        (un récapitulatif texte et les photographies) dans l'espace Google Drive du compte de l'agence,
+        {" "}{CONTACT_EMAIL}. Seul ce compte autorise l'application ; les candidats ne se connectent jamais avec Google.
+      </p>
+      <ul>
+        <li>
+          Autorisation demandée : <code>drive.file</code>. L'application ne peut voir et modifier que les dossiers et
+          fichiers qu'elle a elle-même créés ; elle n'a aucun accès aux autres fichiers du Drive. Les autorisations
+          <code>openid</code> et <code>email</code> servent uniquement à vérifier, lors de l'autorisation, qu'il s'agit
+          bien du compte de l'agence.
+        </li>
+        <li>
+          Arborescence : <em>WEBLACK TALENTS / année / Candidatures / référence</em>. Les dossiers et fichiers sont nommés
+          par la référence de candidature, jamais par le nom du candidat.
+        </li>
+        <li>Les dossiers restent privés : l'application vérifie qu'aucun lien de partage public n'existe.</li>
+        <li>
+          Lorsqu'une candidature est supprimée dans l'administration, son dossier Drive est placé dans la corbeille de
+          Google Drive, qui le supprime définitivement au bout de 30 jours.
+        </li>
+        <li>
+          Les données obtenues via les API Google ne sont pas transférées à des tiers, ni utilisées pour de la publicité,
+          ni pour entraîner des modèles d'intelligence artificielle.
+        </li>
+      </ul>
+      <p>
+        L'utilisation et le transfert, par WEBLACK TALENTS, des informations reçues des API Google respectent les
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">règles relatives aux données utilisateur des services d'API Google</a>,
+        y compris les exigences d'utilisation limitée (« Limited Use »).
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Pour toute question sur l'application ou sur vos données : <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        Éditeur du site et responsable : voir les <a href={localizedPath(lang, "/mentions-legales")}>mentions légales</a>.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

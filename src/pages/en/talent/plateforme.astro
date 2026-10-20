@@ -1,0 +1,104 @@
+---
+/**
+ * Public homepage of the WEBLACK TALENTS application — the page declared in
+ * Google Auth Platform ("Application home page"). Readable without any
+ * account or session. Mirrors src/pages/talent/plateforme.astro; every
+ * statement matches the code (functions/api/talent-application/,
+ * functions/lib/driveSync.ts, googleDrive.ts).
+ */
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { localizedPath } from "../../../i18n/utils";
+import { CONTACT_EMAIL } from "../../../lib/contact";
+
+const lang = "en" as const;
+const privacy = localizedPath(lang, "/politique-de-confidentialite");
+---
+
+<BaseLayout
+  lang={lang}
+  title="WEBLACK TALENTS — application platform"
+  description="WEBLACK TALENTS lets talent aged 18 and over apply to the WEBLACK agency, and lets authorised staff review and privately archive those applications."
+>
+  <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
+    <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
+      <p class="label-tracked text-(--color-ink)/60">WEBLACK · Talent</p>
+      <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">WEBLACK TALENTS — application platform</h1>
+
+      <p class="text-lg">
+        WEBLACK is an independent creative agency founded in 2010, organised in three divisions — Talent, Creative and
+        Consulting. <strong>WEBLACK TALENTS</strong> is the application that lets talent (models, creative profiles) apply
+        to the Talent division, and lets authorised WEBLACK staff review those applications.
+      </p>
+      <p>
+        <a href={localizedPath(lang, "/talent/candidature")}>Go to the application form</a> ·
+        <a href={privacy}>Privacy policy</a> ·
+        <a href={localizedPath(lang, "/mentions-legales")}>Legal notice</a>
+      </p>
+
+      <h2>What the application does</h2>
+      <ul>
+        <li>
+          <strong>For applicants</strong>: a public five-step form, in French and English, with no account and no sign-in.
+          It is open to people aged 18 and over only; age is checked by the server.
+        </li>
+        <li>
+          <strong>After submission</strong>: the application is saved, a unique reference is shown and a confirmation email
+          is sent to the applicant.
+        </li>
+        <li>
+          <strong>For WEBLACK staff</strong>: a password-protected administration area lets authorised people only view
+          applications and photographs, track their status and delete them.
+        </li>
+        <li><strong>Archiving</strong>: a copy of each application is filed in the agency's Google Drive (see below).</li>
+      </ul>
+
+      <h2>Information requested and why</h2>
+      <ul>
+        <li>Identity and contact details (first and last name, date of birth, city, country, email, phone): to identify the applicant, check they are an adult, and get back to them.</li>
+        <li>Professional profile (category, experience level and duration, portfolio links, current agency if any): to assess the application.</li>
+        <li>Measurements, optional and never eliminatory: used for model castings.</li>
+        <li>Three required photographs (portrait, profile, full-length dressed) and up to three additional ones: to assess the profile. Location data is removed from photos.</li>
+        <li>Languages, mobility, project types sought, optional introduction: to match the applicant with relevant opportunities.</li>
+      </ul>
+      <p>
+        This information is not published, not sold and not used for advertising. Processing details, service providers,
+        retention periods and rights are set out in the <a href={privacy}>privacy policy</a>.
+      </p>
+
+      <h2>Use of Google Drive</h2>
+      <p>
+        The application uses the Google Drive API for one purpose only: <strong>archiving each application</strong> (a text
+        summary and the photographs) in the Google Drive storage of the agency's account, {CONTACT_EMAIL}. Only that
+        account authorises the application; applicants never sign in with Google.
+      </p>
+      <ul>
+        <li>
+          Permission requested: <code>drive.file</code>. The application can only see and change folders and files it has
+          created itself; it has no access to any other file in the Drive. The <code>openid</code> and <code>email</code>
+          permissions are only used, at authorisation time, to check that the account is the agency's.
+        </li>
+        <li>
+          Folder structure: <em>WEBLACK TALENTS / year / Candidatures / reference</em>. Folders and files are named after
+          the application reference, never the applicant's name.
+        </li>
+        <li>Folders stay private: the application checks that no public sharing link exists.</li>
+        <li>
+          When an application is deleted in the administration area, its Drive folder is moved to the Google Drive trash,
+          which permanently deletes it after 30 days.
+        </li>
+        <li>Data obtained through Google APIs is not transferred to third parties, used for advertising, or used to train artificial intelligence models.</li>
+      </ul>
+      <p>
+        WEBLACK TALENTS's use and transfer of information received from Google APIs will adhere to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>,
+        including the Limited Use requirements.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about the application or your data: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Site
+        publisher and data controller: see the <a href={localizedPath(lang, "/mentions-legales")}>legal notice</a>.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

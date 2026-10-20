@@ -1,67 +1,243 @@
 ---
+/**
+ * Politique de confidentialité — décrit les traitements tels qu'ils sont
+ * réellement implémentés (vérifiés dans le code : functions/api/*,
+ * functions/lib/*, src/scripts/consent.ts, BaseLayout.astro). Durées de
+ * conservation et bases légales des candidatures : reprises de la notice
+ * WEBLACK TALENTS rédigée par l'agence (Sanity, talentApplicationSettings).
+ * Toute évolution d'un traitement doit être répercutée ici ET dans
+ * src/pages/en/politique-de-confidentialite.astro.
+ */
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { useTranslations } from "../i18n/utils";
+import { useTranslations, localizedPath } from "../i18n/utils";
 import { CONTACT_EMAIL } from "../lib/contact";
 
 const lang = "fr" as const;
 const t = useTranslations(lang);
+const mail = `mailto:${CONTACT_EMAIL}`;
 ---
 
-<BaseLayout lang={lang} title={t("footer.privacy")} description={t("privacy.seo.description")} noindex>
+<BaseLayout lang={lang} title={t("footer.privacy")} description={t("privacy.seo.description")}>
   <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
     <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
       <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
+      <p class="text-sm text-(--color-ink)/60">Dernière mise à jour : 20 octobre 2026</p>
 
-      <p class="mt-4 text-sm text-(--color-ink)/50">
-        <strong>Page en attente de validation juridique.</strong> Ce texte décrit le traitement des
-        données tel qu'implémenté techniquement sur ce site (formulaire de contact) et doit être
-        revu par un conseil avant mise en ligne, notamment sur les mentions relatives à l'éditeur.
+      <p>
+        Cette politique explique quelles données personnelles le site weblack.fr et l'application WEBLACK TALENTS
+        collectent, pourquoi, où elles sont stockées, qui y accède, combien de temps elles sont conservées et comment
+        exercer vos droits.
       </p>
 
-      <h2>Responsable de traitement</h2>
+      <h2>1. Responsable du traitement et contact</h2>
       <p>
-        WEBLACK, [forme juridique et adresse à compléter], est responsable du traitement des
-        données collectées via ce site. Contact : {CONTACT_EMAIL}.
+        Le responsable du traitement est l'éditeur du site WEBLACK, dont la raison sociale, le siège et le directeur de la
+        publication figurent dans les <a href={localizedPath(lang, "/mentions-legales")}>mentions légales</a>. Pour toute
+        question ou demande relative à vos données : <a href={mail}>{CONTACT_EMAIL}</a>.
       </p>
 
-      <h2>Données collectées</h2>
+      <h2>2. Données collectées et finalités</h2>
+
+      <h3>2.1 Consultation du site</h3>
       <p>
-        Le formulaire de contact du site ouvre directement votre messagerie personnelle, pré-remplie
-        avec votre nom, votre adresse e-mail, votre organisation (facultatif), le profil sélectionné
-        et votre message : c'est vous qui envoyez ensuite ce message, depuis votre propre
-        boîte mail, vers {CONTACT_EMAIL}. En dehors du formulaire de contact décrit ci-dessus, le
-        site ne collecte pas de données à des fins de mesure d'audience sans votre consentement. Si
-        vous acceptez la mesure d'audience, des données relatives à votre navigation peuvent être
-        transmises à Google Analytics afin de mesurer l'utilisation du site.
+        Le site est hébergé par Cloudflare (Cloudflare Pages). Comme tout hébergeur, Cloudflare traite l'adresse IP et les
+        informations techniques de la requête pour délivrer les pages et protéger le site contre les abus. Les images
+        éditoriales sont servies par le réseau de diffusion de Sanity (cdn.sanity.io), qui reçoit à ce titre l'adresse IP
+        du visiteur. Les polices de caractères sont hébergées par le site lui-même.
       </p>
 
-      <h2>Finalité et durée de conservation</h2>
+      <h3>2.2 Formulaire de contact</h3>
       <p>
-        Les messages ainsi envoyés sont utilisés exclusivement pour répondre à votre demande. Ils sont
-        conservés dans la messagerie de WEBLACK le temps nécessaire au traitement de la demande,
-        puis supprimés ou archivés conformément aux obligations légales applicables.
+        Le formulaire de contact ne transite par aucun serveur : il ouvre votre propre messagerie, pré-remplie avec votre
+        nom, votre adresse e-mail, votre organisation (facultative), le profil choisi et votre message. C'est vous qui
+        envoyez ce message à {CONTACT_EMAIL}. Il est utilisé uniquement pour répondre à votre demande et conservé dans la
+        messagerie de WEBLACK le temps nécessaire à son traitement.
       </p>
 
-      <h2>Sous-traitant technique</h2>
+      <h3>2.3 Lettre d'information</h3>
       <p>
-        Le formulaire de contact ne transite par aucun serveur ni prestataire tiers : il construit un
-        lien <code>mailto:</code> ouvert par votre propre client de messagerie. Aucune donnée bancaire
-        ou sensible n'est collectée sur ce site.
+        Si vous vous inscrivez, votre adresse e-mail est ajoutée à la liste de diffusion gérée par notre prestataire
+        d'envoi Resend, sur la base de votre consentement. Elle sert uniquement à vous adresser la lettre d'information ;
+        vous pouvez vous désinscrire à tout moment, ce qui met fin à la conservation de votre adresse pour cette finalité.
       </p>
 
-      <h2>Vos droits</h2>
+      <h3>2.4 Candidatures WEBLACK TALENTS</h3>
       <p>
-        Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez d'un
-        droit d'accès, de rectification, d'effacement et de portabilité de vos données, ainsi que du
-        droit de vous opposer à leur traitement. Pour exercer ces droits, écrivez à {CONTACT_EMAIL}.
+        Le <a href={localizedPath(lang, "/talent/candidature")}>formulaire de candidature</a>, réservé aux personnes de
+        18 ans et plus, collecte :
+      </p>
+      <ul>
+        <li>identité et coordonnées : prénom, nom, date de naissance, ville, pays, e-mail, téléphone, Instagram (facultatif) ;</li>
+        <li>profil professionnel : catégorie, niveau et durée d'expérience, liens de portfolio, agence et exclusivité éventuelles ;</li>
+        <li>mensurations, toutes facultatives (taille, poitrine, tour de taille, hanches, entrejambe, pointure, taille de vêtements, couleur des yeux et des cheveux) ;</li>
+        <li>photographies : trois obligatoires (portrait, profil, en pied habillée) et jusqu'à trois complémentaires ; les métadonnées de localisation (EXIF) sont retirées avant stockage ;</li>
+        <li>langues, mobilité, types de projets recherchés, présentation facultative ;</li>
+        <li>la confirmation de l'exactitude des informations, la version de la notice de confidentialité consultée et la langue du formulaire.</li>
+      </ul>
+      <p>
+        Finalités : recevoir et examiner la candidature, vérifier que la personne est majeure, la recontacter et, le cas
+        échéant, l'orienter vers une opportunité adaptée. Les bases légales et la politique de conservation propres aux
+        candidatures sont détaillées dans la notice affichée à l'étape 5 du formulaire ; elles sont résumées aux sections 3
+        et 7 ci-dessous. Le dépôt d'une candidature ne vaut pas autorisation de publier les photographies.
+      </p>
+      <p>
+        Stockage : le dossier est enregistré dans une base de données Cloudflare D1 et les photographies dans un espace de
+        stockage Cloudflare. Une photographie envoyée mais jamais rattachée à une candidature (formulaire abandonné) est
+        effacée automatiquement au bout de deux heures. Après l'envoi, un e-mail de confirmation est adressé au candidat et
+        une notification interne, sans nom ni coordonnées, est adressée à l'équipe, via Resend. Une copie d'archive du
+        dossier peut être rangée dans l'espace Google Drive de l'agence (section 4).
+      </p>
+      <p>
+        Accès : les dossiers et photographies ne sont jamais publics. Ils ne sont consultables que dans l'espace
+        d'administration, protégé par mot de passe, par les personnes habilitées de WEBLACK.
       </p>
 
-      <h2>Cookies</h2>
+      <h3>2.5 Sécurité et prévention des abus</h3>
       <p>
-        Ce site utilise Google Analytics (GA4), un outil de mesure d'audience, uniquement après votre
-        consentement explicite. Vous pouvez accepter, refuser ou personnaliser ce choix à tout moment
-        depuis les « Préférences de confidentialité » en pied de page. Aucune collecte Google
-        Analytics n'est activée avant votre consentement.
+        Pour limiter les envois automatisés (formulaire, photographies, connexion à l'administration), le nombre de
+        requêtes par adresse IP est compté pendant une heure au plus. L'adresse IP n'est pas conservée en clair : seule une
+        empreinte cryptographique tronquée est utilisée, puis effacée à l'expiration de ce délai.
+      </p>
+
+      <h3>2.6 Cookies, stockage local et mesure d'audience</h3>
+      <ul>
+        <li>
+          Mesure d'audience : Google Analytics 4 n'est chargé qu'après votre consentement explicite, que vous pouvez
+          retirer à tout moment depuis « Préférences de confidentialité » en pied de page. Sans consentement, aucune
+          donnée n'est transmise à Google Analytics.
+        </li>
+        <li>
+          Stockage local du navigateur (pas de cookie) : votre choix de consentement, votre préférence d'affichage
+          clair/sombre et l'indication que la fenêtre d'inscription à la lettre d'information a déjà été vue.
+        </li>
+        <li>
+          Administration : un cookie de session strictement nécessaire, réservé aux personnes habilitées qui se
+          connectent, valable 12 heures et révoqué à la déconnexion.
+        </li>
+        <li>
+          Vidéos : les pages « Live » intègrent le lecteur YouTube en mode de confidentialité renforcée
+          (youtube-nocookie.com) ; Google (YouTube) peut traiter des données lorsque vous lancez la lecture.
+        </li>
+      </ul>
+
+      <h2>3. Bases légales</h2>
+      <ul>
+        <li>Lettre d'information et mesure d'audience : votre consentement, retirable à tout moment.</li>
+        <li>
+          Candidatures (selon la notice WEBLACK TALENTS) : mesures précontractuelles prises à la demande du candidat pour
+          l'examen du dossier ; intérêt légitime de WEBLACK pour l'administration et la sécurité du service ; consentement
+          distinct pour toute conservation dans un vivier de talents ou toute exploitation des photographies au-delà de
+          l'examen ; obligation légale ou intérêt légitime pour la défense des droits.
+        </li>
+        <li>Sécurité du site et prévention des abus : intérêt légitime de WEBLACK à protéger ses services.</li>
+      </ul>
+
+      <h2>4. Données utilisateur Google (API Google Drive)</h2>
+      <p>
+        L'application WEBLACK TALENTS utilise l'API Google Drive pour archiver chaque candidature (un récapitulatif texte
+        et les photographies) dans l'espace Google Drive du compte de l'agence, {CONTACT_EMAIL}. Les candidats ne se
+        connectent jamais avec un compte Google : seul le compte de l'agence autorise l'application.
+      </p>
+      <ul>
+        <li>
+          Données Google consultées : uniquement les dossiers et fichiers que l'application a elle-même créés
+          (autorisation <code>drive.file</code>), ainsi que l'adresse e-mail du compte qui donne l'autorisation
+          (autorisations <code>openid</code> et <code>email</code>), utilisée une seule fois pour vérifier qu'il s'agit du
+          compte de l'agence. L'application n'a accès à aucun autre fichier du Drive.
+        </li>
+        <li>
+          Utilisation : créer l'arborescence <em>WEBLACK TALENTS / année / Candidatures / référence</em>, y déposer le
+          dossier, vérifier sa présence et l'absence de tout lien de partage public, et le placer dans la corbeille de
+          Google Drive lorsque la candidature est supprimée.
+        </li>
+        <li>
+          Partage : les données obtenues via les API Google ne sont transférées à aucun tiers, ne sont pas vendues, ne
+          servent pas à la publicité et ne sont pas utilisées pour entraîner des modèles d'intelligence artificielle.
+        </li>
+        <li>
+          Stockage et protection : le jeton d'autorisation est conservé uniquement dans les secrets chiffrés de
+          l'hébergeur (Cloudflare), jamais dans le code ni dans le navigateur.
+        </li>
+        <li>
+          Retrait : l'agence peut retirer l'accès à tout moment depuis les paramètres de son compte Google ; l'archivage
+          s'arrête alors, sans effet sur les candidatures déjà enregistrées.
+        </li>
+      </ul>
+      <p>
+        L'utilisation et le transfert, par WEBLACK TALENTS, des informations reçues des API Google respectent les
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">règles relatives aux données utilisateur des services d'API Google</a>,
+        y compris les exigences d'utilisation limitée (« Limited Use »).
+      </p>
+
+      <h2>5. Destinataires et prestataires</h2>
+      <p>
+        Les données sont accessibles aux seules personnes habilitées de WEBLACK. Elles sont traitées, pour le compte de
+        WEBLACK et dans la limite de leur mission, par :
+      </p>
+      <ul>
+        <li>Cloudflare : hébergement du site, fonctions serveur, base de données des candidatures, stockage des photographies ;</li>
+        <li>Resend : envoi des e-mails de confirmation et de notification, gestion de la liste de la lettre d'information ;</li>
+        <li>Google : archivage des candidatures dans le Google Drive de l'agence ; Google Analytics (uniquement après consentement) ; lecteur YouTube ;</li>
+        <li>Sanity : gestion des contenus éditoriaux et diffusion des images du site. Aucune donnée de candidature n'est stockée dans Sanity.</li>
+      </ul>
+      <p>Aucune donnée n'est vendue ni rendue publique.</p>
+
+      <h2>6. Transferts hors de l'Union européenne</h2>
+      <p>
+        Les prestataires ci-dessus peuvent traiter des données depuis des pays situés hors de l'Espace économique
+        européen, notamment les États-Unis. Les garanties applicables sont celles prévues par les conditions de protection
+        des données de chacun de ces prestataires.
+      </p>
+
+      <h2>7. Durées de conservation</h2>
+      <ul>
+        <li>
+          Candidatures non retenues : suppression des données et des photographies dans un délai maximal de trois mois
+          après la clôture de la candidature, sauf obligation légale.
+        </li>
+        <li>
+          Vivier de talents : conservation pendant deux ans au plus à compter du dernier contact pertinent, uniquement
+          lorsque le candidat en a été informé et que la base légale appropriée le permet.
+        </li>
+        <li>
+          La suppression est effectuée par l'équipe dans l'espace d'administration : elle efface le dossier, ses
+          photographies et ses e-mails en attente ; l'archive Google Drive correspondante est placée dans la corbeille,
+          vidée automatiquement par Google au bout de 30 jours.
+        </li>
+        <li>Photographies envoyées mais non rattachées à une candidature : effacement automatique après deux heures.</li>
+        <li>Compteurs anti-abus : une heure au plus. Session d'administration : 12 heures au plus.</li>
+        <li>Lettre d'information : jusqu'à la désinscription.</li>
+        <li>Messages reçus via le formulaire de contact : le temps nécessaire au traitement de la demande.</li>
+      </ul>
+
+      <h2>8. Sécurité</h2>
+      <p>
+        Mesures en place : connexion chiffrée (HTTPS) imposée ; espace d'administration protégé par mot de passe, avec
+        session signée, limitée dans le temps et révocable ; limitation du nombre de tentatives ; photographies servies
+        uniquement aux administrateurs connectés, jamais par une adresse publique ; retrait des données de localisation
+        des photos ; autorisation Google Drive limitée aux seuls fichiers créés par l'application ; secrets conservés
+        uniquement chez l'hébergeur. Aucune mesure ne garantit un risque nul.
+      </p>
+
+      <h2>9. Vos droits</h2>
+      <p>
+        Conformément au Règlement général sur la protection des données (RGPD), vous disposez d'un droit d'accès, de
+        rectification, d'effacement, de limitation, d'opposition et, le cas échéant, de portabilité, ainsi que du droit de
+        retirer votre consentement à tout moment. Pour les exercer, écrivez à <a href={mail}>{CONTACT_EMAIL}</a> en
+        précisant, pour une candidature, sa référence. Vous pouvez introduire une réclamation auprès de la CNIL
+        (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).
+      </p>
+
+      <h2>10. Mineurs</h2>
+      <p>
+        Les candidatures WEBLACK TALENTS sont réservées aux personnes de 18 ans et plus ; une candidature d'une personne
+        mineure est refusée par le serveur.
+      </p>
+
+      <h2>11. Modifications</h2>
+      <p>
+        Cette politique est mise à jour lorsque les traitements, les prestataires ou les obligations évoluent. La date de
+        dernière mise à jour figure en haut de la page.
       </p>
     </div>
   </section>

@@ -1,67 +1,224 @@
 ---
+/**
+ * Privacy policy — English mirror of src/pages/politique-de-confidentialite.astro.
+ * Describes processing as actually implemented (checked in functions/api/*,
+ * functions/lib/*, src/scripts/consent.ts, BaseLayout.astro). Application
+ * retention periods and legal bases come from the WEBLACK TALENTS notice
+ * written by the agency (Sanity, talentApplicationSettings). Keep both
+ * languages in sync.
+ */
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { useTranslations } from "../../i18n/utils";
+import { useTranslations, localizedPath } from "../../i18n/utils";
 import { CONTACT_EMAIL } from "../../lib/contact";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
+const mail = `mailto:${CONTACT_EMAIL}`;
 ---
 
-<BaseLayout lang={lang} title={t("footer.privacy")} description={t("privacy.seo.description")} noindex>
+<BaseLayout lang={lang} title={t("footer.privacy")} description={t("privacy.seo.description")}>
   <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
     <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
       <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
+      <p class="text-sm text-(--color-ink)/60">Last updated: 20 October 2026</p>
 
-      <p class="mt-4 text-sm text-(--color-ink)/50">
-        <strong>Page pending legal review.</strong> This text describes data handling as technically
-        implemented on this site (contact form) and should be reviewed by counsel before going live,
-        particularly the publisher details.
-      </p>
-
-      <h2>Data controller</h2>
       <p>
-        WEBLACK, [legal form and address to be completed], is the data controller for
-        information collected through this site. Contact: {CONTACT_EMAIL}.
+        This policy explains what personal data the weblack.fr website and the WEBLACK TALENTS application collect, why,
+        where it is stored, who can access it, how long it is kept and how to exercise your rights.
       </p>
 
-      <h2>Data collected</h2>
+      <h2>1. Data controller and contact</h2>
       <p>
-        The site's contact form opens your own mail app directly, pre-filled with your name, email
-        address, organisation (optional), the profile you selected and your message — you then send
-        that message yourself, from your own mailbox, to {CONTACT_EMAIL}. Beyond the contact form
-        described above, the site does not collect data for audience measurement without your
-        consent. If you accept audience measurement, data relating to your browsing activity may be
-        transmitted to Google Analytics to measure how the site is used.
+        The data controller is the publisher of the WEBLACK website, whose company name, registered office and publication
+        director are given in the <a href={localizedPath(lang, "/mentions-legales")}>legal notice</a>. For any question or
+        request about your data: <a href={mail}>{CONTACT_EMAIL}</a>.
       </p>
 
-      <h2>Purpose and retention</h2>
+      <h2>2. Data collected and purposes</h2>
+
+      <h3>2.1 Browsing the website</h3>
       <p>
-        Messages sent this way are used solely to respond to your enquiry. They are kept in WEBLACK's
-        mailbox for as long as necessary to process the request, then deleted or archived in
-        accordance with applicable legal obligations.
+        The website is hosted by Cloudflare (Cloudflare Pages). Like any host, Cloudflare processes the IP address and
+        technical request information to deliver pages and protect the site against abuse. Editorial images are served by
+        Sanity's content delivery network (cdn.sanity.io), which therefore receives the visitor's IP address. Fonts are
+        hosted by the website itself.
       </p>
 
-      <h2>Technical sub-processor</h2>
+      <h3>2.2 Contact form</h3>
       <p>
-        The contact form does not route through any server or third-party service: it builds a
-        <code>mailto:</code> link opened by your own mail client. No financial or sensitive data is
-        collected on this site.
+        The contact form does not go through any server: it opens your own email client, pre-filled with your name, email
+        address, organisation (optional), the profile you chose and your message. You send that message to
+        {" "}{CONTACT_EMAIL} yourself. It is used only to answer your request and kept in WEBLACK's mailbox for as long as
+        needed to handle it.
       </p>
 
-      <h2>Your rights</h2>
+      <h3>2.3 Newsletter</h3>
       <p>
-        Under the General Data Protection Regulation (GDPR), you have the right to access, rectify,
-        erase and port your data, as well as the right to object to its processing. To exercise these
-        rights, write to {CONTACT_EMAIL}.
+        If you subscribe, your email address is added to the mailing list managed by our email provider Resend, based on
+        your consent. It is used only to send you the newsletter; you can unsubscribe at any time, which ends the retention
+        of your address for this purpose.
       </p>
 
-      <h2>Cookies</h2>
+      <h3>2.4 WEBLACK TALENTS applications</h3>
       <p>
-        This site uses Google Analytics (GA4), an audience measurement tool, only after your explicit
-        consent. You can accept, reject, or customise this choice at any time from the "Privacy
-        preferences" link in the footer. Google Analytics collection is not activated before your
-        consent.
+        The <a href={localizedPath(lang, "/talent/candidature")}>application form</a>, open to people aged 18 and over only,
+        collects:
       </p>
+      <ul>
+        <li>identity and contact details: first name, last name, date of birth, city, country, email, phone, Instagram (optional);</li>
+        <li>professional profile: category, experience level and duration, portfolio links, current agency and exclusivity if any;</li>
+        <li>measurements, all optional (height, chest, waist, hips, inseam, shoe size, clothing size, eye and hair colour);</li>
+        <li>photographs: three required (portrait, profile, full-length dressed) and up to three additional ones; location metadata (EXIF) is removed before storage;</li>
+        <li>languages, mobility, project types sought, optional introduction;</li>
+        <li>confirmation that the information is accurate, the version of the privacy notice read, and the form language.</li>
+      </ul>
+      <p>
+        Purposes: to receive and review the application, check that the person is an adult, get back to them and, where
+        relevant, direct them to a suitable opportunity. The legal bases and retention policy specific to applications are
+        detailed in the notice shown in step 5 of the form and summarised in sections 3 and 7 below. Submitting an
+        application does not authorise publication of the photographs.
+      </p>
+      <p>
+        Storage: the application is saved in a Cloudflare D1 database and the photographs in Cloudflare storage. A photo
+        uploaded but never attached to an application (abandoned form) is deleted automatically after two hours. After
+        submission, a confirmation email is sent to the applicant and an internal notification, with no name or contact
+        details, is sent to the team, via Resend. An archive copy of the application may be filed in the agency's Google
+        Drive (section 4).
+      </p>
+      <p>
+        Access: applications and photographs are never public. They can only be viewed in the password-protected
+        administration area, by authorised WEBLACK staff.
+      </p>
+
+      <h3>2.5 Security and abuse prevention</h3>
+      <p>
+        To limit automated submissions (form, photographs, administration sign-in), the number of requests per IP address
+        is counted for one hour at most. The IP address is not stored in clear: only a truncated cryptographic hash is
+        used, then erased when that period ends.
+      </p>
+
+      <h3>2.6 Cookies, local storage and analytics</h3>
+      <ul>
+        <li>
+          Analytics: Google Analytics 4 is loaded only after your explicit consent, which you can withdraw at any time from
+          "Privacy preferences" in the footer. Without consent, no data is sent to Google Analytics.
+        </li>
+        <li>
+          Browser local storage (not cookies): your consent choice, your light/dark display preference and a marker that
+          the newsletter pop-up has already been shown.
+        </li>
+        <li>
+          Administration: a strictly necessary session cookie, only for authorised staff who sign in, valid for 12 hours
+          and revoked on sign-out.
+        </li>
+        <li>
+          Videos: the "Live" pages embed the YouTube player in privacy-enhanced mode (youtube-nocookie.com); Google
+          (YouTube) may process data when you start playback.
+        </li>
+      </ul>
+
+      <h2>3. Legal bases</h2>
+      <ul>
+        <li>Newsletter and analytics: your consent, which you can withdraw at any time.</li>
+        <li>
+          Applications (as set out in the WEBLACK TALENTS notice): pre-contractual steps taken at the applicant's request
+          to review the application; WEBLACK's legitimate interest in running and securing the service; separate consent
+          for any retention in a talent pool or any use of the photographs beyond the review; legal obligation or
+          legitimate interest for the defence of rights.
+        </li>
+        <li>Website security and abuse prevention: WEBLACK's legitimate interest in protecting its services.</li>
+      </ul>
+
+      <h2>4. Google user data (Google Drive API)</h2>
+      <p>
+        The WEBLACK TALENTS application uses the Google Drive API to archive each application (a text summary and the
+        photographs) in the Google Drive storage of the agency's account, {CONTACT_EMAIL}. Applicants never sign in with a
+        Google account: only the agency's account authorises the application.
+      </p>
+      <ul>
+        <li>
+          Google data accessed: only the folders and files the application has created itself (<code>drive.file</code>
+          permission), and the email address of the authorising account (<code>openid</code> and <code>email</code>
+          permissions), used once to check that it is the agency's account. The application has no access to any other
+          file in the Drive.
+        </li>
+        <li>
+          Use: create the <em>WEBLACK TALENTS / year / Candidatures / reference</em> folder structure, file the application
+          there, check that it is present and that no public sharing link exists, and move it to the Google Drive trash
+          when the application is deleted.
+        </li>
+        <li>
+          Sharing: data obtained through Google APIs is not transferred to any third party, not sold, not used for
+          advertising and not used to train artificial intelligence models.
+        </li>
+        <li>
+          Storage and protection: the authorisation token is kept only in the host's (Cloudflare) encrypted secrets, never
+          in the code or in the browser.
+        </li>
+        <li>
+          Revocation: the agency can revoke access at any time from its Google account settings; archiving then stops, with
+          no effect on applications already saved.
+        </li>
+      </ul>
+      <p>
+        WEBLACK TALENTS's use and transfer of information received from Google APIs will adhere to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>,
+        including the Limited Use requirements.
+      </p>
+
+      <h2>5. Recipients and service providers</h2>
+      <p>Data is accessible only to authorised WEBLACK staff. It is processed on WEBLACK's behalf, within the scope of their service, by:</p>
+      <ul>
+        <li>Cloudflare: website hosting, server functions, application database, photograph storage;</li>
+        <li>Resend: sending confirmation and notification emails, managing the newsletter list;</li>
+        <li>Google: archiving applications in the agency's Google Drive; Google Analytics (only after consent); YouTube player;</li>
+        <li>Sanity: editorial content management and delivery of website images. No application data is stored in Sanity.</li>
+      </ul>
+      <p>No data is sold or made public.</p>
+
+      <h2>6. Transfers outside the European Union</h2>
+      <p>
+        The providers above may process data from countries outside the European Economic Area, including the United
+        States. The applicable safeguards are those provided for in each provider's data protection terms.
+      </p>
+
+      <h2>7. Retention periods</h2>
+      <ul>
+        <li>Unsuccessful applications: data and photographs deleted within three months at most after the application is closed, unless required by law.</li>
+        <li>Talent pool: kept for two years at most from the last relevant contact, only where the applicant has been informed and the appropriate legal basis allows it.</li>
+        <li>
+          Deletion is carried out by the team in the administration area: it erases the application, its photographs and
+          its pending emails; the matching Google Drive archive is moved to the trash, which Google empties automatically
+          after 30 days.
+        </li>
+        <li>Photos uploaded but not attached to an application: deleted automatically after two hours.</li>
+        <li>Abuse-prevention counters: one hour at most. Administration session: 12 hours at most.</li>
+        <li>Newsletter: until you unsubscribe.</li>
+        <li>Messages received through the contact form: as long as needed to handle the request.</li>
+      </ul>
+
+      <h2>8. Security</h2>
+      <p>
+        Measures in place: encrypted connection (HTTPS) enforced; password-protected administration area with a signed,
+        time-limited, revocable session; limits on repeated attempts; photographs served only to signed-in administrators,
+        never through a public address; location data removed from photos; Google Drive permission limited to files
+        created by the application; secrets kept only by the host. No measure guarantees zero risk.
+      </p>
+
+      <h2>9. Your rights</h2>
+      <p>
+        Under the General Data Protection Regulation (GDPR), you have the right of access, rectification, erasure,
+        restriction, objection and, where applicable, portability, and the right to withdraw your consent at any time. To
+        exercise them, write to <a href={mail}>{CONTACT_EMAIL}</a>, giving the reference of your application if relevant.
+        You may lodge a complaint with the French data protection authority, the CNIL
+        (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).
+      </p>
+
+      <h2>10. Minors</h2>
+      <p>WEBLACK TALENTS applications are open to people aged 18 and over only; an application from a minor is refused by the server.</p>
+
+      <h2>11. Changes</h2>
+      <p>This policy is updated when processing, providers or obligations change. The date of the last update is shown at the top of the page.</p>
     </div>
   </section>
 </BaseLayout>

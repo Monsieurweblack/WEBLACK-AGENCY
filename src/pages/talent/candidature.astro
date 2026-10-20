@@ -32,6 +32,11 @@ const settings = await getTalentApplicationSettings(lang);
                 {settings.intro}
               </p>
             )}
+            <p class="mt-6 text-sm" data-reveal>
+              <a href={localizedPath(lang, "/talent/plateforme")} class="text-(--color-paper)/60 underline underline-offset-4 transition-colors hover:text-(--color-gold)">
+                {t("talentApplication.platformLink")}
+              </a>
+            </p>
             <div class="mt-10" data-reveal>
               <TalentApplicationPdfLinks lang={lang} />
             </div>
