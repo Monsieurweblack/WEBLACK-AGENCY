@@ -34,3 +34,6 @@ editorial-engine/logs/*.log
 editorial-engine/logs/*.jsonl
 editorial-engine/tests/*.sqlite3
 editorial-engine/test-results/
+
+# Identifiants OAuth Google téléchargés (scripts/google-drive/authorize.mjs --client-file) — jamais versionnés
+client_secret*.json
