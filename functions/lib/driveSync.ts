@@ -29,7 +29,7 @@
  *   - échec = statut sync_failed + code technique, le dossier D1 et les
  *     photos KV ne sont jamais touchés.
  */
-import { DriveClient, DriveError, driveConfigured, type DriveEnv, type DriveFile } from "./googleDrive.ts";
+import { DriveClient, DriveError, driveConfigured, folderUrl, type DriveEnv, type DriveFile } from "./googleDrive.ts";
 import { getPhoto } from "./photos.ts";
 import { referenceFor } from "./talentOutbox.ts";
 import { formatApplicationField } from "../../src/lib/talent-application-display.ts";
@@ -382,4 +382,52 @@ export function renderSummary(application: ApplicationRecord, photos: PhotoRow[]
     "Document confidentiel : ne pas partager ce dossier par lien public.",
   );
   return `${lines.join("\n")}\n`;
+}
+
+// --- Auto-test d'archivage (administration) -------------------------------------------
+
+export interface DriveSelfTestResult {
+  ok: true;
+  fileName: string;
+  sizeBytes: number;
+  folderUrl: string;
+  /** Le fichier a été retrouvé par sa propriété technique — le mécanisme qu'utilise une reprise. */
+  foundByProperty: boolean;
+  publicLinks: 0;
+  verifiedAt: string;
+}
+
+/**
+ * Prouve, sans aucune donnée de candidat, que la chaîne d'archivage fonctionne
+ * en production : jeton OAuth, création/réutilisation de la racine
+ * WEBLACK TALENTS, dossier « _tests-archivage », téléversement, relecture
+ * (présence + taille), recherche par propriété, absence de partage public.
+ * Mêmes fonctions que l'archivage réel (ensureFolder, DriveClient).
+ */
+export async function driveSelfTest(env: DriveSyncEnv, now = new Date()): Promise<DriveSelfTestResult> {
+  const nowIso = now.toISOString();
+  const drive = new DriveClient(env);
+  const rootId = await ensureFolder(env.DB, drive, "root", ROOT_NAME, undefined, nowIso);
+  const testsId = await ensureFolder(env.DB, drive, "_tests", "_tests-archivage", rootId, nowIso);
+
+  const sourceId = `selftest-${crypto.randomUUID()}`;
+  const fileName = `test-archivage-${nowIso.replace(/[:.]/g, "-")}.txt`;
+  const bytes = new TextEncoder().encode(
+    `Fichier de test technique WEBLACK TALENTS — aucune donnée personnelle.\nCréé le ${nowIso} par l'auto-test d'archivage de l'administration.\nPeut être supprimé sans conséquence.\n`,
+  );
+  await drive.upload(fileName, testsId, "text/plain", bytes, { weblackSelfTest: "1", weblackSourceId: sourceId });
+
+  // Vérification réelle : relecture du dossier, pas la seule réponse du téléversement.
+  const listed = (await drive.listChildren(testsId)).find((f) => f.appProperties?.weblackSourceId === sourceId);
+  if (!listed) throw new DriveError("verify_missing_file");
+  if (Number(listed.size) !== bytes.length) throw new DriveError("verify_size_mismatch");
+  const foundByProperty = (await drive.findByProperty("weblackSourceId", sourceId, testsId)).some((f) => f.id === listed.id);
+  if (!foundByProperty) throw new DriveError("verify_property_lookup_failed");
+
+  for (const id of [rootId, testsId, listed.id]) {
+    const permissions = await drive.listPermissions(id);
+    if (permissions.some((p) => p.type === "anyone" || p.type === "domain")) throw new DriveError("public_permission_detected", false);
+  }
+
+  return { ok: true, fileName, sizeBytes: bytes.length, folderUrl: folderUrl(testsId), foundByProperty, publicLinks: 0, verifiedAt: nowIso };
 }

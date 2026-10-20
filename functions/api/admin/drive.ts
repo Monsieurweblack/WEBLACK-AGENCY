@@ -2,7 +2,7 @@ import { json } from "../../lib/json.ts";
 import { requireAdmin, UUID_RE } from "../../lib/adminSession.ts";
 import { checkRateLimit } from "../../lib/rateLimit.ts";
 import { DriveClient, DriveError, driveConfigured } from "../../lib/googleDrive.ts";
-import { MAX_DRIVE_ATTEMPTS, syncDrive, type DriveSyncEnv } from "../../lib/driveSync.ts";
+import { MAX_DRIVE_ATTEMPTS, driveSelfTest, syncDrive, type DriveSyncEnv } from "../../lib/driveSync.ts";
 
 interface Env extends DriveSyncEnv {
   ADMIN_SESSION_SECRET?: string;
@@ -44,16 +44,31 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!rate.allowed) return json({ ok: false, reason: "rate_limited" }, 429);
 
   let applicationId: string | undefined;
+  let selfTest = false;
   const text = await request.text();
   if (text) {
     try {
-      const body = JSON.parse(text) as { applicationId?: unknown };
+      const body = JSON.parse(text) as { applicationId?: unknown; action?: unknown };
+      if (body.action !== undefined) {
+        if (body.action !== "selftest") return json({ ok: false, reason: "invalid_action" }, 400);
+        selfTest = true;
+      }
       if (body.applicationId !== undefined) {
         if (typeof body.applicationId !== "string" || !UUID_RE.test(body.applicationId)) return json({ ok: false, reason: "invalid_id" }, 400);
         applicationId = body.applicationId;
       }
     } catch {
       return json({ ok: false, reason: "invalid" }, 400);
+    }
+  }
+
+  // Auto-test : un fichier de test non sensible, archivé et vérifié comme un vrai dossier.
+  if (selfTest) {
+    if (!driveConfigured(env)) return json({ ok: false, reason: "not_configured" }, 409);
+    try {
+      return json({ ok: true, selfTest: await driveSelfTest(env) }, 200);
+    } catch (error) {
+      return json({ ok: false, reason: "selftest_failed", code: error instanceof DriveError ? error.code : "internal" }, 502);
     }
   }
 

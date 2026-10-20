@@ -342,3 +342,39 @@ test("drive — dossier commun mis à la corbeille à la main : arborescence rec
   assert.equal(rows[1]!.status, "synced");
   assert.equal(liveFolders().filter((f) => f.name === "WEBLACK TALENTS").length, 1, "une nouvelle racine visible, l'ancienne reste à la corbeille");
 });
+
+test("auto-test d'archivage : fichier non sensible créé dans WEBLACK TALENTS / _tests-archivage, relu, retrouvé, privé", async () => {
+  const env = makeEnv();
+  const session = await cookie();
+  const response = await driveRetry({ request: request("/api/admin/drive", { method: "POST", body: '{"action":"selftest"}', cookie: session }), env: env as never, params: {} });
+  assert.equal(response.status, 200);
+  const { selfTest } = (await response.json()) as { selfTest: { fileName: string; sizeBytes: number; folderUrl: string; foundByProperty: boolean } };
+  assert.match(selfTest.fileName, /^test-archivage-.+\.txt$/);
+  assert.equal(selfTest.foundByProperty, true);
+
+  const file = fakeDrive.live().find((f) => f.appProperties.weblackSelfTest === "1")!;
+  assert.equal(file.size, selfTest.sizeBytes);
+  const tests = fakeDrive.files.get(file.parents[0]!)!;
+  const root = fakeDrive.files.get(tests.parents[0]!)!;
+  assert.deepEqual([root.name, tests.name], ["WEBLACK TALENTS", "_tests-archivage"]);
+  assert.equal(selfTest.folderUrl, `https://drive.google.com/drive/folders/${tests.id}`);
+  assert.ok(fakeDrive.live().every((f) => f.permissions.every((p) => p.type === "user")), "aucun partage public");
+  assert.equal(env.DB.rows(`SELECT * FROM applications`).length, 0, "aucune candidature créée par le test");
+
+  // La racine est réutilisée ensuite par l'archivage réel (aucune seconde racine).
+  await submitApplication(env);
+  assert.equal(liveFolders().filter((f) => f.name === "WEBLACK TALENTS").length, 1);
+});
+
+test("auto-test d'archivage : sans session 401, action inconnue 400, non configuré 409, panne Drive 502 avec code", async () => {
+  const env = makeEnv();
+  assert.equal((await driveRetry({ request: request("/api/admin/drive", { method: "POST", body: '{"action":"selftest"}' }), env: env as never, params: {} })).status, 401);
+  const session = await cookie();
+  assert.equal((await driveRetry({ request: request("/api/admin/drive", { method: "POST", body: '{"action":"drop"}', cookie: session }), env: env as never, params: {} })).status, 400);
+  const unconfigured = makeEnv({ GOOGLE_DRIVE_REFRESH_TOKEN: undefined });
+  assert.equal((await driveRetry({ request: request("/api/admin/drive", { method: "POST", body: '{"action":"selftest"}', cookie: session }), env: unconfigured as never, params: {} })).status, 409);
+  fakeDrive.oauth = "invalid_grant";
+  const failed = await driveRetry({ request: request("/api/admin/drive", { method: "POST", body: '{"action":"selftest"}', cookie: session }), env: env as never, params: {} });
+  assert.equal(failed.status, 502);
+  assert.deepEqual(await failed.json(), { ok: false, reason: "selftest_failed", code: "oauth_invalid_grant" });
+});

@@ -123,6 +123,34 @@ export function initAdminCandidatures() {
   }
 
   driveCheck?.addEventListener("click", () => void loadDriveSummary(true));
+
+  // Auto-test : écrit un fichier de test non sensible dans WEBLACK TALENTS / _tests-archivage et le vérifie.
+  const driveSelfTestButton = document.getElementById("drive-selftest") as HTMLButtonElement | null;
+  const driveSelfTestResult = document.getElementById("drive-selftest-result");
+  driveSelfTestButton?.addEventListener("click", async () => {
+    if (!driveSelfTestResult) return;
+    driveSelfTestButton.disabled = true;
+    driveSelfTestResult.textContent = "Test d'archivage en cours…";
+    const response = await fetch("/api/admin/drive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "selftest" }),
+    });
+    driveSelfTestButton.disabled = false;
+    if (response.status === 401) return showLogin();
+    const data = (await response.json()) as {
+      ok: boolean;
+      code?: string;
+      reason?: string;
+      selfTest?: { fileName: string; sizeBytes: number; folderUrl: string; foundByProperty: boolean; verifiedAt: string };
+    };
+    if (data.ok && data.selfTest) {
+      const t = data.selfTest;
+      driveSelfTestResult.innerHTML = `Test d'archivage réussi : <strong>${escapeHtml(t.fileName)}</strong> (${t.sizeBytes} octets) créé, relu, retrouvé par sa propriété technique, aucun lien public — ${escapeHtml(new Date(t.verifiedAt).toLocaleString("fr-FR"))}. <a href="${escapeHtml(t.folderUrl)}" target="_blank" rel="noopener noreferrer" class="text-(--color-gold) underline">Ouvrir le dossier de test</a>`;
+    } else {
+      driveSelfTestResult.textContent = `Test d'archivage en échec : ${data.code ?? data.reason ?? "erreur"}`;
+    }
+  });
   driveRetry?.addEventListener("click", async () => {
     driveRetry.disabled = true;
     const response = await fetch("/api/admin/drive", { method: "POST" });

@@ -54,7 +54,9 @@ import "../../styles/global.css";
         <!-- Archivage Google Drive : suivi séparé de l'enregistrement du dossier -->
         <div id="drive-panel" class="mt-2 flex flex-wrap items-center gap-4 text-sm text-(--color-paper)/60">
           <p id="drive-summary" role="status" aria-live="polite"></p>
+          <p id="drive-selftest-result" role="status" aria-live="polite" class="w-full"></p>
           <button id="drive-check" class="label-tracked min-h-10 text-(--color-paper)/60 hover:text-(--color-gold)">Tester la connexion Drive</button>
+          <button id="drive-selftest" class="label-tracked min-h-10 text-(--color-paper)/60 hover:text-(--color-gold)">Test d'archivage Drive</button>
           <button id="drive-retry" hidden class="label-tracked min-h-10 text-(--color-gold) hover:text-(--color-gold-bright)">Relancer l'archivage en attente</button>
         </div>
 
