@@ -17,8 +17,10 @@ import {
   completeAuthorization,
   createPkce,
   parseCallback,
+  parseGrantedScopes,
   readClientFile,
   storeSecrets,
+  waitForAuthorizationCode,
 } from "../google-drive/oauth.mjs";
 
 const CLIENT_ID = "123456789012-abcdefghijklmnop0123456789abcdef.apps.googleusercontent.com";
@@ -80,11 +82,17 @@ test("retour Google : state falsifié, refus, code absent, cas nominal", () => {
 
 const idToken = (claims) => `h.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.s`;
 
-function fakeGoogle({ token = {}, tokenStatus = 200, probeStatus = 200 } = {}) {
+/** `tokeninfo` : réponse de l'endpoint tokeninfo — objet, "fail" (HTTP 400) ou "down" (réseau). */
+function fakeGoogle({ token = {}, tokenStatus = 200, probeStatus = 200, tokeninfo = { scope: `openid ${EMAIL_SCOPE} ${DRIVE_SCOPE}` } } = {}) {
   const calls = [];
   const fetchImpl = async (url, init) => {
     calls.push({ url: String(url), body: init?.body ? String(init.body) : undefined, headers: init?.headers });
-    if (String(url).startsWith("https://oauth2.googleapis.com/token")) {
+    if (String(url) === "https://oauth2.googleapis.com/tokeninfo") {
+      if (tokeninfo === "down") throw new TypeError("fetch failed");
+      if (tokeninfo === "fail") return new Response(JSON.stringify({ error: "invalid_token" }), { status: 400 });
+      return new Response(JSON.stringify(tokeninfo));
+    }
+    if (String(url) === "https://oauth2.googleapis.com/token") {
       return new Response(
         JSON.stringify({
           access_token: "ya29.test",
@@ -156,4 +164,107 @@ test("fichier client JSON : « installed » accepté, client Web refusé, fichie
   writeFileSync(web, JSON.stringify({ web: { client_id: CLIENT_ID, client_secret: "x" } }));
   assert.throws(() => readClientFile(web), { code: "client_type_web" });
   assert.throws(() => readClientFile(join(dir, "absent.json")), { code: "client_file_unreadable" });
+});
+
+// --- Interprétation des permissions accordées ----------------------------------------
+
+test("permissions : champ scope présent, vide ou absent — absent ne veut pas dire refusé", () => {
+  assert.deepEqual(parseGrantedScopes(`openid ${DRIVE_SCOPE}`), ["openid", DRIVE_SCOPE]);
+  assert.deepEqual(parseGrantedScopes(`  openid   ${DRIVE_SCOPE} `), ["openid", DRIVE_SCOPE]);
+  assert.equal(parseGrantedScopes(undefined), null);
+  assert.equal(parseGrantedScopes(""), null);
+  assert.equal(parseGrantedScopes(42), null);
+});
+
+test("scope présent avec drive.file : accepté sans appel à tokeninfo", async () => {
+  const { fetchImpl, calls } = fakeGoogle();
+  await exchange(fetchImpl);
+  assert.ok(!calls.some((c) => c.url.includes("tokeninfo")));
+});
+
+test("scope présent SANS drive.file (case Drive non cochée) : refus explicite listant les permissions accordées, sans jeton", async () => {
+  const { fetchImpl } = fakeGoogle({ token: { scope: `openid ${EMAIL_SCOPE}` } });
+  await assert.rejects(exchange(fetchImpl), (e) => {
+    assert.equal(e.code, "scope_missing");
+    assert.match(e.message, /Permissions accordées : openid, userinfo\.email/);
+    assert.match(e.message, /cochez explicitement la case Google Drive/);
+    for (const secret of ["ya29.test", "1//test-refresh", "GOCSPX-test-secret", "4/0Abc"]) {
+      assert.ok(!e.message.includes(secret), `aucun jeton, secret ni code dans le message (${secret.slice(0, 4)}…)`);
+    }
+    return true;
+  });
+});
+
+test("scope non retourné : vérification auprès de Google (tokeninfo, en POST, jeton hors URL)", async () => {
+  const { fetchImpl, calls } = fakeGoogle({ token: { scope: undefined } });
+  assert.deepEqual(await exchange(fetchImpl), { refreshToken: "1//test-refresh" });
+  const info = calls.find((c) => c.url.includes("tokeninfo"));
+  assert.ok(info && !info.url.includes("ya29"), "jeton transmis dans le corps, jamais dans l'URL");
+  assert.equal(new URLSearchParams(info.body).get("access_token"), "ya29.test");
+});
+
+test("scope non retourné et tokeninfo sans drive.file : vrai refus", async () => {
+  const { fetchImpl } = fakeGoogle({ token: { scope: undefined }, tokeninfo: { scope: "openid email" } });
+  await assert.rejects(exchange(fetchImpl), { code: "scope_missing" });
+});
+
+test("scope non retourné et tokeninfo indisponible : l'accès Drive réel tranche (succès ou refus)", async () => {
+  for (const tokeninfo of ["fail", "down"]) {
+    assert.deepEqual(await exchange(fakeGoogle({ token: { scope: undefined }, tokeninfo }).fetchImpl), { refreshToken: "1//test-refresh" }, tokeninfo);
+    await assert.rejects(exchange(fakeGoogle({ token: { scope: undefined }, tokeninfo, probeStatus: 403 }).fetchImpl), { code: "drive_probe_failed" });
+  }
+});
+
+test("réponse d'échange sans jeton d'accès : erreur d'échange, pas un faux « scope manquant »", async () => {
+  await assert.rejects(exchange(fakeGoogle({ token: { access_token: undefined } }).fetchImpl), { code: "invalid_token_response" });
+});
+
+// --- Serveur local de redirection : fermeture unique et propre ------------------------
+
+async function startServer(timeoutMs = 5000) {
+  const state = "etat-test-0123456789abcdef";
+  let redirectUri;
+  const handle = waitForAuthorizationCode({ state, timeoutMs, onListening: (uri) => (redirectUri = uri) });
+  while (!redirectUri) await new Promise((r) => setTimeout(r, 5));
+  return { ...handle, state, redirectUri };
+}
+
+test("serveur local : retour valide → code reçu, serveur fermé, un second appel ne fait rien planter", async () => {
+  const { promise, server, state, redirectUri } = await startServer();
+  const other = await fetch(redirectUri.replace("/callback", "/favicon.ico"));
+  assert.equal(other.status, 404, "une autre route ne règle pas l'attente");
+  const res = await fetch(`${redirectUri}?code=4%2F0Abc&state=${state}`);
+  assert.equal(res.status, 200);
+  assert.deepEqual(await promise, { code: "4/0Abc", redirectUri });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(server.listening, false);
+  await assert.rejects(fetch(`${redirectUri}?code=x&state=${state}`), "serveur fermé : connexion refusée, pas de crash");
+});
+
+test("serveur local : state falsifié ou refus Google → rejet unique, serveur fermé", async () => {
+  for (const query of ["code=abc&state=faux", "error=access_denied&state=etat-test-0123456789abcdef"]) {
+    const { promise, server, redirectUri } = await startServer();
+    const settled = promise.then(() => "ok", (e) => e.code);
+    const res = await fetch(`${redirectUri}?${query}`);
+    assert.equal(res.status, 400);
+    assert.match(await settled, /state_mismatch|google_access_denied/);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(server.listening, false);
+  }
+});
+
+test("serveur local : délai dépassé → rejet « timeout », serveur fermé ; fermetures multiples sans erreur", async () => {
+  const { promise, server, shutdown } = await startServer(50);
+  await assert.rejects(promise, { code: "timeout" });
+  assert.equal(server.listening, false);
+  shutdown();
+  shutdown();
+});
+
+test("serveur local : un rejet survenu AVANT que l'appelant n'attende ne provoque pas de « unhandled rejection »", async () => {
+  const { promise, server, redirectUri } = await startServer();
+  await fetch(`${redirectUri}?code=abc&state=faux`);
+  await new Promise((r) => setTimeout(r, 20)); // le rejet a eu lieu, personne n'attendait encore
+  await assert.rejects(promise, { code: "state_mismatch" });
+  assert.equal(server.listening, false);
 });

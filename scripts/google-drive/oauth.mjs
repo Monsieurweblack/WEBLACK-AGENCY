@@ -9,6 +9,7 @@
  *   au retour, accès hors ligne pour obtenir un jeton de renouvellement.
  */
 import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
 
 export const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -127,9 +128,23 @@ export async function completeAuthorization({ fetchImpl = fetch, clientId, clien
     };
     throw new OAuthError(`token_${reason}`, `Échange du code refusé par Google (${reason}). ${hints[reason] ?? ""}`.trim());
   }
+  // Réponse d'échange valide avant toute interprétation des permissions.
+  if (typeof tokens.access_token !== "string" || tokens.access_token === "") {
+    throw new OAuthError("invalid_token_response", "Réponse de Google sans jeton d'accès : échange incomplet. Relancez le script.");
+  }
   if (!tokens.refresh_token) throw new OAuthError("no_refresh_token", "Google n'a pas fourni de jeton de renouvellement. Retirez l'accès sur https://myaccount.google.com/permissions puis relancez.");
-  const granted = String(tokens.scope ?? "").split(" ");
-  if (!granted.includes(DRIVE_SCOPE)) throw new OAuthError("scope_missing", "La permission Google Drive (drive.file) n'a pas été accordée. Relancez et cochez l'accès à Drive.");
+
+  // Permissions réellement accordées. Un champ `scope` absent ne vaut PAS refus :
+  // on interroge alors Google (tokeninfo) ; si c'est impossible, l'accès Drive
+  // réel (test ci-dessous) tranche.
+  const granted = parseGrantedScopes(tokens.scope) ?? (await fetchTokenScopes(fetchImpl, tokens.access_token));
+  if (granted && !granted.includes(DRIVE_SCOPE)) {
+    throw new OAuthError(
+      "scope_missing",
+      `Google n'a pas accordé la permission Google Drive (drive.file). Permissions accordées : ${describeScopes(granted)}. ` +
+        "Sur l'écran de consentement, cochez explicitement la case Google Drive (« Afficher, modifier, créer et supprimer uniquement les fichiers Google Drive que vous utilisez avec cette application »), puis relancez.",
+    );
+  }
 
   // Jeton d'identité reçu directement de Google en HTTPS : son contenu suffit à lire le compte.
   let identity = {};
@@ -150,6 +165,101 @@ export async function completeAuthorization({ fetchImpl = fetch, clientId, clien
   if (!probe.ok) throw new OAuthError("drive_probe_failed", `Accès Drive refusé (HTTP ${probe.status}). Vérifiez que l'API Google Drive est activée dans ce projet Google Cloud.`);
 
   return { refreshToken: tokens.refresh_token };
+}
+
+/**
+ * Liste des permissions d'une réponse de jeton. `null` = information absente
+ * (champ manquant ou vide) — à distinguer d'une liste qui exclut drive.file.
+ */
+export function parseGrantedScopes(scopeField) {
+  if (typeof scopeField !== "string") return null;
+  const scopes = scopeField.split(/\s+/).filter(Boolean);
+  return scopes.length ? scopes : null;
+}
+
+/** Noms courts des permissions (ce ne sont pas des secrets) pour un message lisible. */
+export function describeScopes(scopes) {
+  return scopes.length ? scopes.map((s) => s.replace("https://www.googleapis.com/auth/", "")).join(", ") : "aucune";
+}
+
+/**
+ * Permissions d'un jeton d'accès selon Google (tokeninfo), en POST pour que le
+ * jeton ne figure dans aucune URL. `null` si Google ne répond pas : l'appelant
+ * se fie alors au test d'accès Drive.
+ */
+export async function fetchTokenScopes(fetchImpl, accessToken) {
+  try {
+    const response = await fetchImpl("https://oauth2.googleapis.com/tokeninfo", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ access_token: accessToken }),
+    });
+    if (!response.ok) return null;
+    return parseGrantedScopes((await response.json()).scope);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Serveur local temporaire de redirection (127.0.0.1, port libre). Attend UN
+ * retour de Google sur /callback, le vérifie (parseCallback), puis s'arrête.
+ * Arrêt idempotent : délai dépassé, retour valide ou refus déclenchent la même
+ * fermeture une seule fois (minuterie annulée, connexions fermées) — aucune
+ * double fermeture, aucune promesse réglée deux fois.
+ */
+export function waitForAuthorizationCode({ state, timeoutMs, onListening }) {
+  let settled = false;
+  let timer;
+  const server = createServer();
+  const shutdown = () => {
+    clearTimeout(timer);
+    if (server.listening) server.close();
+    server.closeAllConnections?.();
+  };
+
+  const promise = new Promise((resolve, reject) => {
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      shutdown();
+      fn(value);
+    };
+
+    server.on("request", (req, res) => {
+      const path = new URL(req.url, "http://127.0.0.1").pathname;
+      if (path !== "/callback" || settled) {
+        res.writeHead(404, { Connection: "close" }).end();
+        return;
+      }
+      try {
+        const { code } = parseCallback(req.url, state);
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", Connection: "close" }).end("<p>Autorisation reçue. Revenez au terminal pour la suite.</p>");
+        settle(resolve, { code, redirectUri: `http://127.0.0.1:${server.address().port}/callback` });
+      } catch (error) {
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8", Connection: "close" }).end("<p>Autorisation refusée ou invalide. Revenez au terminal.</p>");
+        settle(reject, error);
+      }
+    });
+    server.on("error", (error) => settle(reject, new OAuthError("local_server_error", `Serveur local indisponible (${error.code ?? "erreur"}).`)));
+
+    server.listen(0, "127.0.0.1", () => {
+      timer = setTimeout(() => settle(reject, new OAuthError("timeout", "Délai dépassé sans retour de Google. Relancez le script.")), timeoutMs);
+      timer.unref?.();
+      try {
+        onListening?.(`http://127.0.0.1:${server.address().port}/callback`);
+      } catch (error) {
+        settle(reject, error);
+      }
+    });
+  });
+
+  // Le rejet peut survenir avant que l'appelant n'attende la promesse (retour
+  // du navigateur très rapide) : on l'observe ici pour qu'il ne devienne jamais
+  // un « unhandled rejection » qui ferait planter Node. L'appelant reçoit
+  // toujours le rejet en attendant `promise`.
+  promise.catch(() => undefined);
+  return { promise, server, shutdown };
 }
 
 /** Écriture des secrets — jamais en --dry-run, et seulement avec les trois valeurs. */
