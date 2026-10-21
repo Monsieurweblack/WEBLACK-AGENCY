@@ -753,6 +753,7 @@ const translations = {
     "privacy.seo.description":
       "Politique de confidentialité de WEBLACK : données collectées, finalités et droits des utilisateurs.",
     "footer.privacy": "Politique de confidentialité",
+    "footer.talentPlatform": "Plateforme WEBLACK TALENTS",
     "footer.privacyPreferences": "Préférences de confidentialité",
     "footer.rights": "Tous droits réservés.",
     "footer.since": "Fondée en 2010",
@@ -1519,6 +1520,7 @@ const translations = {
     "privacy.seo.description":
       "WEBLACK's privacy policy: what data is collected, why, and your rights as a user.",
     "footer.privacy": "Privacy policy",
+    "footer.talentPlatform": "WEBLACK TALENTS platform",
     "footer.privacyPreferences": "Privacy preferences",
     "footer.rights": "All rights reserved.",
     "footer.since": "Founded in 2010",

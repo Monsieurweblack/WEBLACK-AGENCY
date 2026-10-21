@@ -15,8 +15,8 @@ const LIMITED_USE = /Limited Use/;
 
 /** Pages publiques requises : chemin, langue, longueur minimale de texte, exigences propres. */
 export const REQUIRED_PAGES = [
-  { path: "/", lang: "fr", minText: 1500, privacyLink: PRIVACY_FR },
-  { path: "/en/", lang: "en", minText: 1500, privacyLink: PRIVACY_EN },
+  { path: "/", lang: "fr", minText: 1500, privacyLink: PRIVACY_FR, links: ["/talent/plateforme"] },
+  { path: "/en/", lang: "en", minText: 1500, privacyLink: PRIVACY_EN, links: ["/en/talent/plateforme"] },
   { path: "/talent/plateforme/", lang: "fr", minText: 3000, privacyLink: PRIVACY_FR, limitedUse: true, mentions: ["Google Drive", "drive.file", "18 ans"] },
   { path: "/en/talent/plateforme/", lang: "en", minText: 3000, privacyLink: PRIVACY_EN, limitedUse: true, mentions: ["Google Drive", "drive.file", "18"] },
   { path: "/politique-de-confidentialite/", lang: "fr", minText: 8000, limitedUse: true, mentions: ["Google Drive", "Resend", "Cloudflare", "Durées de conservation", "CNIL"] },
@@ -84,6 +84,7 @@ export function checkPage(html, page) {
   if (text.length < page.minText) problems.push(`contenu trop court (${text.length} caractères < ${page.minText})`);
   if (page.privacyLink && !new RegExp(`href="${page.privacyLink}/?"`).test(html)) problems.push(`aucun lien vers ${page.privacyLink}`);
   if (page.limitedUse && !LIMITED_USE.test(text)) problems.push("déclaration Google « Limited Use » absente");
+  for (const link of page.links ?? []) if (!new RegExp(`href="${link}/?"`).test(html)) problems.push(`aucun lien vers ${link}`);
   for (const word of page.mentions ?? []) if (!text.includes(word)) problems.push(`mention absente : ${word}`);
   return problems;
 }

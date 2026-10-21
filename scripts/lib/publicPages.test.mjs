@@ -13,8 +13,9 @@ const filler = (n) => "Texte descriptif réel de la page. ".repeat(Math.ceil(n /
 
 function pageHtml(page, { extra = "", canonical = `${SITE}${page.path}`, noindex = false } = {}) {
   const privacy = page.privacyLink ? `<a href="${page.privacyLink}">Politique</a>` : "";
+  const links = (page.links ?? []).map((l) => `<a href="${l}">lien</a>`).join("");
   const required = [...(page.mentions ?? []), page.limitedUse ? "including the Limited Use requirements" : ""].join(" ");
-  return `<!doctype html><html lang="${page.lang}"><head><link rel="canonical" href="${canonical}">${noindex ? '<meta name="robots" content="noindex">' : ""}</head><body><h1>Titre</h1><p>${filler(page.minText)} ${required}</p>${privacy}${extra}</body></html>`;
+  return `<!doctype html><html lang="${page.lang}"><head><link rel="canonical" href="${canonical}">${noindex ? '<meta name="robots" content="noindex">' : ""}</head><body><h1>Titre</h1><p>${filler(page.minText)} ${required}</p>${privacy}${links}${extra}</body></html>`;
 }
 
 function buildSite(mutate = () => undefined) {
@@ -74,4 +75,10 @@ test("secret publié ou raison sociale hors mentions légales : bloquant", () =>
   assert.ok(problems.some((p) => p.includes("/_astro/app.js") && p.includes("OAuth")));
   assert.ok(problems.some((p) => p.includes("/fuite.json") && p.includes("renouvellement")));
   assert.ok(problems.some((p) => p.includes("/journal/index.html") && p.includes("WEBLACK AFRICA")));
+});
+
+test("accueil sans lien vers la page de l'application WEBLACK TALENTS : signalé", () => {
+  const home = REQUIRED_PAGES[0];
+  const html = pageHtml(home).replace('href="/talent/plateforme"', 'href="/ailleurs"');
+  assert.ok(checkPage(html, home).some((p) => p.includes("/talent/plateforme")));
 });
