@@ -20,7 +20,10 @@ const mail = `mailto:${CONTACT_EMAIL}`;
   <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
     <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
       <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
-      <p class="text-sm text-(--color-ink)/60">Last updated: 20 October 2026</p>
+      <p class="text-sm text-(--color-ink)/60">
+        Last updated: 21 October 2026 · <a href={localizedPath("fr", "/politique-de-confidentialite")} hreflang="fr" lang="fr">Version française</a> ·
+        <a href="#google-user-data">Google user data</a>
+      </p>
 
       <p>
         This policy explains what personal data the weblack.fr website and the WEBLACK TALENTS application collect, why,
@@ -130,7 +133,7 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         <li>Website security and abuse prevention: WEBLACK's legitimate interest in protecting its services.</li>
       </ul>
 
-      <h2>4. Google user data (Google Drive API)</h2>
+      <h2 id="google-user-data">4. Google user data (Google Drive API)</h2>
       <p>
         The WEBLACK TALENTS application uses the Google Drive API to archive each application (a text summary and the
         photographs) in the Google Drive storage of the agency's account, {CONTACT_EMAIL}. Applicants never sign in with a
@@ -153,12 +156,24 @@ const mail = `mailto:${CONTACT_EMAIL}`;
           advertising and not used to train artificial intelligence models.
         </li>
         <li>
-          Storage and protection: the authorisation token is kept only in the host's (Cloudflare) encrypted secrets, never
-          in the code or in the browser.
+          Storage and protection: the refresh token is kept only in the host's (Cloudflare) encrypted secrets, never in
+          the code or in the browser; the access token only exists in memory for the duration of a request. The
+          account's email address is not stored by the application: it is only compared, at authorisation time, with
+          the expected address.
         </li>
         <li>
-          Revocation: the agency can revoke access at any time from its Google account settings; archiving then stops, with
-          no effect on applications already saved.
+          Retention and deletion: archived files stay in the agency's Google Drive; the application keeps only their Drive
+          identifiers (no content) in its database, for as long as the matching application. When the application is
+          deleted, its identifiers are erased and the Drive folder is moved to the trash, which Google empties after 30
+          days.
+        </li>
+        <li>
+          Human access: only authorised WEBLACK staff view archived applications, to review them; no one else has access.
+        </li>
+        <li>
+          Revocation: the agency can revoke access at any time from its Google account settings
+          (myaccount.google.com/permissions); archiving then stops, with no effect on applications already saved. Any
+          request about this data: <a href={mail}>{CONTACT_EMAIL}</a>.
         </li>
       </ul>
       <p>

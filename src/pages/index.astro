@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import HeroHome from "../components/sections/HeroHome.astro";
+import TalentsAppNotice from "../components/sections/TalentsAppNotice.astro";
 import LivePriority from "../components/sections/LivePriority.astro";
 import ManifestoQuote from "../components/sections/ManifestoQuote.astro";
 import DivisionsGrid from "../components/sections/DivisionsGrid.astro";
@@ -154,6 +155,7 @@ const translations: TranslationMap = {
 
   {/* ATTENTION */}
   <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
+  <TalentsAppNotice lang={lang} variant="section" />
 
   {/* IDENTIFICATION — dans quel monde travaille WEBLACK */}
   <TerritoriesMarquee lang={lang} />

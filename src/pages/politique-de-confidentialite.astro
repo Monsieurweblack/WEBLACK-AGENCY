@@ -21,7 +21,10 @@ const mail = `mailto:${CONTACT_EMAIL}`;
   <section class="bg-(--color-paper) px-6 pb-24 pt-40 md:px-10 md:pb-32">
     <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
       <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
-      <p class="text-sm text-(--color-ink)/60">Dernière mise à jour : 20 octobre 2026</p>
+      <p class="text-sm text-(--color-ink)/60">
+        Dernière mise à jour : 21 octobre 2026 · <a href={localizedPath("en", "/politique-de-confidentialite")} hreflang="en" lang="en">English version</a> ·
+        <a href="#donnees-google">Données utilisateur Google</a>
+      </p>
 
       <p>
         Cette politique explique quelles données personnelles le site weblack.fr et l'application WEBLACK TALENTS
@@ -133,7 +136,7 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         <li>Sécurité du site et prévention des abus : intérêt légitime de WEBLACK à protéger ses services.</li>
       </ul>
 
-      <h2>4. Données utilisateur Google (API Google Drive)</h2>
+      <h2 id="donnees-google">4. Données utilisateur Google (API Google Drive)</h2>
       <p>
         L'application WEBLACK TALENTS utilise l'API Google Drive pour archiver chaque candidature (un récapitulatif texte
         et les photographies) dans l'espace Google Drive du compte de l'agence, {CONTACT_EMAIL}. Les candidats ne se
@@ -156,12 +159,25 @@ const mail = `mailto:${CONTACT_EMAIL}`;
           servent pas à la publicité et ne sont pas utilisées pour entraîner des modèles d'intelligence artificielle.
         </li>
         <li>
-          Stockage et protection : le jeton d'autorisation est conservé uniquement dans les secrets chiffrés de
-          l'hébergeur (Cloudflare), jamais dans le code ni dans le navigateur.
+          Stockage et protection : le jeton de renouvellement est conservé uniquement dans les secrets chiffrés de
+          l'hébergeur (Cloudflare), jamais dans le code ni dans le navigateur ; le jeton d'accès n'existe qu'en mémoire,
+          le temps d'une requête. L'adresse e-mail du compte n'est pas enregistrée par l'application : elle est
+          seulement comparée, au moment de l'autorisation, à l'adresse attendue.
         </li>
         <li>
-          Retrait : l'agence peut retirer l'accès à tout moment depuis les paramètres de son compte Google ; l'archivage
-          s'arrête alors, sans effet sur les candidatures déjà enregistrées.
+          Conservation et suppression : les fichiers archivés restent dans le Google Drive de l'agence ; l'application
+          conserve uniquement leurs identifiants Drive (sans contenu) dans sa base de données, aussi longtemps que la
+          candidature correspondante. Lorsque la candidature est supprimée, ses identifiants sont effacés et le dossier
+          Drive est placé dans la corbeille, vidée par Google au bout de 30 jours.
+        </li>
+        <li>
+          Accès humain : seules les personnes habilitées de WEBLACK consultent les dossiers archivés, pour l'examen des
+          candidatures ; aucune autre personne n'y a accès.
+        </li>
+        <li>
+          Retrait : l'agence peut retirer l'accès à tout moment depuis les paramètres de son compte Google
+          (myaccount.google.com/permissions) ; l'archivage s'arrête alors, sans effet sur les candidatures déjà
+          enregistrées. Toute demande relative à ces données : <a href={mail}>{CONTACT_EMAIL}</a>.
         </li>
       </ul>
       <p>

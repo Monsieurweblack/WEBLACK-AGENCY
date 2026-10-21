@@ -1,0 +1,80 @@
+---
+/**
+ * Présentation de l'application WEBLACK TALENTS sur la page d'accueil.
+ *
+ * Google Auth Platform exige que la page d'accueil déclarée explique
+ * l'application et mène à sa politique de confidentialité, sans connexion.
+ * Rendu volontairement SANS animation d'apparition (pas de data-reveal) :
+ * un contrôle automatique qui ne fait pas défiler la page voit tout.
+ *
+ *  - variant="hero"    : une ligne dans le premier écran (sous les boutons du hero) ;
+ *  - variant="section" : un bloc explicatif juste après le hero.
+ *
+ * Chaque affirmation correspond au fonctionnement réel (voir /talent/plateforme/).
+ */
+import { localizedPath, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  variant: "hero" | "section";
+}
+
+const { lang, variant } = Astro.props;
+const fr = lang === "fr";
+const platform = localizedPath(lang, "/talent/plateforme");
+const apply = localizedPath(lang, "/talent/candidature");
+const privacy = localizedPath(lang, "/politique-de-confidentialite");
+---
+
+{
+  variant === "hero" ? (
+    <p class="mt-4 text-sm text-(--color-paper)/70" data-talents-app-notice="hero">
+      <a href={platform} class="font-semibold text-(--color-paper) underline underline-offset-4 hover:text-(--color-gold)">
+        WEBLACK TALENTS
+      </a>
+      {fr ? " — candidature en ligne pour les talents" : " — online applications for talent"}
+      <span aria-hidden="true"> · </span>
+      <a href={privacy} class="underline underline-offset-4 hover:text-(--color-gold)">
+        {fr ? "Confidentialité" : "Privacy"}
+      </a>
+    </p>
+  ) : (
+    <section
+      class="border-y border-(--color-line) bg-(--color-ink-soft) px-6 py-14 md:px-10 md:py-16"
+      aria-labelledby="talents-app-title"
+      data-talents-app-notice="section"
+    >
+      <div class="mx-auto grid max-w-(--container-content) gap-8 md:grid-cols-[1fr_1.2fr] md:gap-16">
+        <div>
+          <p class="label-tracked text-(--color-gold)">WEBLACK TALENTS</p>
+          <h2 id="talents-app-title" class="font-display mt-3 text-3xl text-balance text-(--color-paper) sm:text-4xl">
+            {fr ? "La plateforme de candidature de la division Talent" : "The Talent division's application platform"}
+          </h2>
+        </div>
+        <div class="space-y-4 text-(--color-paper)/75">
+          <p>
+            {fr
+              ? "WEBLACK TALENTS permet aux mannequins, modèles et profils créatifs de 18 ans et plus de déposer leur candidature en ligne, en français ou en anglais, sans créer de compte : coordonnées, profil professionnel et photographies."
+              : "WEBLACK TALENTS lets models and creative profiles aged 18 and over apply online, in French or English, without creating an account: contact details, professional profile and photographs."}
+          </p>
+          <p>
+            {fr
+              ? "Seule l'équipe WEBLACK habilitée examine les dossiers, dans un espace d'administration protégé. Une copie d'archive est rangée dans le Google Drive de l'agence ; les dossiers ne sont jamais publics."
+              : "Only authorised WEBLACK staff review applications, in a protected administration area. An archive copy is filed in the agency's Google Drive; applications are never public."}
+          </p>
+          <p class="flex flex-wrap gap-x-6 gap-y-2 pt-2">
+            <a href={platform} class="label-tracked text-(--color-gold) hover:text-(--color-gold-bright)">
+              {fr ? "Fonctionnement de la plateforme" : "How the platform works"} &rarr;
+            </a>
+            <a href={apply} class="label-tracked text-(--color-paper) hover:text-(--color-gold)">
+              {fr ? "Déposer une candidature" : "Apply"} &rarr;
+            </a>
+            <a href={privacy} class="label-tracked text-(--color-paper) hover:text-(--color-gold)">
+              {fr ? "Politique de confidentialité" : "Privacy policy"} &rarr;
+            </a>
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}

@@ -13,7 +13,7 @@ const filler = (n) => "Texte descriptif réel de la page. ".repeat(Math.ceil(n /
 
 function pageHtml(page, { extra = "", canonical = `${SITE}${page.path}`, noindex = false } = {}) {
   const privacy = page.privacyLink ? `<a href="${page.privacyLink}">Politique</a>` : "";
-  const links = (page.links ?? []).map((l) => `<a href="${l}">lien</a>`).join("");
+  const links = (page.links ?? []).map((l) => `<a href="${l}">lien</a>`).join("") + (page.ids ?? []).map((i) => `<h2 id="${i}">x</h2>`).join("");
   const required = [...(page.mentions ?? []), page.limitedUse ? "including the Limited Use requirements" : ""].join(" ");
   return `<!doctype html><html lang="${page.lang}"><head><link rel="canonical" href="${canonical}">${noindex ? '<meta name="robots" content="noindex">' : ""}</head><body><h1>Titre</h1><p>${filler(page.minText)} ${required}</p>${privacy}${links}${extra}</body></html>`;
 }
@@ -81,4 +81,12 @@ test("accueil sans lien vers la page de l'application WEBLACK TALENTS : signalé
   const home = REQUIRED_PAGES[0];
   const html = pageHtml(home).replace('href="/talent/plateforme"', 'href="/ailleurs"');
   assert.ok(checkPage(html, home).some((p) => p.includes("/talent/plateforme")));
+});
+
+test("accueil sans présentation de WEBLACK TALENTS, ou politique sans section Google ancrée : signalés", () => {
+  const home = REQUIRED_PAGES[0];
+  assert.ok(checkPage(pageHtml(home).replace(/WEBLACK TALENTS/g, "WEBLACK"), home).some((p) => p.includes("WEBLACK TALENTS")));
+  assert.ok(checkPage(pageHtml(home).replace('href="/talent/candidature"', 'href="/x"'), home).some((p) => p.includes("/talent/candidature")));
+  const policy = REQUIRED_PAGES.find((p) => p.path === "/en/politique-de-confidentialite/");
+  assert.ok(checkPage(pageHtml(policy).replace('id="google-user-data"', 'id="x"'), policy).some((p) => p.includes("#google-user-data")));
 });

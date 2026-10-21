@@ -1,6 +1,7 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
 import weblackSymbol from "../../assets/logo/weblack-symbol-clean.png";
+import TalentsAppNotice from "./TalentsAppNotice.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import type { HomepageHero } from "../../lib/content";
 
@@ -175,6 +176,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
         </a>
       )}
     </div>
+    <TalentsAppNotice lang={lang} variant="hero" />
   </div>
 
   <a

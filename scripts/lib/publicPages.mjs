@@ -15,12 +15,14 @@ const LIMITED_USE = /Limited Use/;
 
 /** Pages publiques requises : chemin, langue, longueur minimale de texte, exigences propres. */
 export const REQUIRED_PAGES = [
-  { path: "/", lang: "fr", minText: 1500, privacyLink: PRIVACY_FR, links: ["/talent/plateforme"] },
-  { path: "/en/", lang: "en", minText: 1500, privacyLink: PRIVACY_EN, links: ["/en/talent/plateforme"] },
+  // Accueil : présentation explicite de l'application (exigence Google Auth Platform), liens vers sa page,
+  // le parcours de candidature et la politique.
+  { path: "/", lang: "fr", minText: 1500, privacyLink: PRIVACY_FR, links: ["/talent/plateforme", "/talent/candidature"], mentions: ["WEBLACK TALENTS", "La plateforme de candidature", "Google Drive"] },
+  { path: "/en/", lang: "en", minText: 1500, privacyLink: PRIVACY_EN, links: ["/en/talent/plateforme", "/en/talent/candidature"], mentions: ["WEBLACK TALENTS", "application platform", "Google Drive"] },
   { path: "/talent/plateforme/", lang: "fr", minText: 3000, privacyLink: PRIVACY_FR, limitedUse: true, mentions: ["Google Drive", "drive.file", "18 ans"] },
   { path: "/en/talent/plateforme/", lang: "en", minText: 3000, privacyLink: PRIVACY_EN, limitedUse: true, mentions: ["Google Drive", "drive.file", "18"] },
-  { path: "/politique-de-confidentialite/", lang: "fr", minText: 8000, limitedUse: true, mentions: ["Google Drive", "Resend", "Cloudflare", "Durées de conservation", "CNIL"] },
-  { path: "/en/politique-de-confidentialite/", lang: "en", minText: 8000, limitedUse: true, mentions: ["Google Drive", "Resend", "Cloudflare", "Retention periods", "CNIL"] },
+  { path: "/politique-de-confidentialite/", lang: "fr", minText: 8000, limitedUse: true, links: ["/en/politique-de-confidentialite"], ids: ["donnees-google"], mentions: ["Google Drive", "Resend", "Cloudflare", "Durées de conservation", "CNIL", "drive.file", "Conservation et suppression"] },
+  { path: "/en/politique-de-confidentialite/", lang: "en", minText: 8000, limitedUse: true, links: ["/politique-de-confidentialite"], ids: ["google-user-data"], mentions: ["Google Drive", "Resend", "Cloudflare", "Retention periods", "CNIL", "drive.file", "Retention and deletion"] },
   { path: "/mentions-legales/", lang: "fr", minText: 1000, privacyLink: PRIVACY_FR },
   { path: "/en/mentions-legales/", lang: "en", minText: 1000, privacyLink: PRIVACY_EN },
   { path: "/talent/candidature/", lang: "fr", minText: 1000 },
@@ -85,6 +87,7 @@ export function checkPage(html, page) {
   if (page.privacyLink && !new RegExp(`href="${page.privacyLink}/?"`).test(html)) problems.push(`aucun lien vers ${page.privacyLink}`);
   if (page.limitedUse && !LIMITED_USE.test(text)) problems.push("déclaration Google « Limited Use » absente");
   for (const link of page.links ?? []) if (!new RegExp(`href="${link}/?"`).test(html)) problems.push(`aucun lien vers ${link}`);
+  for (const id of page.ids ?? []) if (!new RegExp(`id="${id}"`).test(html)) problems.push(`ancre #${id} absente`);
   for (const word of page.mentions ?? []) if (!text.includes(word)) problems.push(`mention absente : ${word}`);
   return problems;
 }
