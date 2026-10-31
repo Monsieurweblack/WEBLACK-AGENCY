@@ -3,6 +3,7 @@ import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { LOCALES } from "../../i18n/locales";
 import type { AgendaEventData, LivePublicData } from "../../lib/content";
 import { longDate, dateRange, placeLine, whoOf } from "../../lib/agenda-format";
+import { buildEventJsonLd } from "../../lib/agenda-structured-data";
 
 interface Props {
   lang: Lang;
@@ -32,36 +33,9 @@ const liveCtaLabel = relatedLive?.state === "REPLAY" ? t("live.event.watchReplay
  * ou un lieu qu'on n'a pas établis serait exactement la fabrication que
  * toute la chaîne existe pour empêcher. Un champ absent n'est pas déclaré.
  */
-const canDescribeEvent = Boolean(event.eventName && event.startDate && event.city);
-
-const structuredData = canDescribeEvent
-  ? {
-      "@context": "https://schema.org",
-      "@type": "Event",
-      name: event.eventName,
-      startDate: event.startDate,
-      ...(event.endDate ? { endDate: event.endDate } : {}),
-      eventStatus: "https://schema.org/EventScheduled",
-      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-      location: {
-        "@type": "Place",
-        // Pas de nom de lieu quand la source n'en donne pas : le Place se
-        // réduit alors à son adresse, la ville. Nommer la ville comme si
-        // elle était une salle serait une donnée inventée.
-        ...(event.venue ? { name: event.venue } : {}),
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: event.city,
-          ...(event.country ? { addressCountry: event.country } : {}),
-        },
-      },
-      ...(event.description ? { description: event.description } : {}),
-      ...(event.organizer ? { organizer: { "@type": "Organization", name: event.organizer } } : {}),
-      ...(event.artistOrCreator ? { performer: { "@type": "Person", name: event.artistOrCreator } } : {}),
-      url: event.officialUrl,
-      inLanguage: LOCALES[lang].hreflang,
-    }
-  : undefined;
+// Générateur unique du JSON-LD Event (organisateur déclaré seulement avec un
+// site vérifié) : src/lib/agenda-structured-data.ts.
+const structuredData = buildEventJsonLd(event, { inLanguage: LOCALES[lang].hreflang, description: event.description });
 
 const facts: { label: string; value: string }[] = [
   { label: t("agenda.label.when"), value: dateRange(event, lang, t("agenda.dateTo")) },

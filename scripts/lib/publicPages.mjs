@@ -92,6 +92,46 @@ export function checkPage(html, page) {
   return problems;
 }
 
+/**
+ * Données structurées d'une page : chaque bloc JSON-LD doit être du JSON
+ * valide ; chaque Event doit porter name, startDate et location ; tout
+ * organisateur déclaré doit avoir une url absolue https (anomalie Search
+ * Console « url manquant dans organizer »).
+ */
+export function checkStructuredData(html) {
+  const problems = [];
+  let events = 0;
+  let organizers = 0;
+  for (const match of html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)) {
+    let data;
+    try {
+      data = JSON.parse(match[1]);
+    } catch {
+      problems.push("bloc JSON-LD invalide");
+      continue;
+    }
+    const visit = (node) => {
+      if (Array.isArray(node)) return node.forEach(visit);
+      if (!node || typeof node !== "object") return;
+      const types = [].concat(node["@type"] ?? []);
+      if (types.includes("Event")) {
+        events += 1;
+        for (const key of ["name", "startDate", "location"]) if (!node[key]) problems.push(`Event sans ${key}`);
+      }
+      if (node.organizer !== undefined) {
+        for (const org of [].concat(node.organizer)) {
+          organizers += 1;
+          if (!org || typeof org !== "object" || !org.name) problems.push("organizer sans name");
+          else if (typeof org.url !== "string" || !/^https:\/\/[^\s/]+/.test(org.url)) problems.push(`organizer « ${org.name} » sans url https`);
+        }
+      }
+      for (const value of Object.values(node)) if (value && typeof value === "object") visit(value);
+    };
+    visit(data);
+  }
+  return { events, organizers, problems };
+}
+
 /** Renvoie la liste des problèmes trouvés dans dist/ (vide = conforme). */
 export function checkPublicPages(dist) {
   const problems = [];
@@ -110,6 +150,7 @@ export function checkPublicPages(dist) {
     const content = readFileSync(file, "utf8");
     const rel = `/${relative(dist, file).split(sep).join("/")}`;
     for (const [pattern, label] of SECRET_PATTERNS) if (pattern.test(content)) problems.push(`${rel} : ${label} détecté`);
+    if (rel.endsWith(".html")) for (const problem of checkStructuredData(content).problems) problems.push(`${rel} : données structurées — ${problem}`);
     // Contact données personnelles unique : weblackconsulting@gmail.com (décision du responsable,
     // 20/10/2026). security.txt (signalement de failles, fonction distincte) n'est pas une page HTML.
     if (rel.endsWith(".html") && /weblackmedias@gmail\.com/.test(content)) problems.push(`${rel} : ancienne adresse de contact weblackmedias@gmail.com`);

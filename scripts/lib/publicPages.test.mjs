@@ -90,3 +90,15 @@ test("accueil sans présentation de WEBLACK TALENTS, ou politique sans section G
   const policy = REQUIRED_PAGES.find((p) => p.path === "/en/politique-de-confidentialite/");
   assert.ok(checkPage(pageHtml(policy).replace('id="google-user-data"', 'id="x"'), policy).some((p) => p.includes("#google-user-data")));
 });
+
+test("données structurées : organisateur sans url, Event incomplet ou JSON-LD invalide → bloquant", async () => {
+  const { checkStructuredData } = await import("./publicPages.mjs");
+  const block = (data) => `<script type="application/ld+json">${typeof data === "string" ? data : JSON.stringify(data)}</script>`;
+  const event = { "@context": "https://schema.org", "@type": "Event", name: "Expo", startDate: "2026-11-01", location: { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: "Paris" } } };
+  assert.deepEqual(checkStructuredData(block(event)), { events: 1, organizers: 0, problems: [] });
+  assert.deepEqual(checkStructuredData(block({ ...event, organizer: { "@type": "Organization", name: "MoMu", url: "https://www.momu.be/" } })).problems, []);
+  assert.ok(checkStructuredData(block({ ...event, organizer: { "@type": "Organization", name: "MoMu" } })).problems.some((p) => p.includes("sans url")));
+  assert.ok(checkStructuredData(block({ ...event, organizer: { "@type": "Organization", name: "X", url: "/relative" } })).problems.some((p) => p.includes("sans url")));
+  assert.ok(checkStructuredData(block({ "@graph": [{ ...event, startDate: undefined }] })).problems.some((p) => p.includes("startDate")));
+  assert.ok(checkStructuredData(block("{invalide")).problems.includes("bloc JSON-LD invalide"));
+});
