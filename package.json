@@ -50,6 +50,7 @@
     "@astrojs/check": "^0.9.10",
     "pdf-lib": "^1.17.1",
     "playwright": "^1.63.0",
+    "sharp": "^0.35.5",
     "typescript": "^6.0.3"
   },
   "allowScripts": {

@@ -10,8 +10,9 @@ import { LOCALES } from "../i18n/locales";
 import { getSiteSettings } from "../lib/content";
 // Importées en `?url` pour que Vite renvoie le chemin empreinté réellement
 // servi : écrire ces noms à la main préchargerait un fichier périmé au
-// premier changement de version de la police.
-import fraunces from "@fontsource-variable/fraunces/files/fraunces-latin-full-normal.woff2?url";
+// premier changement de version de la police. Même fichier que l'@import
+// de global.css (« standard ») : en diverger ferait télécharger les deux.
+import fraunces from "@fontsource-variable/fraunces/files/fraunces-latin-standard-normal.woff2?url";
 import manrope from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
 
 interface Props {

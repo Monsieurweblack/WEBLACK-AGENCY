@@ -90,6 +90,21 @@ export default defineConfig({
   build: {
     inlineStylesheets: 'always',
   },
+  // Variantes d'images générées UNIQUEMENT à la compilation (sharp, outil
+  // d'images officiel d'Astro) — aucune transformation à l'exécution.
+  // Réglages choisis par mesure contre le banding sur fond #0A0A0A
+  // (comparatifs PR 0) : chroma 4:4:4 partout, qualité fixée à l'appel
+  // (AVIF 90, WebP 95 — voir src/components/media/RemoteImage.astro).
+  image: {
+    service: {
+      entrypoint: 'astro/assets/services/sharp',
+      config: {
+        avif: { chromaSubsampling: '4:4:4' },
+        webp: { smartSubsample: true },
+        jpeg: { mozjpeg: true, chromaSubsampling: '4:4:4' },
+      },
+    },
+  },
   integrations: [
     sitemap({
       filter: (page) => !NOINDEX_PATHS.some((path) => page.endsWith(path)),

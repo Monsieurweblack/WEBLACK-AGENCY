@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
-@import "@fontsource-variable/fraunces/full.css";
+/*
+ * Fraunces « standard » (axes wght + opsz) et non « full » : SOFT et WONK
+ * ne sont utilisés nulle part, et le rendu est identique au pixel près
+ * (romain et italique, 128 → 14 px, graisses 300 → 700 — comparatif PR 0).
+ * 67 Ko au lieu de 121 Ko sur le chemin critique du premier rendu.
+ */
+@import "@fontsource-variable/fraunces/standard.css";
 @import "@fontsource-variable/manrope";
 
 @theme {

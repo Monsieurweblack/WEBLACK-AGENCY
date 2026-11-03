@@ -166,6 +166,17 @@ const liveHref = localizedPath(lang, "/live");
     </nav>
   </noscript>
 </header>
+{/*
+  Première mesure de --header-h, synchrone, dès que l'en-tête est analysé :
+  avant la première peinture. nav.ts (module différé, chargé avec GSAP)
+  n'arrivait qu'après ~3 s en 4G lente ; d'ici là le padding du hero,
+  calculé sur cette variable, était invalide, puis tout le bloc sautait —
+  CLS 0,353 mesuré sur l'accueil mobile. nav.ts reprend ensuite la même
+  mesure et la tient à jour (resize, ResizeObserver).
+*/}
+<script is:inline>
+  document.documentElement.style.setProperty("--header-h", document.getElementById("site-header").getBoundingClientRect().height + "px");
+</script>
 
 <div
   id="site-menu"

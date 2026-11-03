@@ -1,5 +1,6 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
+import { getImage } from "astro:assets";
 import weblackSymbol from "../../assets/logo/weblack-symbol-clean.png";
 import TalentsAppNotice from "./TalentsAppNotice.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
@@ -19,6 +20,11 @@ interface Props {
 }
 
 const { lang, heroImage, hero } = Astro.props;
+// Le symbole n'est utilisé que comme masque CSS (seul son canal alpha
+// compte) : WebP généré à la compilation (canal alpha encodé sans perte,
+// alphaQuality 100 par défaut) au lieu du PNG de
+// 190 Ko, mêmes dimensions, même alpha.
+const symbolMask = await getImage({ src: weblackSymbol, format: "webp", quality: 100 });
 const t = useTranslations(lang);
 
 const tagline = hero?.eyebrow ?? t("home.hero.tagline");
@@ -103,7 +109,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <span data-hero-ring aria-hidden="true"></span>
     <div
       data-hero-mark
-      style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${weblackSymbol.src}); mask-image: url(${weblackSymbol.src});`}
+      style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
       class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
     >
     </div>
