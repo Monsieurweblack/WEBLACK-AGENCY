@@ -38,23 +38,24 @@ Chaque entrée : où, constat mesuré, pourquoi elle n'est pas soldée, quand la
   testé en `--dry-run` (cibles résolues, commit inconnu refusé). Le test réel
   sans effet visible (bascule vers le déploiement déjà actif) touche la
   production : il attend le feu vert, juste avant la promotion P0.
-- **LCP au-dessus du budget sur deux routes — BLOQUANT pour la mise en
-  production.** Lighthouse mobile, bridage devtools (562 ms RTT simulé,
-  1,47 Mb/s), médiane runs 2–4. Mesures après `0914350` (préchargement de
-  l'image LCP depuis le <head>, galerie NTA retenue jusqu'à l'arrivée du
-  bandeau) : aperçu Cloudflare `/talent/` 2,64 s (PR 0 : 2,59 s ;
-  production 3,65 s), NTA 3,00 s (PR 0 : 5,34 s ; production 7,61 s).
-  Le préchargement fonctionne (l'image part au premier octet du HTML, à
-  765 ms) : la limite est désormais la bande passante, HTML puis image +
-  fontes. Trois variantes mesurées sur le même banc (Lighthouse local) :
-  A, état actuel, talent 2,79 s / NTA 2,90 s ; B, fontes non préchargées,
-  talent 2,22 s mais CLS jusqu'à 0,36 (la bascule de police décale le bloc
-  de titre ancré en bas du bandeau) — écartée ; C, fontes préchargées en
-  priorité basse, talent 2,82 s / NTA 2,90 s — sans effet, écartée.
-  Passer sous 2,5 s exige d'envoyer moins d'octets d'image (NTA : 166 Ko
-  pour la variante 800 px AVIF q90 d'une photo textile dense), donc un
-  recadrage portrait mobile ou un réglage d'encodage du bandeau : touche la
-  règle D-6, décision du propriétaire.
+- **LCP NTA au-dessus du budget — BLOQUANT pour la mise en production.**
+  Lighthouse mobile, bridage devtools (562 ms RTT simulé, 1,47 Mb/s), run 1
+  écarté, médiane des runs 2–4, aperçu Cloudflare.
+  `/talent/` est SOLDÉ : 2088/2092/2089 ms → 2,09 s (`ba33434`).
+  `/selected-work/nuit-du-textile-africain-nta/` : 2685/2647/2591 ms →
+  2,65 s (`ba33434`) ; 2580/2913/3005 ms → 2,91 s (`4da2795`, code de la
+  route identique, écart de réseau entre séries). Production : 7,61 s.
+  Ce qui reste : premier octet du HTML à ~750 ms (un aller-retour simulé),
+  puis l'image (117 Ko, carré portrait AVIF q90 4:4:4) partage la bande
+  passante avec les deux fontes préchargées (91 Ko) jusqu'à ~2,6 s.
+  Écartés sur mesures : effort AVIF 9 (pas de gain à q90), fontes non
+  préchargées (talent 2,22 s mais CLS jusqu'à 0,36 : la bascule de police
+  décale le bloc de titre ancré en bas du bandeau), fontes en priorité basse
+  (sans effet sous ce bridage). Pistes restantes, chacune avec un coût à
+  arbitrer : polices de repli à métriques ajustées (size-adjust) pour
+  retirer le préchargement des fontes sans décalage — validation multi-
+  appareils nécessaire ; une couverture NTA moins texturée (choix
+  éditorial) ; un encodage différent du seul bandeau (touche D-6).
 - **Nommage des branches.** `immersive/pr-N-slug` est impossible à côté
   d'une branche `immersive` (Git ne peut pas avoir `refs/heads/immersive` à
   la fois fichier et dossier) : repli `immersive-pr-N-slug`.
