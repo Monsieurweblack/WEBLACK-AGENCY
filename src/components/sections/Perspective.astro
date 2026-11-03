@@ -29,7 +29,7 @@ const steps = [1, 2, 3, 4, 5] as const;
       {
         steps.map((step, i) => (
           <li data-reveal data-reveal-delay={String(i * 0.08)}>
-            <span class="label-tracked text-(--color-ink)/35">0{step}</span>
+            <span class="label-tracked text-(--color-ink)/60">0{step}</span>
             <h3 class="font-display mt-4 text-2xl text-(--color-ink)">
               {t(`perspective.step${step}.name` as UiKey)}
             </h3>
