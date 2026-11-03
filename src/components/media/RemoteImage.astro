@@ -3,6 +3,7 @@ import { getImage } from "astro:assets";
 import weblackMark from "../../assets/logo/weblack-mark-gold-64.png";
 import { isValidImageSrc, isRemoteImageSrc } from "../../lib/image-src";
 import { localVariantWidths, LOCAL_PHOTO_QUALITY } from "../../lib/local-photos";
+import { sanityResponsiveImage } from "../../lib/sanity-image";
 
 /**
  * Les 23 photographies de public/photos/ restent versionnées et servies
@@ -89,9 +90,12 @@ function withWidth(url: string, w: number) {
   return u.toString();
 }
 
+// Images Sanity : paliers de largeur par l'image builder, jamais au-delà de
+// l'original (voir lib/sanity-image.ts). Autres hôtes distants : inchangé.
+const sanity = isRemote ? sanityResponsiveImage(src, width) : null;
 const widths = [Math.round(width * 0.75), width, Math.min(width * 1.5, 3200)];
-const srcset = isRemote ? widths.map((w) => `${withWidth(src, w)} ${w}w`).join(", ") : undefined;
-const finalSrc = isValidUrl ? (isRemote ? withWidth(src, width) : src) : undefined;
+const srcset = sanity ? sanity.srcset : isRemote ? widths.map((w) => `${withWidth(src, w)} ${w}w`).join(", ") : undefined;
+const finalSrc = isValidUrl ? (sanity ? sanity.src : isRemote ? withWidth(src, width) : src) : undefined;
 
 // Photo locale connue : variantes responsives AVIF puis WebP, l'original
 // intact en dernier repli (navigateurs sans AVIF ni WebP).

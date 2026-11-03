@@ -1,5 +1,6 @@
 import { createClient, type SanityClient } from "@sanity/client";
 import { toHTML } from "@portabletext/to-html";
+import { parseSanityImageUrl, sanityResponsiveImage } from "./sanity-image";
 import type { PortableTextBlock } from "@portabletext/types";
 import type { Lang } from "../i18n/utils";
 import { toPublicEvent, startsAfterPublication, isRunningNow, type AgendaEventData } from "./agenda-public";
@@ -298,7 +299,12 @@ function toHtmlSafe(blocks: (PortableTextBlock | { _type: "image"; asset?: { _re
           if (!url) return "";
           const alt = escapeAttr(value.alt ?? "");
           const caption = value.caption ? `<figcaption>${escapeAttr(value.caption)}</figcaption>` : "";
-          return `<figure><img src="${url}" alt="${alt}" loading="lazy" />${caption}</figure>`;
+          // Colonne d'article max-w-3xl (48rem) : paliers par l'image builder,
+          // dimensions explicites pour réserver la place (CLS).
+          const info = parseSanityImageUrl(url);
+          const responsive = sanityResponsiveImage(url, 1600);
+          if (!info || !responsive) return `<figure><img src="${url}" alt="${alt}" loading="lazy" />${caption}</figure>`;
+          return `<figure><img src="${escapeAttr(responsive.src)}" srcset="${escapeAttr(responsive.srcset)}" sizes="(min-width: 48rem) 48rem, 100vw" width="${info.width}" height="${info.height}" alt="${alt}" loading="lazy" decoding="async" />${caption}</figure>`;
         },
       },
     },
