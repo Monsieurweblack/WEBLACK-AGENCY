@@ -8,6 +8,7 @@
  */
 @import "@fontsource-variable/fraunces/standard.css";
 @import "@fontsource-variable/manrope";
+@import "./motion.css";
 
 @theme {
   /* Palette — noir / blanc / or subtil. Dark mode is the default/signature

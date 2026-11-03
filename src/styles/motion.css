@@ -1,0 +1,195 @@
+/*
+ * Système de mouvement WEBLACK — « le métier ».
+ *
+ * Un seul fil conducteur : le fil d'or qui se tend, traverse et relie. Tout
+ * mouvement ici sert une de ces fonctions — orienter (transition de page),
+ * relier (fil de la méthode, du parcours), révéler (image), installer
+ * (ouverture de l'accueil) — et rien d'autre.
+ *
+ * Règles du système :
+ *   - une seule courbe, --ease-signature (@theme), trois durées ci-dessous ;
+ *   - transform / opacity / clip-path uniquement : jamais de propriété qui
+ *     relance la mise en page à chaque image ;
+ *   - CSS d'abord. Les animations liées au défilement tournent hors du fil
+ *     principal (animation-timeline) ; un navigateur qui ne les connaît pas
+ *     affiche le contenu immobile et entièrement visible ;
+ *   - prefers-reduced-motion: reduce coupe tout. La règle globale de
+ *     global.css ramène les durées à ~0, mais une animation liée au
+ *     défilement n'a pas de durée : chaque bloc est donc explicitement
+ *     placé sous (prefers-reduced-motion: no-preference) ;
+ *   - aucun contenu n'est masqué sans que l'animation qui le révèle ne soit
+ *     garantie de tourner (pas d'état initial caché posé « en attendant » un
+ *     script).
+ */
+
+:root {
+  --motion-fast: 240ms;
+  --motion-base: 800ms;
+  --motion-slow: 1300ms;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /*
+   * 1 — Transitions entre pages. View Transitions inter-documents : la
+   * navigation reste une vraie navigation (historique, analytics, scripts de
+   * page, SEO intacts), le navigateur se charge seulement du fondu. Sans
+   * support (Firefox aujourd'hui), navigation ordinaire. L'en-tête porte son
+   * propre nom : il reste immobile pendant que la page change sous lui.
+   * La couverture d'une étude de cas devient le bandeau de sa page
+   * (« work-media », nommé au moment du clic par view-transitions.ts —
+   * jamais en dur, un nom en double annulerait la transition).
+   */
+  @view-transition {
+    navigation: auto;
+  }
+
+  #site-header {
+    view-transition-name: site-header;
+  }
+
+  ::view-transition-old(root) {
+    animation: vt-leave var(--motion-fast) var(--ease-signature) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-enter 560ms var(--ease-signature) both;
+  }
+
+  ::view-transition-group(work-media) {
+    animation-duration: 720ms;
+    animation-timing-function: var(--ease-signature);
+  }
+
+  /*
+   * 4 — Ouverture de l'accueil. Le titre se lève de sous sa ligne de base,
+   * l'or et l'appel suivent. Pur CSS : aucun script ne conditionne
+   * l'apparition. La phrase des piliers ([data-hero-pillars]) n'est
+   * volontairement PAS animée : c'est l'élément LCP de l'accueil (mesuré),
+   * la faire partir d'une opacité nulle retarderait la métrique.
+   */
+  [data-intro] {
+    animation: intro-rise var(--motion-slow) var(--ease-signature) both;
+    animation-delay: calc(120ms + var(--intro-i, 0) * 110ms);
+  }
+
+  [data-intro="title"] {
+    animation-name: intro-title;
+  }
+
+  [data-intro="mark"] {
+    animation-name: intro-mark;
+    animation-duration: 1800ms;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    /*
+     * 2 — Le fil. Un trait d'or qui se tend sur la largeur d'une séquence
+     * (les cinq temps de WEBLACK Perspective, le parcours Talent) au rythme
+     * où on la lit. Sans support : le trait est simplement là, tendu.
+     */
+    [data-thread] {
+      view-timeline-name: --thread;
+    }
+
+    [data-thread]::before {
+      animation: thread-draw linear both;
+      animation-timeline: --thread;
+      animation-range: entry 30% cover 50%;
+    }
+
+    /*
+     * 3 — Dévoilement d'image. Le cadre s'ouvre depuis le centre pendant que
+     * la photographie se pose — une révélation, pas un zoom décoratif. Le
+     * cadre garde sa taille : rien ne bouge autour.
+     */
+    [data-unveil] {
+      animation: unveil linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+
+    [data-unveil] img {
+      animation: unveil-settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+  }
+}
+
+/*
+ * Le trait lui-même existe hors de toute préférence de mouvement : sans
+ * animation, il est tendu d'un bord à l'autre. Pseudo-élément et non
+ * <span> : une <ol> ne doit contenir que des <li>.
+ */
+[data-thread]::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--color-gold);
+  transform-origin: left center;
+}
+
+@keyframes vt-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-1.5vh);
+  }
+}
+
+@keyframes vt-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2.5vh);
+  }
+}
+
+@keyframes intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+}
+
+/* Bornes négatives : leading-[0.95] fait déborder le haut des capitales de
+   la boîte de ligne — un inset(0) final les rognerait. */
+@keyframes intro-title {
+  from {
+    clip-path: inset(-25% -5% 100% -5%);
+    transform: translateY(35%);
+  }
+  to {
+    clip-path: inset(-25% -5% -25% -5%);
+  }
+}
+
+@keyframes intro-mark {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes thread-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes unveil {
+  from {
+    clip-path: inset(10% 8% 10% 8%);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes unveil-settle {
+  from {
+    transform: scale(1.12);
+  }
+}

@@ -16,6 +16,7 @@ const href = localizedPath(lang, `/selected-work/${work.data.slug}`);
 
 <a href={href} class="group block focus-visible:outline-none" data-reveal data-reveal-delay={String((index % 3) * 0.08)}>
   <div
+    data-unveil
     class="relative aspect-[4/5] overflow-hidden bg-(--color-ink-soft) transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-(--color-gold) group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-(--color-ink)"
   >
     <RemoteImage

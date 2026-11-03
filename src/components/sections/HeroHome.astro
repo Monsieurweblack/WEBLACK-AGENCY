@@ -75,6 +75,8 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     >
     </div>
     <div class="absolute inset-0 bg-(--color-ink)/20"></div>
+    {/* La trame (scripts/motion/weave.ts) : transparente tant qu'elle ne tourne pas. */}
+    <canvas data-weave class="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-[1400ms]"></canvas>
   </div>
 
   {/*
@@ -109,6 +111,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <span data-hero-ring aria-hidden="true"></span>
     <div
       data-hero-mark
+      data-intro="mark"
       style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
       class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
     >
@@ -147,11 +150,12 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
       déjà réduits au minimum.
     */}
     <h1
+      data-intro="title"
       class="font-display text-balance text-[clamp(2.25rem,10svh,3.75rem)] leading-[0.95] text-(--color-paper) sm:text-[clamp(1.875rem,10svh,6rem)] lg:text-9xl"
     >
       WEBLACK
     </h1>
-    <p class="label-tracked label-tracked-dot mt-[clamp(0.25rem,2svh,1.5rem)] text-(--color-gold) lg:mt-6">{tagline}</p>
+    <p data-intro style="--intro-i: 1" class="label-tracked label-tracked-dot mt-[clamp(0.25rem,2svh,1.5rem)] text-(--color-gold) lg:mt-6">{tagline}</p>
     {/*
       max-w-xl vise un confort de lecture normal ; sur le paysage téléphone
       le plus court et le plus étroit (667×375), cette même largeur forçait
@@ -166,7 +170,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     >
       {pillars}
     </p>
-    <div class="mt-[clamp(0.5rem,3svh,2.5rem)] flex flex-wrap items-center gap-4 lg:mt-10">
+    <div data-intro style="--intro-i: 3" class="mt-[clamp(0.5rem,3svh,2.5rem)] flex flex-wrap items-center gap-4 lg:mt-10">
       <a
         href={ctaExploreHref}
         class="inline-flex items-center justify-center bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
@@ -193,6 +197,26 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <span class="label-tracked">{t("home.hero.scroll")}</span>
   </a>
 </section>
+
+<script>
+  import { motionProfile } from "../../scripts/motion/capability";
+
+  // La trame n'arrive qu'après le chargement complet et un temps mort du
+  // navigateur : elle ne dispute jamais la bande passante ni le fil principal
+  // au premier rendu (l'élément LCP de l'accueil est la phrase des piliers).
+  const canvas = document.querySelector<HTMLCanvasElement>("[data-weave]");
+  const section = document.querySelector<HTMLElement>("[data-hero-section]");
+  if (canvas && section && motionProfile() === "full") {
+    const start = async () => {
+      const { startWeave } = await import("../../scripts/motion/weave");
+      startWeave({ canvas, section, mark: section.querySelector<HTMLElement>("[data-hero-mark]") });
+    };
+    const whenIdle = () =>
+      "requestIdleCallback" in window ? requestIdleCallback(start, { timeout: 3000 }) : setTimeout(start, 300);
+    if (document.readyState === "complete") whenIdle();
+    else window.addEventListener("load", whenIdle, { once: true });
+  }
+</script>
 
 <style>
   /*

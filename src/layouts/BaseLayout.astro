@@ -160,6 +160,51 @@ const lcpPreload =
         }
       } catch (e) {}
     </script>
+    <!--
+      Continuité couverture → étude de cas (voir motion.css, « work-media »).
+      Le nom de transition est posé au dernier moment, sur UN seul élément :
+      dans l'ancienne page, la couverture visible du lien cliqué
+      (pageswap) ; dans la nouvelle, le bandeau [data-vt-hero] (pagereveal,
+      avant le premier rendu — d'où un script classique dans le <head>). Un
+      nom écrit en dur dans les gabarits se retrouverait en double dès que
+      deux cartes du même projet cohabitent, et le navigateur annulerait la
+      transition. Sans support : rien ne se passe, navigation ordinaire.
+    -->
+    <script is:inline>
+      (function () {
+        var NAME = "work-media";
+        var WORK = /\/selected-work\/[^/]+\/?$/;
+        var path = function (url) {
+          return new URL(url, location.href).pathname.replace(/\/$/, "");
+        };
+        addEventListener("pageswap", function (event) {
+          if (!event.viewTransition || !event.activation) return;
+          var target = event.activation.entry.url;
+          if (!WORK.test(path(target))) return;
+          var links = document.querySelectorAll("a[href]");
+          for (var i = 0; i < links.length; i++) {
+            var media = links[i].querySelector("figure");
+            if (!media || path(links[i].href) !== path(target)) continue;
+            var box = media.getBoundingClientRect();
+            if (box.bottom <= 0 || box.top >= innerHeight) continue;
+            media.style.viewTransitionName = NAME;
+            event.viewTransition.finished.finally(function () {
+              media.style.viewTransitionName = "";
+            });
+            return;
+          }
+        });
+        addEventListener("pagereveal", function (event) {
+          if (!event.viewTransition) return;
+          var hero = document.querySelector("[data-vt-hero]");
+          if (!hero) return;
+          hero.style.viewTransitionName = NAME;
+          event.viewTransition.finished.finally(function () {
+            hero.style.viewTransitionName = "";
+          });
+        });
+      })();
+    </script>
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/png" href="/favicon-32.png" />
