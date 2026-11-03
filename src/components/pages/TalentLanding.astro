@@ -164,7 +164,8 @@ const otherProfiles = ["brand", "media", "creative"] as const;
         </a>
       </div>
 
-      <div class="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* data-after-lcp : la couverture ZÉ DÉFILÉ est aussi le bandeau de cette page ; sa variante carte se téléchargeait en concurrence avec lui (voir global.css, .defer-media). */}
+      <div class="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2" data-after-lcp>
         {zeDefile && (
           <a href={localizedPath(lang, `/selected-work/${zeDefile.data.slug}`)} class="group block" data-reveal>
             <div class="relative aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
