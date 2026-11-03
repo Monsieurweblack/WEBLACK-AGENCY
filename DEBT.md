@@ -36,6 +36,19 @@ Chaque entrée : où, constat mesuré, pourquoi elle n'est pas soldée, quand la
   testé en `--dry-run` (cibles résolues, commit inconnu refusé). Le test réel
   sans effet visible (bascule vers le déploiement déjà actif) touche la
   production : il attend le feu vert, juste avant la promotion P0.
+- **LCP au-dessus du budget sur deux routes** (Lighthouse mobile, bridage
+  devtools, médiane runs 2–4, aperçu Cloudflare) :
+  `/selected-work/nuit-du-textile-africain-nta/` 5,34 s (production 7,61 s) et
+  `/talent/` 2,59 s (production 3,65 s). PR 0 améliore, n'atteint pas
+  2,5 s. Cause NTA : variante 800 px AVIF q90 de la photo textile = 167 Ko
+  (texture dense), téléchargée en concurrence avec ~400 Ko de galerie
+  (images différées, mais dans le seuil de chargement anticipé de Chrome en
+  réseau lent). Baisser la qualité gagnerait ~50 Ko (q80 : 117 Ko) au prix
+  de plus d'aplatissement (31 → 37 %) sur une photo à 11 % de dégradés
+  sombres : écarté (D-6). Préchargement en <head> écarté : l'image est déjà
+  découverte par le préchargeur, le délai de 0,9 s est le HTML + un aller-
+  retour. Pistes : ordonner le chargement de la galerie après le LCP
+  (PR 1, orchestrateur), ou un recadrage dédié du visuel de couverture.
 - **Nommage des branches.** `immersive/pr-N-slug` est impossible à côté
   d'une branche `immersive` (Git ne peut pas avoir `refs/heads/immersive` à
   la fois fichier et dossier) : repli `immersive-pr-N-slug`.
