@@ -72,19 +72,14 @@ export interface ContentIdAlias {
  * the day either has content that needs it) — nothing here is hardcoded to
  * exactly two languages.
  *
- * Verified 2026-08-29 directly against Sanity: both fr/en documents share
- * relatedWorkSlug = "nuit-du-textile-africain-bamako", confirming they cover
- * the same announcement.
+ * Empty since 2026-11-03: the only entry (NTA partnership announcement,
+ * fr "l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine"
+ * ↔ en "partenariat-nuit-du-textile-africain", verified 2026-08-29 via their
+ * shared relatedWorkSlug "nuit-du-textile-africain-bamako") was removed
+ * because the EN document was unpublished in Sanity — it survives only as a
+ * draft. If it is published again, restore that exact pair.
  */
-export const CONTENT_ID_ALIASES: ContentIdAlias[] = [
-  {
-    type: "journal",
-    slugs: {
-      fr: "l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine",
-      en: "partenariat-nuit-du-textile-africain",
-    },
-  },
-];
+export const CONTENT_ID_ALIASES: ContentIdAlias[] = [];
 
 /**
  * Resolves a (type, lang, slug) triple to a stable contentId. The canonical

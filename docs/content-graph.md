@@ -46,6 +46,8 @@ Sanity has no field that ties together the FR and EN documents for "the same" pi
 
   Verified directly against live Sanity data before being added: both documents independently declare the same `relatedWorkSlug` (`nuit-du-textile-africain-bamako`), confirming they cover the same real announcement — not a guess.
 
+  **Removed 2026-11-03:** the EN document was unpublished in Sanity (only its draft remains), which made the stale-alias integrity check fail every build. The table is empty until that article is published again — then restore the pair above as-is.
+
 ### Adding an alias
 
 Only add an entry to `CONTENT_ID_ALIASES` when you have personally confirmed, from the actual Sanity data (not from titles or dates alone), that two documents in different languages are the same content published under different slugs. A shared `relatedWorkSlug` pointing at the same project, as in the NTA case, is good corroborating evidence. When in doubt, leave it out — an unaliased pair simply isn't unified under one contentId; it does not break anything.
