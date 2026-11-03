@@ -118,7 +118,8 @@ const finalSrc = image?.src;
     ) : null
   }
   <div hidden={isValidUrl} class="absolute inset-0 flex items-center justify-center bg-(--color-ink-soft)">
-    <img src={weblackMark.src} alt="" width="28" height="28" class="opacity-30" />
+    {/* loading="lazy" : masqué (hidden) tant que l'image tient, il n'est alors jamais téléchargé — 7 Ko de moins avant le LCP. */}
+    <img src={weblackMark.src} alt="" width="28" height="28" loading="lazy" class="opacity-30" />
   </div>
   {
     credit && (
