@@ -1,106 +1,59 @@
+import { revealKeyframes, REVEAL_DURATION_MS, SIGNATURE_EASING } from "../motion/tokens";
+
 let initialized = false;
 
-export async function initScrollChoreography() {
+/**
+ * Apparition des blocs [data-reveal] (46 pages l'appellent).
+ *
+ * Ce module chargeait GSAP + ScrollTrigger (~46 Ko compressés, mesurés sur
+ * l'aperçu PR 0) sur chaque page pour un seul effet : un fondu montant à
+ * l'entrée dans l'écran. Un IntersectionObserver et l'API Web Animations du
+ * navigateur font exactement ce geste, sans téléchargement ni évaluation :
+ * c'est l'essentiel du temps de blocage (TBT) mesuré sur l'accueil.
+ *
+ * Contrat inchangé : rien n'est jamais masqué d'avance. Un bloc déjà visible
+ * au chargement ne bouge pas ; un bloc plus bas reste rendu tel quel jusqu'à
+ * son premier pixel visible, puis s'anime depuis l'état initial
+ * (fill: "backwards" couvre le délai éventuel). Si ce script échoue, la page
+ * est simplement immobile. Les compteurs [data-counter] ont été retirés :
+ * aucune page ne les utilisait plus.
+ */
+export function initScrollChoreography() {
   if (initialized) return;
   initialized = true;
 
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!("IntersectionObserver" in window) || !("animate" in Element.prototype)) return;
 
-  const reveals = document.querySelectorAll<HTMLElement>("[data-reveal]");
+  const reveals = [...document.querySelectorAll<HTMLElement>("[data-reveal]")];
   if (!reveals.length) return;
 
-  if (reduceMotion) {
-    reveals.forEach((el) => {
-      el.style.opacity = "1";
-      el.style.transform = "none";
-    });
-    const locale = document.documentElement.lang || "fr";
-    document.querySelectorAll<HTMLElement>("[data-counter]").forEach((el) => {
-      const numeric = parseFloat(el.dataset.counter || "0");
-      const suffix = el.dataset.counterSuffix ?? "";
-      if (!Number.isNaN(numeric)) el.textContent = `${numeric.toLocaleString(locale)}${suffix}`;
-    });
-    return;
-  }
-
-  /**
-   * gsap + ScrollTrigger (~110KB combined) is real weight to fetch and parse
-   * on every single page purely for a scroll-reveal effect nobody sees until
-   * they scroll. Elements start at their normal opacity (no CSS pre-hides
-   * them), so deferring this to idle time costs nothing visually — at worst
-   * a very fast scroll before the browser goes idle shows content without
-   * its fade-in, which reads as a bonus (content available sooner), not a
-   * regression. requestIdleCallback isn't in Safari; the timeout fallback
-   * still gets this off the critical initial-load path.
-   */
-  const runWhenIdle =
-    window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({} as IdleDeadline), 200));
-
-  await new Promise<void>((resolve) => runWhenIdle(() => resolve()));
-
-  const [{ gsap }, ScrollTriggerModule] = await Promise.all([
-    import("gsap"),
-    import("gsap/ScrollTrigger"),
-  ]);
-  const ScrollTrigger = ScrollTriggerModule.ScrollTrigger;
-  gsap.registerPlugin(ScrollTrigger);
-
-  /**
-   * gsap.fromTo()'s "from" state (opacity: 0) renders immediately on
-   * creation (immediateRender defaults to true for .fromTo, unlike .to) —
-   * confirmed via real Playwright measurement: an element already visible
-   * and painted at page load was observed dropping to opacity ~0.2 right
-   * when this idle-deferred script ran, then fading back in over ~800ms.
-   * ScrollTrigger's own "start: top 85%" would fire onEnter immediately for
-   * these same already-in-view elements anyway, so this isn't a difference
-   * in *what* gets revealed — only in whether already-visible content is
-   * allowed to flash invisible first. Elements still below that threshold
-   * keep the exact same scroll-triggered fade-in as before.
-   */
-  reveals.forEach((el) => {
-    const alreadyInView = el.getBoundingClientRect().top < window.innerHeight * 0.85;
-    if (alreadyInView) return;
-
-    const delay = Number(el.dataset.revealDelay || 0);
-    gsap.fromTo(
-      el,
-      { opacity: 0, y: 28 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.8,
-        delay,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: el,
-          start: "top 85%",
-          once: true,
-        },
-      },
-    );
-  });
-
-  const counters = document.querySelectorAll<HTMLElement>("[data-counter]");
-  counters.forEach((el) => {
-    const numeric = parseFloat(el.dataset.counter || "0");
-    if (Number.isNaN(numeric)) return;
-    const suffix = el.dataset.counterSuffix ?? "";
-    const locale = document.documentElement.lang || "fr";
-    const counterObj = { value: 0 };
-    ScrollTrigger.create({
-      trigger: el,
-      start: "top 90%",
-      once: true,
-      onEnter: () => {
-        gsap.to(counterObj, {
-          value: numeric,
-          duration: 1.4,
-          ease: "power2.out",
-          onUpdate: () => {
-            el.textContent = `${Math.round(counterObj.value).toLocaleString(locale)}${suffix}`;
-          },
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const el = entry.target as HTMLElement;
+        observer.unobserve(el);
+        el.animate(revealKeyframes, {
+          duration: REVEAL_DURATION_MS,
+          delay: Number(el.dataset.revealDelay || 0) * 1000,
+          easing: SIGNATURE_EASING,
+          fill: "backwards",
         });
-      },
-    });
+      }
+    },
+    // 40 px sous le bord : l'animation démarre juste avant le premier pixel visible,
+    // jamais un bloc qui s’affiche puis disparaît pour réapparaître.
+    { rootMargin: "0px 0px 40px 0px", threshold: 0 },
+  );
+
+  // Les blocs déjà dans l'écran sont laissés tels quels : les animer ferait
+  // clignoter un contenu déjà lu. Une seule lecture de mise en page pour tous.
+  const visible = reveals.map((el) => el.getBoundingClientRect().top < window.innerHeight);
+  reveals.forEach((el, i) => {
+    if (!visible[i]) observer.observe(el);
   });
+
+  // bfcache : la page restaurée garde son état, l'observateur n'a plus rien à faire.
+  window.addEventListener("pagehide", () => observer.disconnect(), { once: true });
 }
