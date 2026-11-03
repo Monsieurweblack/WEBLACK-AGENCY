@@ -30,25 +30,31 @@ Chaque entrée : où, constat mesuré, pourquoi elle n'est pas soldée, quand la
   conserve pas. Marge large sous la limite de 20 min, à surveiller si le
   nombre de photos croît.
 - **TBT mesuré (devtools, CPU ×4) ≈ 1,27 s sur l'accueil, identique à main** :
-  GSAP + ScrollTrigger et leurs initialisations. Hors périmètre PR 0 ; le
-  socle PR 1 (orchestrateur unique) doit le réduire.
+  GSAP + ScrollTrigger et leurs initialisations. Soldé en partie : les
+  apparitions [data-reveal] n'utilisent plus GSAP (IntersectionObserver +
+  Web Animations) ; GSAP ne se charge plus qu'à la demande (menu, modale
+  fondateur, filtre journal).
 - **Retour arrière : test réel en attente.** `scripts/rollback-production.mjs`
   testé en `--dry-run` (cibles résolues, commit inconnu refusé). Le test réel
   sans effet visible (bascule vers le déploiement déjà actif) touche la
   production : il attend le feu vert, juste avant la promotion P0.
-- **LCP au-dessus du budget sur deux routes** (Lighthouse mobile, bridage
-  devtools, médiane runs 2–4, aperçu Cloudflare) :
-  `/selected-work/nuit-du-textile-africain-nta/` 5,34 s (production 7,61 s) et
-  `/talent/` 2,59 s (production 3,65 s). PR 0 améliore, n'atteint pas
-  2,5 s. Cause NTA : variante 800 px AVIF q90 de la photo textile = 167 Ko
-  (texture dense), téléchargée en concurrence avec ~400 Ko de galerie
-  (images différées, mais dans le seuil de chargement anticipé de Chrome en
-  réseau lent). Baisser la qualité gagnerait ~50 Ko (q80 : 117 Ko) au prix
-  de plus d'aplatissement (31 → 37 %) sur une photo à 11 % de dégradés
-  sombres : écarté (D-6). Préchargement en <head> écarté : l'image est déjà
-  découverte par le préchargeur, le délai de 0,9 s est le HTML + un aller-
-  retour. Pistes : ordonner le chargement de la galerie après le LCP
-  (PR 1, orchestrateur), ou un recadrage dédié du visuel de couverture.
+- **LCP au-dessus du budget sur deux routes — BLOQUANT pour la mise en
+  production.** Lighthouse mobile, bridage devtools (562 ms RTT simulé,
+  1,47 Mb/s), médiane runs 2–4. Mesures après `0914350` (préchargement de
+  l'image LCP depuis le <head>, galerie NTA retenue jusqu'à l'arrivée du
+  bandeau) : aperçu Cloudflare `/talent/` 2,64 s (PR 0 : 2,59 s ;
+  production 3,65 s), NTA 3,00 s (PR 0 : 5,34 s ; production 7,61 s).
+  Le préchargement fonctionne (l'image part au premier octet du HTML, à
+  765 ms) : la limite est désormais la bande passante, HTML puis image +
+  fontes. Trois variantes mesurées sur le même banc (Lighthouse local) :
+  A, état actuel, talent 2,79 s / NTA 2,90 s ; B, fontes non préchargées,
+  talent 2,22 s mais CLS jusqu'à 0,36 (la bascule de police décale le bloc
+  de titre ancré en bas du bandeau) — écartée ; C, fontes préchargées en
+  priorité basse, talent 2,82 s / NTA 2,90 s — sans effet, écartée.
+  Passer sous 2,5 s exige d'envoyer moins d'octets d'image (NTA : 166 Ko
+  pour la variante 800 px AVIF q90 d'une photo textile dense), donc un
+  recadrage portrait mobile ou un réglage d'encodage du bandeau : touche la
+  règle D-6, décision du propriétaire.
 - **Nommage des branches.** `immersive/pr-N-slug` est impossible à côté
   d'une branche `immersive` (Git ne peut pas avoir `refs/heads/immersive` à
   la fois fichier et dossier) : repli `immersive-pr-N-slug`.
