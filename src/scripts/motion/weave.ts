@@ -96,27 +96,55 @@ function compile(gl: WebGL2RenderingContext, type: number, source: string) {
   const shader = gl.createShader(type);
   if (!shader) return null;
   gl.shaderSource(shader, source);
+  // Pas de lecture de COMPILE_STATUS ici : elle forcerait une compilation
+  // synchrone. Un échec se lit plus tard, dans LINK_STATUS.
   gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    gl.deleteShader(shader);
-    return null;
-  }
   return shader;
 }
 
-/** Démarre la trame ; renvoie false sans rien modifier si WebGL2 est indisponible. */
-export function startWeave({ canvas, section, mark }: WeaveOptions): boolean {
+/** Rendu WebGL logiciel (pas de GPU, ou GPU sur liste noire) : précisément le cas « trop coûteux pour l'appareil ». */
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
+/**
+ * Démarre la trame ; ne fait rien (le canvas reste transparent) si WebGL2
+ * est indisponible, rendu en logiciel, ou si le shader ne compile pas.
+ *
+ * La compilation ne bloque jamais le fil principal : avec
+ * KHR_parallel_shader_compile, on attend la fin de l'édition de liens image
+ * par image au lieu de la forcer (getProgramParameter(LINK_STATUS) est
+ * synchrone — mesuré : 346 ms de délai d'entrée sur un tap pendant le
+ * démarrage, CPU ×4).
+ */
+export function startWeave(options: WeaveOptions): void {
+  const { canvas } = options;
   const gl = canvas.getContext("webgl2", { alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: "low-power" });
-  if (!gl) return false;
+  if (!gl) return;
+  const release = () => gl.getExtension("WEBGL_lose_context")?.loseContext();
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? "");
+  if (SOFTWARE_RENDERER.test(renderer)) return release();
 
   const vs = compile(gl, gl.VERTEX_SHADER, VERTEX);
   const fs = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT);
   const program = gl.createProgram();
-  if (!vs || !fs || !program) return false;
+  if (!vs || !fs || !program) return release();
   gl.attachShader(program, vs);
   gl.attachShader(program, fs);
   gl.linkProgram(program);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return false;
+
+  const parallel = gl.getExtension("KHR_parallel_shader_compile");
+  const whenLinked = () => {
+    if (parallel && !gl.getProgramParameter(program, parallel.COMPLETION_STATUS_KHR)) {
+      requestAnimationFrame(whenLinked);
+      return;
+    }
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return release();
+    run(gl, program, options);
+  };
+  whenLinked();
+}
+
+function run(gl: WebGL2RenderingContext, program: WebGLProgram, { canvas, section, mark }: WeaveOptions) {
   gl.useProgram(program);
 
   // Un triangle qui couvre tout l'écran.
@@ -249,5 +277,4 @@ export function startWeave({ canvas, section, mark }: WeaveOptions): boolean {
 
   canvas.style.opacity = "1";
   sync();
-  return true;
 }
