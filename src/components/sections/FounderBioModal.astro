@@ -71,7 +71,7 @@ const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["Â« ", " Â
           {member!.gallery.map((photo) => (
             <figure class="overflow-hidden">
               <img src={photo.url} alt={photo.alt} loading="lazy" class="aspect-[3/4] w-full object-cover" />
-              {photo.caption && <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/45">{photo.caption}</figcaption>}
+              {photo.caption && <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/50">{photo.caption}</figcaption>}
             </figure>
           ))}
         </div>
@@ -88,7 +88,7 @@ const [openQuote, closeQuote]: [string, string] = bioLang === "fr" ? ["Â« ", " Â
                 decoding="async"
                 class:list={["w-full object-cover", photo.wide ? "aspect-[16/10]" : "aspect-[3/4]"]}
               />
-              <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/45">{photo.caption}</figcaption>
+              <figcaption class="label-tracked mt-2 text-xs text-(--color-paper)/50">{photo.caption}</figcaption>
             </figure>
           ))}
         </div>

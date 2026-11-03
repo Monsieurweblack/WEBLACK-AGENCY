@@ -99,7 +99,7 @@ const otherProfiles = ["brand", "media", "creative"] as const;
           {t("talent.hero.applyLink")} &rarr;
         </a>
       </div>
-      <p class="mt-8 text-xs text-(--color-paper)/35">
+      <p class="mt-8 text-xs text-(--color-paper)/50">
         {t("talent.industries.zedefile.caption")}
       </p>
     </div>
@@ -133,7 +133,7 @@ const otherProfiles = ["brand", "media", "creative"] as const;
         {
           capabilities.map((key, i) => (
             <li class="grid grid-cols-1 gap-4 border-b border-(--color-line) py-10 md:grid-cols-[0.3fr_1fr_1.4fr] md:items-baseline md:gap-10" data-reveal data-reveal-delay={String(i * 0.08)}>
-              <span class="label-tracked text-(--color-paper)/30">0{i + 1}</span>
+              <span class="label-tracked text-(--color-paper)/50">0{i + 1}</span>
               <h3 class="font-display text-2xl text-(--color-paper) sm:text-3xl">
                 {t(`talent.capabilities.${key}.name` as UiKey)}
               </h3>
@@ -320,7 +320,7 @@ const otherProfiles = ["brand", "media", "creative"] as const;
               </a>
             ))}
           </div>
-          <p class="mt-6 text-sm text-(--color-paper)/40">{t("talent.finalCta.other.hint")}</p>
+          <p class="mt-6 text-sm text-(--color-paper)/50">{t("talent.finalCta.other.hint")}</p>
         </div>
       </div>
     </div>

@@ -42,7 +42,7 @@ const indexUrl = localizedPath(lang, "/search-index.json");
 >
   <div class="w-full max-w-2xl">
     <div class="flex items-center gap-4 border-b border-(--color-line) pb-4">
-      <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-(--color-paper)/40" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-(--color-paper)/50" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
         <circle cx="10.8" cy="10.8" r="6.3" />
         <path d="m19.5 19.5-4.15-4.15" stroke-linecap="round" />
       </svg>
@@ -51,7 +51,7 @@ const indexUrl = localizedPath(lang, "/search-index.json");
         id="search-input"
         placeholder={t("search.placeholder")}
         autocomplete="off"
-        class="font-display w-full border-0 bg-transparent text-xl text-(--color-paper) outline-none placeholder:text-(--color-paper)/40 sm:text-2xl"
+        class="font-display w-full border-0 bg-transparent text-xl text-(--color-paper) outline-none placeholder:text-(--color-paper)/50 sm:text-2xl"
       />
       <button
         type="button"
@@ -64,7 +64,7 @@ const indexUrl = localizedPath(lang, "/search-index.json");
         </svg>
       </button>
     </div>
-    <p id="search-hint" class="mt-4 text-sm text-(--color-paper)/40">{t("search.hint")}</p>
+    <p id="search-hint" class="mt-4 text-sm text-(--color-paper)/50">{t("search.hint")}</p>
     <ul id="search-results" class="mt-2 max-h-[60vh] space-y-1 overflow-y-auto"></ul>
   </div>
 </div>
@@ -76,7 +76,7 @@ const indexUrl = localizedPath(lang, "/search-index.json");
         <span class="block text-(--color-paper) group-hover:text-(--color-gold)" data-result-title></span>
         <span class="mt-1 block text-sm text-(--color-paper)/50" data-result-description></span>
       </span>
-      <span class="label-tracked shrink-0 text-(--color-paper)/30" data-result-type></span>
+      <span class="label-tracked shrink-0 text-(--color-paper)/50" data-result-type></span>
     </a>
   </li>
 </template>

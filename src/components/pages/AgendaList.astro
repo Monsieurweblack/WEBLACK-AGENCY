@@ -36,7 +36,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
       {t("agenda.hero.title")}
     </h1>
     <p class="mt-6 max-w-2xl text-lg text-(--color-paper)/70">{t("agenda.hero.intro")}</p>
-    <p class="label-tracked mt-8 text-(--color-paper)/40">{countLabel}</p>
+    <p class="label-tracked mt-8 text-(--color-paper)/50">{countLabel}</p>
   </div>
 </section>
 
@@ -53,7 +53,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
             <legend class="sr-only">{t("agenda.filter.legend")}</legend>
 
             <label class="flex min-w-0 flex-col gap-2">
-              <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.period")}</span>
+              <span class="label-tracked text-(--color-paper)/50">{t("agenda.filter.period")}</span>
               <select
                 name="period"
                 class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
@@ -66,7 +66,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
 
             {facets.regions.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
-                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.region")}</span>
+                <span class="label-tracked text-(--color-paper)/50">{t("agenda.filter.region")}</span>
                 <select
                   name="region"
                   class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
@@ -81,7 +81,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
 
             {facets.disciplines.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
-                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.discipline")}</span>
+                <span class="label-tracked text-(--color-paper)/50">{t("agenda.filter.discipline")}</span>
                 <select
                   name="discipline"
                   class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
@@ -96,7 +96,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
 
             {facets.cities.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
-                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.city")}</span>
+                <span class="label-tracked text-(--color-paper)/50">{t("agenda.filter.city")}</span>
                 <select
                   name="city"
                   class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
@@ -111,7 +111,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
 
             {facets.countries.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
-                <span class="label-tracked text-(--color-paper)/40">{t("agenda.filter.country")}</span>
+                <span class="label-tracked text-(--color-paper)/50">{t("agenda.filter.country")}</span>
                 <select
                   name="country"
                   class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none"
@@ -177,11 +177,11 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
                         <span class="font-display text-3xl leading-none text-(--color-gold) tabular-nums">
                           {dayNumber(event.startDate, lang)}
                         </span>
-                        <span class="label-tracked text-(--color-paper)/40">{shortMonth(event.startDate, lang)}</span>
+                        <span class="label-tracked text-(--color-paper)/50">{shortMonth(event.startDate, lang)}</span>
                       </p>
 
                       <div class="min-w-0">
-                        <p class="label-tracked text-(--color-paper)/40">
+                        <p class="label-tracked text-(--color-paper)/50">
                           {event.discipline ?? event.eventType ?? t(`agenda.status.${event.status}`)}
                         </p>
                         <h3 class="font-display mt-2 text-2xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
@@ -208,7 +208,7 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
                         y débordait, coupée silencieusement par overflow-x:clip
                         sur html (mesuré avec du contenu réel, pas hypothétique).
                       */}
-                      <p class="label-tracked min-w-0 self-center text-(--color-paper)/40 md:whitespace-nowrap md:text-right">
+                      <p class="label-tracked min-w-0 self-center text-(--color-paper)/50 md:whitespace-nowrap md:text-right">
                         {event.status === "ONGOING" ? t("agenda.status.ONGOING") : dateRange(event, lang, t("agenda.dateTo"))}
                       </p>
                     </a>

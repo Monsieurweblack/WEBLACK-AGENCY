@@ -56,7 +56,7 @@ const t = useTranslations(lang);
       qui disparaîtrait à la saisie et laisserait l'utilisateur sans repère.
     */}
     <span
-      class="label-tracked pointer-events-none absolute left-0 top-5 text-(--color-paper)/40 transition-all duration-300 ease-(--ease-signature) peer-focus:top-0 peer-focus:text-(--color-gold) peer-[:not(:placeholder-shown)]:top-0"
+      class="label-tracked pointer-events-none absolute left-0 top-5 text-(--color-paper)/50 transition-all duration-300 ease-(--ease-signature) peer-focus:top-0 peer-focus:text-(--color-gold) peer-[:not(:placeholder-shown)]:top-0"
     >
       {t("newsletter.field")}
     </span>
@@ -94,7 +94,7 @@ const t = useTranslations(lang);
     data-newsletter-status
   ></p>
 
-  <p id={`${idPrefix}-consent`} class="mt-4 text-xs leading-relaxed text-(--color-paper)/40">
+  <p id={`${idPrefix}-consent`} class="mt-4 text-xs leading-relaxed text-(--color-paper)/50">
     {t("newsletter.consent")}{" "}
     <a
       href={localizedPath(lang, "/politique-de-confidentialite")}

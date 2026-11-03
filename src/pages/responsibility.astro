@@ -39,7 +39,7 @@ const pillars = ["people", "culture", "practice"] as const;
         {
           pillars.map((pillar, i) => (
             <div data-reveal data-reveal-delay={String(i * 0.1)}>
-              <span class="label-tracked text-(--color-paper)/40">0{i + 1}</span>
+              <span class="label-tracked text-(--color-paper)/50">0{i + 1}</span>
               <h2 class="font-display mt-4 text-2xl text-(--color-paper)">
                 {t(`responsibility.${pillar}.name` as UiKey)}
               </h2>

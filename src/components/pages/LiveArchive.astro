@@ -22,7 +22,7 @@ const countLabel = replays.length === 1 ? "1" : `${replays.length}`;
     <h1 class="font-display text-balance mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
       {t("live.archive.title")}
     </h1>
-    <p class="label-tracked mt-8 text-(--color-paper)/40">{countLabel}</p>
+    <p class="label-tracked mt-8 text-(--color-paper)/50">{countLabel}</p>
   </div>
 </section>
 
@@ -36,7 +36,7 @@ const countLabel = replays.length === 1 ? "1" : `${replays.length}`;
 
             {facets.years.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
-                <span class="label-tracked text-(--color-paper)/40">{t("live.archive.filter.year")}</span>
+                <span class="label-tracked text-(--color-paper)/50">{t("live.archive.filter.year")}</span>
                 <select name="year" class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none">
                   <option value="all">{t("live.archive.filter.all")}</option>
                   {facets.years.map((value) => (
@@ -48,7 +48,7 @@ const countLabel = replays.length === 1 ? "1" : `${replays.length}`;
 
             {facets.disciplines.length > 1 && (
               <label class="flex min-w-0 flex-col gap-2">
-                <span class="label-tracked text-(--color-paper)/40">{t("live.archive.filter.discipline")}</span>
+                <span class="label-tracked text-(--color-paper)/50">{t("live.archive.filter.discipline")}</span>
                 <select name="discipline" class="min-w-40 border-b border-(--color-line) bg-transparent pb-2 text-(--color-paper) focus-visible:border-(--color-gold) focus-visible:outline-none">
                   <option value="all">{t("live.archive.filter.all")}</option>
                   {facets.disciplines.map((value) => (
@@ -86,7 +86,7 @@ const countLabel = replays.length === 1 ? "1" : `${replays.length}`;
                   {live.scheduledStart ? new Date(live.scheduledStart).getFullYear() : ""}
                 </p>
                 <div class="min-w-0">
-                  {live.discipline && <p class="label-tracked text-(--color-paper)/40">{live.discipline}</p>}
+                  {live.discipline && <p class="label-tracked text-(--color-paper)/50">{live.discipline}</p>}
                   <h2 class="font-display mt-2 text-2xl text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-3xl">
                     {live.title}
                   </h2>

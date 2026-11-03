@@ -51,7 +51,7 @@ const collectionHref = product.collection ? localizedPath(lang, `/boutique/colle
           </a>
         )}
         <h1 class="font-display mt-3 max-w-xl text-3xl text-(--color-paper) sm:text-4xl">{product.name}</h1>
-        <p class="label-tracked mt-3 text-(--color-paper)/40">{t("boutique.productCode")} · {product.productCode}</p>
+        <p class="label-tracked mt-3 text-(--color-paper)/50">{t("boutique.productCode")} · {product.productCode}</p>
 
         <div class="mt-6 flex flex-wrap items-center gap-4">
           <p class="text-xl text-(--color-paper)">{priceLabel}</p>
@@ -91,7 +91,7 @@ const collectionHref = product.collection ? localizedPath(lang, `/boutique/colle
 
         {product.downloads.length > 0 && (
           <div class="mt-12 border-t border-(--color-line) pt-8">
-            <p class="label-tracked text-(--color-paper)/40">{t("boutique.downloads.title")}</p>
+            <p class="label-tracked text-(--color-paper)/50">{t("boutique.downloads.title")}</p>
             <ul class="mt-4 flex flex-col gap-3">
               {product.downloads.map((download) => (
                 <li>

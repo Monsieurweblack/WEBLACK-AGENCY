@@ -53,7 +53,7 @@ const events = (await getAgendaEvents(lang)).slice(0, limit);
                   <span class="font-display text-3xl leading-none text-(--color-gold) tabular-nums">
                     {dayNumber(event.startDate, lang)}
                   </span>
-                  <span class="label-tracked text-(--color-paper)/40">{shortMonth(event.startDate, lang)}</span>
+                  <span class="label-tracked text-(--color-paper)/50">{shortMonth(event.startDate, lang)}</span>
                 </p>
                 <h3 class="font-display mt-4 text-xl text-(--color-paper) transition-colors group-hover:text-(--color-gold)">
                   {event.eventName}

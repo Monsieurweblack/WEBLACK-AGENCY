@@ -79,7 +79,7 @@ const facts: { label: string; value: string }[] = [
       {
         facts.map((fact) => (
           <div class="min-w-0">
-            <dt class="label-tracked text-(--color-paper)/40">{fact.label}</dt>
+            <dt class="label-tracked text-(--color-paper)/50">{fact.label}</dt>
             <dd class="mt-2 text-lg text-(--color-paper)">{fact.value}</dd>
           </div>
         ))
@@ -107,7 +107,7 @@ const facts: { label: string; value: string }[] = [
       }
     </div>
 
-    <footer class="mt-16 border-t border-(--color-line) pt-8 text-sm text-(--color-paper)/40">
+    <footer class="mt-16 border-t border-(--color-line) pt-8 text-sm text-(--color-paper)/50">
       {
         event.lastVerifiedAt && (
           <p>
@@ -118,7 +118,7 @@ const facts: { label: string; value: string }[] = [
       {
         event.sourceUrls.length > 0 && (
           <div class="mt-4">
-            <p class="label-tracked text-(--color-paper)/40">{t("agenda.sources")}</p>
+            <p class="label-tracked text-(--color-paper)/50">{t("agenda.sources")}</p>
             <ul class="mt-2 flex flex-col gap-1">
               {event.sourceUrls.map((url) => (
                 <li class="min-w-0">

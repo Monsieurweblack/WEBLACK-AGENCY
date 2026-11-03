@@ -26,7 +26,7 @@ const locale = intlTagFor(lang);
           <li class="border-t border-(--color-line) pt-6 first:border-t-0 first:pt-0">
             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span class="text-sm font-semibold text-(--color-paper)">{comment.name}</span>
-              <time class="text-xs text-(--color-paper)/40">
+              <time class="text-xs text-(--color-paper)/50">
                 {new Date(comment.date).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })}
               </time>
             </div>
