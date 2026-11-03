@@ -2,8 +2,8 @@
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import WorkDetail from "../../../components/pages/WorkDetail.astro";
 import { useTranslations } from "../../../i18n/utils";
-import { getEntriesByLang } from "../../../lib/content";
-import { WORK_HERO_WIDTH } from "../../../lib/hero-images";
+import { getEntriesByLang, imageFit } from "../../../lib/content";
+import { WORK_HERO_WIDTH, WORK_HERO_PORTRAIT } from "../../../lib/hero-images";
 
 export async function getStaticPaths() {
   const entries = await getEntriesByLang("work", "en");
@@ -20,7 +20,12 @@ const t = useTranslations(lang);
   title={`${work.data.title} — ${t("nav.selectedwork")}`}
   description={work.data.context}
   image={work.data.coverImage.url}
-  lcpImage={{ src: work.data.coverImage.url, width: WORK_HERO_WIDTH }}
+  lcpImage={{
+    src: work.data.coverImage.url,
+    width: WORK_HERO_WIDTH,
+    // Même condition que RemoteImage : pas de recadrage pour une image contenue (logo, affiche).
+    portrait: imageFit(work.data.coverImage) === "cover" ? WORK_HERO_PORTRAIT : undefined,
+  }}
 >
   <WorkDetail lang={lang} work={work} />
 </BaseLayout>

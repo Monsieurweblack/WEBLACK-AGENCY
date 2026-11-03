@@ -36,6 +36,12 @@ interface Props {
    */
   fit?: "cover" | "contain";
   sizes?: string;
+  /**
+   * Bandeau plein cadre : rapport de viewport sous lequel le cadre est plus
+   * haut que large (« 3/5 »). Sert alors un carré centré qui contient tout ce
+   * que le cadre affiche — voir responsiveImage(). Ignoré pour fit="contain".
+   */
+  portrait?: string;
 }
 
 const {
@@ -50,6 +56,7 @@ const {
   class: className,
   fit = "cover",
   sizes = "100vw",
+  portrait,
 } = Astro.props;
 
 /**
@@ -63,7 +70,7 @@ const {
  * already reports on its own — this component must degrade to "no image"
  * instead, independently of that check ever running.
  */
-const image = await responsiveImage(src, width);
+const image = await responsiveImage(src, width, fit === "cover" ? portrait : undefined);
 const isValidUrl = image !== null;
 if (!isValidUrl && import.meta.env.DEV) {
   console.warn(`RemoteImage: ignoring invalid src (expected an http(s) URL or a root-relative path): ${JSON.stringify(src)}`);
@@ -79,7 +86,9 @@ const finalSrc = image?.src;
   {
     isValidUrl && localSources ? (
       <picture class="contents">
-        {localSources.map((source) => <source type={source.type} srcset={source.srcset} sizes={sizes} />)}
+        {localSources.map((source) => (
+          <source type={source.type} media={source.media} srcset={source.srcset} sizes={source.sizes ?? sizes} />
+        ))}
         <img
           src={src}
           alt={alt}

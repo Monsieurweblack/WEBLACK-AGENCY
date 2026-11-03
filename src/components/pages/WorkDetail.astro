@@ -5,7 +5,7 @@ import CtaContact from "../sections/CtaContact.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { getEntriesByLang, imageFit, type WorkEntry } from "../../lib/content";
 import { getRelatedProjects } from "../../lib/content-graph";
-import { WORK_HERO_WIDTH } from "../../lib/hero-images";
+import { WORK_HERO_WIDTH, WORK_HERO_PORTRAIT } from "../../lib/hero-images";
 
 interface Props {
   lang: Lang;
@@ -41,6 +41,7 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
         loading="eager"
         fetchpriority="high"
         fit={imageFit(work.data.coverImage)}
+        portrait={WORK_HERO_PORTRAIT}
         class="h-full w-full opacity-55"
       />
       <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/40 to-(--color-ink)/10"></div>

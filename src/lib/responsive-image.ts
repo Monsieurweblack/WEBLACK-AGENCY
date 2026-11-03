@@ -18,8 +18,16 @@ import { sanityResponsiveImage } from "./sanity-image";
  */
 const LOCAL_PHOTOS = import.meta.glob<{ default: ImageMetadata }>("/public/photos/*.{jpg,jpeg,png}", { eager: true });
 
+export interface ImageSource {
+  type: string;
+  srcset: string;
+  /** Présents sur les sources portrait seulement (voir `portrait` ci-dessous). */
+  media?: string;
+  sizes?: string;
+}
+
 export type ResponsiveImage =
-  | { kind: "local"; src: string; sources: { type: string; srcset: string }[] }
+  | { kind: "local"; src: string; sources: ImageSource[] }
   | { kind: "remote"; src: string; srcset?: string }
   | { kind: "plain"; src: string };
 
@@ -33,8 +41,26 @@ function withWidth(url: string, w: number) {
   return u.toString();
 }
 
-/** null quand la source est invalide (champ Sanity vide ou mal saisi) : l'appelant n'affiche pas d'image. */
-export async function responsiveImage(src: string, width: number): Promise<ResponsiveImage | null> {
+/**
+ * null quand la source est invalide (champ Sanity vide ou mal saisi) : l'appelant n'affiche pas d'image.
+ *
+ * `portrait` — bandeau plein cadre (object-cover, centré) d'une photo locale
+ * paysage : le rapport largeur/hauteur de viewport (« 3/5 ») sous lequel le
+ * cadre est à coup sûr plus haut que large. Dans ce cadre, object-cover
+ * n'affiche jamais qu'une bande centrale de la photo, sur toute sa hauteur.
+ * Pour chaque variante servie jusqu'ici (largeur w, hauteur h), on génère le
+ * carré centré h × h qui contient cette bande en entier : mêmes pixels
+ * affichés, même densité, même cadrage, même encodage — seules les marges
+ * latérales que le cadre rognait ne sont plus téléchargées (44 % de pixels en moins
+ * sur une photo 16:9, en pixels).
+ *
+ * Les `sizes` de ces sources (100vw ÷ rapport de la photo, soit 56.25vw en
+ * 16:9) ne décrivent pas la largeur CSS du cadre : ils reproduisent
+ * exactement la sélection faite jusqu'ici (variante w ≥ 100vw × DPR, donc
+ * carré h = w ÷ rapport). Le navigateur choisit le carré de la variante
+ * qu'il choisissait déjà, jamais un plus petit.
+ */
+export async function responsiveImage(src: string, width: number, portrait?: string): Promise<ResponsiveImage | null> {
   if (!isValidImageSrc(src)) return null;
 
   if (isRemoteImageSrc(src)) {
@@ -50,6 +76,26 @@ export async function responsiveImage(src: string, width: number): Promise<Respo
   // intact en dernier repli (navigateurs sans AVIF ni WebP).
   const photo = LOCAL_PHOTOS[`/public${src.split("?")[0]}`]?.default;
   if (!photo) return { kind: "plain", src };
+  const ratio = photo.width / photo.height;
+  const portraitSources =
+    portrait && ratio > 1
+      ? await Promise.all(
+          (["avif", "webp"] as const).map(async (format) => {
+            const squares = await Promise.all(
+              localVariantWidths(photo.width).map((w) => {
+                const side = Math.round(w / ratio);
+                return getImage({ src: photo, width: side, height: side, fit: "cover", position: "center", format, quality: LOCAL_PHOTO_QUALITY[format] });
+              }),
+            );
+            return {
+              type: `image/${format}`,
+              media: `(max-aspect-ratio: ${portrait})`,
+              sizes: `${Math.round((100 / ratio) * 100) / 100}vw`,
+              srcset: squares.map((v) => `${v.src} ${v.attributes.width}w`).join(", "),
+            };
+          }),
+        )
+      : [];
   const sources = await Promise.all(
     (["avif", "webp"] as const).map(async (format) => {
       const variants = await Promise.all(
@@ -58,5 +104,5 @@ export async function responsiveImage(src: string, width: number): Promise<Respo
       return { type: `image/${format}`, srcset: variants.map((v) => `${v.src} ${v.attributes.width}w`).join(", ") };
     }),
   );
-  return { kind: "local", src, sources };
+  return { kind: "local", src, sources: [...portraitSources, ...sources] };
 }

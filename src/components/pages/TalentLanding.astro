@@ -77,6 +77,7 @@ const otherProfiles = ["brand", "media", "creative"] as const;
         fetchpriority="high"
         class="h-full w-full opacity-50"
         sizes={TALENT_HERO.sizes}
+        portrait={TALENT_HERO.portrait}
       />
       <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/50 to-(--color-ink)/10" />
     </div>
@@ -220,7 +221,7 @@ const otherProfiles = ["brand", "media", "creative"] as const;
         {
           journeySteps.map((step, i) => (
             <li data-reveal data-reveal-delay={String(i * 0.08)}>
-              <span class="label-tracked text-(--color-ink)/35">0{step}</span>
+              <span class="label-tracked text-(--color-ink)/60">0{step}</span>
               <h3 class="font-display mt-4 text-2xl text-(--color-ink)">
                 {t(`perspective.step${step}.name` as UiKey)}
               </h3>

@@ -31,22 +31,33 @@ interface Props {
    * HTML (CSS inline, en-tête, menu) : 2 à 3 allers-retours de découverte
    * perdus sur un réseau lent, mesurés à 0,73 s sur /talent/.
    */
-  lcpImage?: { src: string; width: number; sizes?: string };
+  lcpImage?: { src: string; width: number; sizes?: string; portrait?: string };
 }
 
 const { lang, title, description, image, imageAlt, noindex, bodyClass, translations, lcpImage } = Astro.props;
 const t = useTranslations(lang);
 const siteSettings = await getSiteSettings(lang);
-// Variante locale : seule la source AVIF est préchargée, filtrée par `type` —
-// un navigateur sans AVIF l'ignore et retombe sur le <picture>, au lieu de
-// télécharger deux formats.
-const lcp = lcpImage ? await responsiveImage(lcpImage.src, lcpImage.width) : null;
-const lcpPreload =
+// Variante locale : seules les sources AVIF sont préchargées, filtrées par
+// `type` — un navigateur sans AVIF les ignore et retombe sur le <picture>, au
+// lieu de télécharger deux formats. Avec un recadrage portrait, deux
+// préchargements à media exclusifs : un seul s'applique, celui que le
+// <picture> choisira.
+const lcp = lcpImage ? await responsiveImage(lcpImage.src, lcpImage.width, lcpImage.portrait) : null;
+const lcpSizes = lcpImage?.sizes ?? "100vw";
+const lcpPreloads =
   lcp?.kind === "local"
-    ? { type: lcp.sources[0].type, srcset: lcp.sources[0].srcset }
+    ? lcp.sources
+        .filter((source) => source.type === "image/avif")
+        .map((source) => ({
+          type: source.type,
+          srcset: source.srcset,
+          sizes: source.sizes ?? lcpSizes,
+          media: source.media ?? (lcpImage?.portrait ? `not all and (max-aspect-ratio: ${lcpImage.portrait})` : undefined),
+        }))
     : lcp?.kind === "remote" && lcp.srcset
-      ? { type: undefined, srcset: lcp.srcset }
-      : null;
+      ? [{ type: undefined, srcset: lcp.srcset, sizes: lcpSizes, media: undefined }]
+      : [];
+const lcpPreload = lcpPreloads.length > 0;
 ---
 
 <!doctype html>
@@ -82,16 +93,17 @@ const lcpPreload =
     <link rel="dns-prefetch" href="https://cdn.sanity.io" />
     <!-- Avant les fontes : l'image LCP part en premier sur la connexion. -->
     {
-      lcpPreload && (
+      lcpPreloads.map((preload) => (
         <link
           rel="preload"
           as="image"
-          type={lcpPreload.type}
-          imagesrcset={lcpPreload.srcset}
-          imagesizes={lcpImage?.sizes ?? "100vw"}
+          type={preload.type}
+          media={preload.media}
+          imagesrcset={preload.srcset}
+          imagesizes={preload.sizes}
           fetchpriority="high"
         />
-      )
+      ))
     }
     {lcpPreload && <script is:inline>document.documentElement.classList.add("defer-media");</script>}
     <!--
