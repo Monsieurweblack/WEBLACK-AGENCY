@@ -3,13 +3,14 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import TalentLanding from "../../../components/pages/TalentLanding.astro";
 import { useTranslations } from "../../../i18n/utils";
 import { getEntriesByLang } from "../../../lib/content";
+import { TALENT_HERO } from "../../../lib/hero-images";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
 const talent = await getEntriesByLang("talent", lang);
 ---
 
-<BaseLayout lang={lang} title={t("talent.seo.title")} description={t("talent.hero.lead")}>
+<BaseLayout lang={lang} title={t("talent.seo.title")} description={t("talent.hero.lead")} lcpImage={TALENT_HERO}>
   <TalentLanding lang={lang} talent={talent} />
 </BaseLayout>
 

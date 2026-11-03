@@ -5,6 +5,7 @@ import CtaContact from "../sections/CtaContact.astro";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { getEntriesByLang, imageFit, type WorkEntry } from "../../lib/content";
 import { getRelatedProjects } from "../../lib/content-graph";
+import { WORK_HERO_WIDTH } from "../../lib/hero-images";
 
 interface Props {
   lang: Lang;
@@ -35,8 +36,8 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
       <RemoteImage
         src={work.data.coverImage.url}
         alt=""
-        width={2400}
-        height={1350}
+        width={WORK_HERO_WIDTH}
+        height={Math.round((WORK_HERO_WIDTH * 9) / 16)}
         loading="eager"
         fetchpriority="high"
         fit={imageFit(work.data.coverImage)}
@@ -103,9 +104,17 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
       </aside>
     </div>
 
+    {/*
+      data-after-lcp — la galerie attend l'image du bandeau (voir global.css,
+      .defer-media). Sans cela, ses images, pourtant « lazy », tombaient dans
+      le seuil de chargement anticipé de Chrome en réseau lent et
+      partageaient la bande passante avec l'image LCP : 394 Ko contre 166 Ko,
+      4,3 s de chargement mesurés. content-visibility: auto ne l'empêche pas
+      (essayé, mesuré : mêmes requêtes au même instant).
+    */}
     {
       work.data.galleryImages && work.data.galleryImages.length > 0 && (
-        <div class="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2" data-after-lcp>
           {work.data.galleryImages.map((image) => (
             <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)" data-reveal>
               <RemoteImage src={image.url} alt={image.alt} width={900} height={675} credit={image.credit} class="h-full w-full" />

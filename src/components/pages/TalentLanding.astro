@@ -3,6 +3,7 @@ import RemoteImage from "../media/RemoteImage.astro";
 import CardTalent from "../cards/CardTalent.astro";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 import { getEntriesByLang, sortByDateDesc, type TalentEntry } from "../../lib/content";
+import { TALENT_HERO } from "../../lib/hero-images";
 
 interface Props {
   lang: Lang;
@@ -68,14 +69,14 @@ const otherProfiles = ["brand", "media", "creative"] as const;
   <header class="relative flex min-h-[70vh] items-end overflow-hidden">
     <div class="absolute inset-0" aria-hidden="true">
       <RemoteImage
-        src="/photos/ze-defile-2026-cover.jpg"
+        src={TALENT_HERO.src}
         alt=""
-        width={1600}
-        height={900}
+        width={TALENT_HERO.width}
+        height={TALENT_HERO.height}
         loading="eager"
         fetchpriority="high"
         class="h-full w-full opacity-50"
-        sizes="100vw"
+        sizes={TALENT_HERO.sizes}
       />
       <div class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/50 to-(--color-ink)/10" />
     </div>

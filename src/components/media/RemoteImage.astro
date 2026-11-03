@@ -1,25 +1,13 @@
 ---
-import { getImage } from "astro:assets";
 import weblackMark from "../../assets/logo/weblack-mark-gold-64.png";
-import { isValidImageSrc, isRemoteImageSrc } from "../../lib/image-src";
-import { localVariantWidths, LOCAL_PHOTO_QUALITY } from "../../lib/local-photos";
-import { sanityResponsiveImage } from "../../lib/sanity-image";
-
-/**
- * Les 23 photographies de public/photos/ restent versionnées et servies
- * telles quelles à leur URL /photos/… (images de partage, liens externes,
- * valeurs saisies dans Sanity). Pour l'affichage, elles sont relues ici par
- * l'outil d'images d'Astro, qui en génère À LA COMPILATION des variantes
- * AVIF et WebP aux largeurs utiles — jamais au-delà de l'original.
- */
-const LOCAL_PHOTOS = import.meta.glob<{ default: ImageMetadata }>("/public/photos/*.{jpg,jpeg,png}", { eager: true });
+import { responsiveImage } from "../../lib/responsive-image";
 
 /**
  * Wrapper for two image sources: hotlinked Unsplash URLs (astro:assets can't
  * optimize remote URLs without remotePatterns, so we build a srcset from
  * Unsplash's own resize query params instead) and local WEBLACK photos in
- * public/photos/ (AVIF/WebP variants built at compile time, see above; the
- * untouched original stays the <img> fallback).
+ * public/photos/ (AVIF/WebP variants built at compile time; the
+ * untouched original stays the <img> fallback — see lib/responsive-image.ts).
  *
  * Falls back to a plain on-brand placeholder (never a stock/generic image)
  * when the source 404s — real WEBLACK photography is still pending for most
@@ -75,41 +63,16 @@ const {
  * already reports on its own — this component must degrade to "no image"
  * instead, independently of that check ever running.
  */
-const isValidUrl = isValidImageSrc(src);
-const isRemote = isValidUrl && isRemoteImageSrc(src);
+const image = await responsiveImage(src, width);
+const isValidUrl = image !== null;
 if (!isValidUrl && import.meta.env.DEV) {
   console.warn(`RemoteImage: ignoring invalid src (expected an http(s) URL or a root-relative path): ${JSON.stringify(src)}`);
 }
-
-function withWidth(url: string, w: number) {
-  const u = new URL(url);
-  u.searchParams.set("w", String(w));
-  u.searchParams.set("q", "80");
-  u.searchParams.set("auto", "format");
-  u.searchParams.set("fit", "crop");
-  return u.toString();
-}
-
-// Images Sanity : paliers de largeur par l'image builder, jamais au-delà de
-// l'original (voir lib/sanity-image.ts). Autres hôtes distants : inchangé.
-const sanity = isRemote ? sanityResponsiveImage(src, width) : null;
-const widths = [Math.round(width * 0.75), width, Math.min(width * 1.5, 3200)];
-const srcset = sanity ? sanity.srcset : isRemote ? widths.map((w) => `${withWidth(src, w)} ${w}w`).join(", ") : undefined;
-const finalSrc = isValidUrl ? (sanity ? sanity.src : isRemote ? withWidth(src, width) : src) : undefined;
-
-// Photo locale connue : variantes responsives AVIF puis WebP, l'original
-// intact en dernier repli (navigateurs sans AVIF ni WebP).
-const localPhoto = isValidUrl && !isRemote ? LOCAL_PHOTOS[`/public${src.split("?")[0]}`]?.default : undefined;
-const localSources = localPhoto
-  ? await Promise.all(
-      (["avif", "webp"] as const).map(async (format) => {
-        const variants = await Promise.all(
-          localVariantWidths(localPhoto.width).map((w) => getImage({ src: localPhoto, width: w, format, quality: LOCAL_PHOTO_QUALITY[format] })),
-        );
-        return { type: `image/${format}`, srcset: variants.map((v) => `${v.src} ${v.attributes.width}w`).join(", ") };
-      }),
-    )
-  : undefined;
+// Variantes calculées dans lib/responsive-image.ts, partagées avec le
+// préchargement LCP de BaseLayout : mêmes URL au caractère près.
+const localSources = image?.kind === "local" ? image.sources : undefined;
+const srcset = image?.kind === "remote" ? image.srcset : undefined;
+const finalSrc = image?.src;
 ---
 
 <figure class:list={["relative m-0", className]}>

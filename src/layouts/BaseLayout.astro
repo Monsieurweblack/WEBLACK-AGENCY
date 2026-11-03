@@ -8,6 +8,7 @@ import NewsletterPopup from "../components/sections/NewsletterPopup.astro";
 import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
 import { LOCALES } from "../i18n/locales";
 import { getSiteSettings } from "../lib/content";
+import { responsiveImage } from "../lib/responsive-image";
 // Importées en `?url` pour que Vite renvoie le chemin empreinté réellement
 // servi : écrire ces noms à la main préchargerait un fichier périmé au
 // premier changement de version de la police. Même fichier que l'@import
@@ -24,11 +25,28 @@ interface Props {
   noindex?: boolean;
   bodyClass?: string;
   translations?: TranslationMap;
+  /**
+   * L'image LCP de la page, avec EXACTEMENT les mêmes src, width et sizes
+   * que le RemoteImage qui l'affiche. Elle arrive sinon après ~110 Ko de
+   * HTML (CSS inline, en-tête, menu) : 2 à 3 allers-retours de découverte
+   * perdus sur un réseau lent, mesurés à 0,73 s sur /talent/.
+   */
+  lcpImage?: { src: string; width: number; sizes?: string };
 }
 
-const { lang, title, description, image, imageAlt, noindex, bodyClass, translations } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex, bodyClass, translations, lcpImage } = Astro.props;
 const t = useTranslations(lang);
 const siteSettings = await getSiteSettings(lang);
+// Variante locale : seule la source AVIF est préchargée, filtrée par `type` —
+// un navigateur sans AVIF l'ignore et retombe sur le <picture>, au lieu de
+// télécharger deux formats.
+const lcp = lcpImage ? await responsiveImage(lcpImage.src, lcpImage.width) : null;
+const lcpPreload =
+  lcp?.kind === "local"
+    ? { type: lcp.sources[0].type, srcset: lcp.sources[0].srcset }
+    : lcp?.kind === "remote" && lcp.srcset
+      ? { type: undefined, srcset: lcp.srcset }
+      : null;
 ---
 
 <!doctype html>
@@ -62,6 +80,20 @@ const siteSettings = await getSiteSettings(lang);
     -->
     <link rel="preconnect" href="https://cdn.sanity.io" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.sanity.io" />
+    <!-- Avant les fontes : l'image LCP part en premier sur la connexion. -->
+    {
+      lcpPreload && (
+        <link
+          rel="preload"
+          as="image"
+          type={lcpPreload.type}
+          imagesrcset={lcpPreload.srcset}
+          imagesizes={lcpImage?.sizes ?? "100vw"}
+          fetchpriority="high"
+        />
+      )
+    }
+    {lcpPreload && <script is:inline>document.documentElement.classList.add("defer-media");</script>}
     <!--
       Les deux seules fontes réellement téléchargées sur une page FR/EN —
       les autres sous-ensembles (cyrillique, grec, vietnamien) portent un
@@ -157,5 +189,27 @@ const siteSettings = await getSiteSettings(lang);
     <Footer lang={lang} siteSettings={siteSettings} />
     <NewsletterPopup lang={lang} />
     <ConsentBanner lang={lang} />
+    {
+      /*
+        Libère les images [data-after-lcp] (voir global.css, .defer-media)
+        dès que l'image LCP est arrivée — chargée ou en échec — et au plus
+        tard après 5 s, pour qu'aucune image ne reste jamais masquée.
+      */
+      lcpPreload && (
+        <script is:inline>
+          (function () {
+            var root = document.documentElement;
+            var release = function () {
+              root.classList.remove("defer-media");
+            };
+            var hero = document.querySelector('main img[fetchpriority="high"]');
+            if (!hero || hero.complete) return release();
+            hero.addEventListener("load", release, { once: true });
+            hero.addEventListener("error", release, { once: true });
+            setTimeout(release, 5000);
+          })();
+        </script>
+      )
+    }
   </body>
 </html>

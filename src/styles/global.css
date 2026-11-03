@@ -433,4 +433,16 @@
       opacity 420ms ease,
       transform 420ms ease;
   }
+
+  /*
+   * Images différées après l'image LCP (voir BaseLayout, `lcpImage`). La
+   * classe .defer-media n'est posée QUE par un script : sans JavaScript,
+   * rien n'est jamais masqué. Seule l'<img> sort du rendu — son cadre garde
+   * ses proportions, donc aucun décalage de mise en page — et le chargement
+   * différé natif de Chrome, qui ignore une image sans boîte, ne la
+   * télécharge plus en concurrence avec le bandeau.
+   */
+  .defer-media [data-after-lcp] img {
+    display: none;
+  }
 }
