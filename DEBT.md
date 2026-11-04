@@ -35,32 +35,35 @@ Chaque entrée : où, constat mesuré, pourquoi elle n'est pas soldée, quand la
   Web Animations) ; GSAP ne se charge plus qu'à la demande (menu, modale
   fondateur, filtre journal).
 - **LCP NTA au-dessus du budget — BLOQUANT pour la mise en production.**
-  Lighthouse mobile, bridage devtools (562 ms RTT simulé, 1,47 Mb/s), run 1
-  écarté, médiane des runs 2–4, aperçus Cloudflare mesurés en alternance.
-  `/talent/` est SOLDÉ (2,13 s, `6fa7a65` ; 1983–2324 ms en alternance).
-  `/selected-work/nuit-du-textile-africain-nta/` après l'option A
-  (polices de repli calibrées, fontes non préchargées sur les pages à image
-  LCP) : 2602/2557/2603 ms → 2,60 s (`d4cd9ed`), contre 2754/2774/2815 ms
-  pour `463b8ab` dans la même série. CLS 0,004 inchangé.
-  Ce qui reste : l'image (117 Ko) puis les fontes demandées au premier
-  rendu (~1 s) se partagent encore la bande passante jusqu'à ~2,4 s.
-  Essayé et non retenu sans décision du propriétaire : fontes demandées
-  seulement après l'image LCP (classe .defer-fonts libérée avec
-  .defer-media) — NTA 2,03 s en local, CLS 0,004, mais la vraie typographie
-  arrive ~2 s plus tard en 4G lente et un bref flash de police de repli
-  devient systématique sur réseau rapide (correctif conservé hors dépôt).
-  Repli calibré de Manrope (Arial) essayé puis retiré : il décalait l'encart
-  de la page candidature (CLS 0,016 contre 0,001) et coûtait ~150 ms de TBT.
+  Diagnostic final (2026-11-04, Lighthouse mobile devtools, traces Chrome
+  conservées) sur `b56ad35` : élément LCP = <img> du bandeau, carré
+  portrait AVIF 117 Ko, préchargé depuis le <head>, priorité High.
+  Phases (runs 2–4) : TTFB 94–148 ms ; délai de chargement 653–727 ms =
+  l'aller-retour du document lui-même (l'image part au premier octet du
+  HTML, la découverte est déjà immédiate) ; durée de chargement
+  1 500–1 741 ms pour 117 Ko, au lieu d'~1,2 s seule, parce que les deux
+  fontes (91 Ko, demandées au premier rendu ~1,1–1,4 s) partagent le lien ;
+  délai de rendu 77–441 ms, quand une passe de mise en page complète
+  (150–315 ms à CPU ×4, déclenchée par la bascule d'une fonte) tombe à
+  l'arrivée de l'image. Une passe coûte ~200 ms même corps masqué : coût
+  porté par les déclarations @font-face des polices variables, pas par le
+  contenu (bissection en transit, page vide témoin : 59 ms).
+  Plancher sous ce bridage : aller-retour du document (~0,75 s) + celui de
+  l'image (~0,56 s) + 117 Ko seuls (~0,65 s) + rendu ≈ 2,05 s ; il reste
+  ~0,45 s pour la fin du HTML et les 91 Ko de fontes. Tant que les fontes
+  partagent cette fenêtre, la médiane reste au-dessus de 2,5 s.
+  Mesuré et non retenu : Fraunces figée à wght=400 (35 Ko au lieu de 67,
+  opsz conservé ; avances ±1/16 px, 0,02 % par ligne) → 2,63 s contre 2,81 s
+  dans la même série, toujours au-dessus. Arrêt des modifications
+  spéculatives conformément à la consigne.
 - **Rebuilds Sanity de main en échec depuis le 2026-10-31.** Le déploiement
   0655d659 (deploy hook, 20:09 UTC) a échoué au contrôle d'intégrité : la
   version anglaise de l'article NTA n'existe plus qu'en brouillon, et main
   porte encore l'alias. La production reste figée sur le contenu du
   31 octobre 14:47 tant que PR 0 (qui retire l'alias) n'est pas promue.
-- **URL /en/journal/partenariat-nuit-du-textile-africain/.** Servie en
-  production (construite le 31 octobre), absente du candidat : son document
-  anglais n'est plus publié (brouillon drafts.92f10d44…). Sans publication,
-  elle deviendrait 404 à la promotion. Redirection temporaire proposée,
-  non appliquée, en attente de validation.
+- **URL /en/journal/partenariat-nuit-du-textile-africain/.** Redirection
+  temporaire 302 vers l'article français (public/_redirects, validée le
+  2026-11-04). À retirer dès qu'une version anglaise validée est publiée.
 - **robots.txt de production.** Cloudflare (« Manage robots.txt ») préfixe
   le fichier du dépôt d'un bloc géré : signaux de contenu (ai-train=no) et
   ~30 robots bloqués, dont deux moteurs de recherche (Baiduspider,

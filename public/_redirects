@@ -31,3 +31,11 @@
 /nb/*   /en/:splat    301
 /zh     /en/          301
 /zh/*   /en/:splat    301
+
+# TEMPORAIRE (302), validé le 2026-11-04 : la version anglaise de l'annonce
+# du partenariat NTA n'existe plus qu'en brouillon dans Sanity. L'URL,
+# publiée jusqu'au 31 octobre, renvoie vers l'article français — la même
+# annonce — plutôt que vers une 404. À RETIRER dès qu'une version anglaise
+# validée est publiée (sinon ce renvoi masquerait la page).
+/en/journal/partenariat-nuit-du-textile-africain    /journal/l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine/  302
+/en/journal/partenariat-nuit-du-textile-africain/   /journal/l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine/  302
