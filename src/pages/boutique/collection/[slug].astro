@@ -17,7 +17,7 @@ const { collection } = Astro.props as { collection: BoutiqueCollectionData };
 const [products, categories] = await Promise.all([getProductsByCollection(lang, collection.slug), getBoutiqueCategories(lang)]);
 
 const translations: TranslationMap = {
-  en: localizedPath("en", `/boutique/collection/${collection.slug}`),
+  en: localizedPath("en", `/boutique/collection/${collection.slug}/`),
 };
 ---
 

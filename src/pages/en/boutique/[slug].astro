@@ -35,7 +35,7 @@ async function findRelated(current: BoutiqueProductData): Promise<BoutiqueProduc
 const related = await findRelated(product);
 
 const translations: TranslationMap = {
-  fr: localizedPath("fr", `/boutique/${product.slug}`),
+  fr: localizedPath("fr", `/boutique/${product.slug}/`),
 };
 ---
 

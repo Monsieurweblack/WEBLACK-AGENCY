@@ -76,8 +76,17 @@ export interface ContentIdAlias {
  * shared relatedWorkSlug "nuit-du-textile-africain-bamako") was removed
  * because the EN document was unpublished in Sanity — it survives only as a
  * draft. If it is published again, restore that exact pair.
+ *
+ * The two Selected Work pairs, verified 2026-11-04 against the live Sanity
+ * documents: same client, year, city, country, title and cover image, one
+ * document per language. Without them the project pages fell back to the
+ * naive same-slug swap and their language switcher and hreflang pointed at
+ * 404s (e.g. /selected-work/nuit-du-textile-africain-bamako/).
  */
-export const CONTENT_ID_ALIASES: ContentIdAlias[] = [];
+export const CONTENT_ID_ALIASES: ContentIdAlias[] = [
+  { type: "work", slugs: { fr: "nuit-du-textile-africain-nta", en: "nuit-du-textile-africain-bamako" } },
+  { type: "work", slugs: { fr: "ze-defile-by-waxfashion", en: "ze-defile-by-waxfashion-paris" } },
+];
 
 /**
  * Resolves a (type, lang, slug) triple to a stable contentId. The canonical

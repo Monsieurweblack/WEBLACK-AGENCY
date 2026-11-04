@@ -1,16 +1,28 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import WorkDetail from "../../../components/pages/WorkDetail.astro";
-import { useTranslations } from "../../../i18n/utils";
+import { useTranslations, localizedPath, type TranslationMap } from "../../../i18n/utils";
 import { getEntriesByLang, imageFit } from "../../../lib/content";
+import { resolveContentId } from "../../../lib/content-graph";
 import { WORK_HERO_WIDTH, WORK_HERO_PORTRAIT } from "../../../lib/hero-images";
 
+/**
+ * FR and EN slugs of the same project can differ (NTA, ZÉ DÉFILÉ): the
+ * counterpart is matched by contentId (src/lib/content-graph.ts), never by
+ * slug. Always an explicit map, possibly {} — "checked, none found" — so a
+ * project without a counterpart never gets a guessed link.
+ */
 export async function getStaticPaths() {
-  const entries = await getEntriesByLang("work", "en");
-  return entries.map((work) => ({ params: { slug: work.data.slug }, props: { work } }));
+  const [entries, others] = await Promise.all([getEntriesByLang("work", "en"), getEntriesByLang("work", "fr")]);
+  const otherById = new Map(others.map((entry) => [resolveContentId("work", "fr", entry.data.slug), entry]));
+  return entries.map((work) => {
+    const match = otherById.get(resolveContentId("work", "en", work.data.slug));
+    const translations: TranslationMap = match ? { fr: localizedPath("fr", `/selected-work/${match.data.slug}/`) } : {};
+    return { params: { slug: work.data.slug }, props: { work, translations } };
+  });
 }
 
-const { work } = Astro.props;
+const { work, translations } = Astro.props;
 const lang = "en" as const;
 const t = useTranslations(lang);
 ---
@@ -20,6 +32,7 @@ const t = useTranslations(lang);
   title={`${work.data.title} — ${t("nav.selectedwork")}`}
   description={work.data.context}
   image={work.data.coverImage.url}
+  translations={translations}
   lcpImage={{
     src: work.data.coverImage.url,
     width: WORK_HERO_WIDTH,
