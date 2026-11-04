@@ -1,5 +1,4 @@
 ---
-import RemoteImage from "../media/RemoteImage.astro";
 import { getImage } from "astro:assets";
 import weblackSymbol from "../../assets/logo/weblack-symbol-clean.png";
 import TalentsAppNotice from "./TalentsAppNotice.astro";
@@ -8,18 +7,11 @@ import type { HomepageHero } from "../../lib/content";
 
 interface Props {
   lang: Lang;
-  heroImage: {
-    url: string;
-    alt: string;
-    width: number;
-    height: number;
-    credit?: { photographer: string; photographerUrl?: string };
-  };
   /** From the "homepage" Sanity singleton — falls back to i18n copy below when a field isn't set. */
   hero?: HomepageHero;
 }
 
-const { lang, heroImage, hero } = Astro.props;
+const { lang, hero } = Astro.props;
 // Le symbole n'est utilisé que comme masque CSS (seul son canal alpha
 // compte) : WebP généré à la compilation (canal alpha encodé sans perte,
 // alphaQuality 100 par défaut) au lieu du PNG de
@@ -59,24 +51,17 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   data-hero-section
   class="relative flex min-h-[100svh] items-start overflow-hidden bg-(--color-ink) lg:items-end"
 >
+  {/*
+    Fond : noir profond, une lumière et un grain — rien d'autre. Le
+    monogramme reste le seul élément graphique (voir le <style> plus bas).
+    La photographie du public (champ « heroImage » de la page d'accueil dans
+    Sanity, vide à ce jour, repli /photos/hero-home.jpg) n'est plus affichée
+    ici : un projecteur et des silhouettes derrière le texte ajoutaient du
+    bruit, pas de la profondeur.
+  */}
   <div class="absolute inset-0" aria-hidden="true">
-    <RemoteImage
-      src={heroImage.url}
-      alt=""
-      width={heroImage.width}
-      height={heroImage.height}
-      loading="eager"
-      fetchpriority="high"
-      class="h-full w-full opacity-45"
-      sizes="100vw"
-    />
-    <div
-      class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/60 to-(--color-ink)/20"
-    >
-    </div>
-    <div class="absolute inset-0 bg-(--color-ink)/20"></div>
-    {/* La trame (scripts/motion/weave.ts) : transparente tant qu'elle ne tourne pas. */}
-    <canvas data-weave class="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-[1400ms]"></canvas>
+    <div data-hero-light class="absolute inset-0"></div>
+    <div data-hero-grain class="absolute inset-0"></div>
   </div>
 
   {/*
@@ -108,7 +93,6 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     aria-hidden="true"
   >
     <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
-    <span data-hero-ring aria-hidden="true"></span>
     <div
       data-hero-mark
       data-intro="mark"
@@ -197,26 +181,6 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <span class="label-tracked">{t("home.hero.scroll")}</span>
   </a>
 </section>
-
-<script>
-  import { motionProfile } from "../../scripts/motion/capability";
-
-  // La trame n'arrive qu'après le chargement complet et un temps mort du
-  // navigateur : elle ne dispute jamais la bande passante ni le fil principal
-  // au premier rendu (l'élément LCP de l'accueil est la phrase des piliers).
-  const canvas = document.querySelector<HTMLCanvasElement>("[data-weave]");
-  const section = document.querySelector<HTMLElement>("[data-hero-section]");
-  if (canvas && section && motionProfile() === "full") {
-    const start = async () => {
-      const { startWeave } = await import("../../scripts/motion/weave");
-      startWeave({ canvas, section, mark: section.querySelector<HTMLElement>("[data-hero-mark]") });
-    };
-    const whenIdle = () =>
-      "requestIdleCallback" in window ? requestIdleCallback(start, { timeout: 3000 }) : setTimeout(start, 300);
-    if (document.readyState === "complete") whenIdle();
-    else window.addEventListener("load", whenIdle, { once: true });
-  }
-</script>
 
 <style>
   /*
@@ -319,49 +283,56 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   }
 
   /*
-   * The symbol is a single flattened image (W + its thin circle baked into
-   * one alpha mask, no separable layers) — isolating just the circle would
-   * mean reconstructing the artwork from an approximation, which risks
-   * visible degradation of the mark. Instead the W stays completely
-   * untouched and static, and an independent ring sits behind it, sized and
-   * centered to match the circle's actual footprint in the source file
-   * (measured from the asset's own alpha channel: a ~618px circle centered
-   * at roughly 50%/47.5% of the 735x720 frame, i.e. ~84% of its width).
-   * Rotation is transform-only, so it's cheap and covered by the site's
-   * existing global prefers-reduced-motion rule (global.css forces
-   * animation-duration to ~0 for every element under that setting).
+   * Lumière de plateau : un halo très doux, centré là où se tient le
+   * monogramme (en haut sur mobile, à droite sur grand écran), qui laisse les
+   * bords dans le noir. Sa respiration — une variation d'intensité de 24 s,
+   * imperceptible à l'arrêt — n'anime que l'opacité (composée par le GPU) ;
+   * sous prefers-reduced-motion, la règle globale de global.css la fige.
    */
-  [data-hero-ring] {
-    position: absolute;
-    left: 50%;
-    top: 47.5%;
-    width: 84%;
-    aspect-ratio: 1;
-    transform: translate(-50%, -50%);
-    border-radius: 9999px;
-    background: conic-gradient(
-      from 0deg,
-      color-mix(in srgb, var(--color-gold) 30%, transparent) 0deg,
-      color-mix(in srgb, var(--color-gold) 30%, transparent) 330deg,
-      var(--color-gold) 344deg,
-      var(--color-gold-bright) 356deg,
-      color-mix(in srgb, var(--color-gold) 30%, transparent) 360deg
-    );
-    -webkit-mask-image: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    mask-image: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    animation: hero-ring-spin 22s linear infinite;
-    will-change: transform;
+  [data-hero-light] {
+    background:
+      radial-gradient(60% 45% at 50% 30%, color-mix(in srgb, var(--color-gold) 7%, transparent), transparent 70%),
+      radial-gradient(120% 90% at 50% 40%, transparent 55%, color-mix(in srgb, #000 55%, transparent));
+    animation: hero-light-breathe 24s ease-in-out infinite alternate;
   }
 
-  @keyframes hero-ring-spin {
-    to {
-      transform: translate(-50%, -50%) rotate(360deg);
+  @media (min-width: 1024px) {
+    [data-hero-light] {
+      background:
+        radial-gradient(42% 60% at 72% 50%, color-mix(in srgb, var(--color-gold) 8%, transparent), transparent 70%),
+        radial-gradient(120% 100% at 60% 50%, transparent 55%, color-mix(in srgb, #000 55%, transparent));
     }
   }
 
-  @media (max-width: 640px) {
-    [data-hero-ring] {
+  /* Thème clair : le halo seul — la vignette noire assombrirait un fond clair. */
+  :global(:root[data-theme="light"]) [data-hero-light] {
+    background: radial-gradient(60% 45% at 50% 30%, color-mix(in srgb, var(--color-gold) 10%, transparent), transparent 70%);
+  }
+
+  @media (min-width: 1024px) {
+    :global(:root[data-theme="light"]) [data-hero-light] {
+      background: radial-gradient(42% 60% at 72% 50%, color-mix(in srgb, var(--color-gold) 10%, transparent), transparent 70%);
+    }
+  }
+
+  @keyframes hero-light-breathe {
+    from {
       opacity: 0.75;
     }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /*
+   * Grain de pellicule, fixe : un bruit fractal (feTurbulence) en SVG inline,
+   * dessiné une fois puis répété — aucune requête, aucune animation. Juste
+   * assez pour que le noir ait une matière, jamais un motif.
+   */
+  [data-hero-grain] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px 180px;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
   }
 </style>

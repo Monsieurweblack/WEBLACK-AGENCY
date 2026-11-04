@@ -73,12 +73,6 @@ async function selectBoutiqueProducts(): Promise<BoutiqueProductData[]> {
 }
 const boutiqueProducts = await selectBoutiqueProducts();
 
-const heroImage = homepage?.hero.image ?? {
-  url: "/photos/hero-home.jpg",
-  alt: "Défilé de mode dans une salle comble, mannequin sous un projecteur.",
-  width: 1440,
-  height: 959,
-};
 
 /** Manual selection (by slug) wins when set; otherwise the featured-fallback flag decides the pool, sorted by date, capped to the configured count. */
 function selectBySlug<T extends { data: { slug: string; publishDate?: Date; startDate?: Date } }>(
@@ -148,7 +142,7 @@ const displayedWork = selectBySlug<WorkEntry>(
   <LivePriority lang={lang} live={activeLive} />
 
   {/* ATTENTION */}
-  <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
+  <HeroHome lang={lang} hero={homepage?.hero} />
   <TalentsAppNotice lang={lang} variant="section" />
 
   {/* IDENTIFICATION — dans quel monde travaille WEBLACK */}
