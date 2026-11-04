@@ -1,4 +1,4 @@
-import { revealKeyframes, REVEAL_DURATION_MS, SIGNATURE_EASING, WORD_STAGGER_MS, wordKeyframes } from "../motion/tokens";
+import { revealKeyframes, REVEAL_DURATION_MS, SIGNATURE_EASING } from "../motion/tokens";
 
 let initialized = false;
 
@@ -25,7 +25,7 @@ export function initScrollChoreography() {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (!("IntersectionObserver" in window) || !("animate" in Element.prototype)) return;
 
-  const reveals = [...document.querySelectorAll<HTMLElement>("[data-reveal], [data-split]")];
+  const reveals = [...document.querySelectorAll<HTMLElement>("[data-reveal]")];
   if (!reveals.length) return;
 
   // Premier rapport de l'observateur = état au chargement, calculé après la
@@ -43,25 +43,12 @@ export function initScrollChoreography() {
         if (!entry.isIntersecting) continue;
         observer.unobserve(el);
         if (first) continue;
-        if (el.hasAttribute("data-split")) splitWords(el);
-        if (el.hasAttribute("data-reveal")) {
-          el.animate(revealKeyframes, {
-            duration: REVEAL_DURATION_MS,
-            delay: Number(el.dataset.revealDelay || 0) * 1000,
-            easing: SIGNATURE_EASING,
-            fill: "backwards",
-          });
-        }
-        if (el.hasAttribute("data-split")) {
-          el.querySelectorAll<HTMLElement>("[data-word]").forEach((word, i) =>
-            word.animate(wordKeyframes, {
-              duration: REVEAL_DURATION_MS,
-              delay: 120 + i * WORD_STAGGER_MS,
-              easing: SIGNATURE_EASING,
-              fill: "backwards",
-            }),
-          );
-        }
+        el.animate(revealKeyframes, {
+          duration: REVEAL_DURATION_MS,
+          delay: Number(el.dataset.revealDelay || 0) * 1000,
+          easing: SIGNATURE_EASING,
+          fill: "backwards",
+        });
       }
     },
     // 40 px sous le bord : l'animation démarre juste avant le premier pixel visible,
@@ -71,60 +58,7 @@ export function initScrollChoreography() {
 
   reveals.forEach((el) => observer.observe(el));
 
-  // Manifeste lu au défilement (motion.css, .mq-word) : quand la citation a
-  // franchi la ligne médiane de l'écran vers le haut, chaque mot est à son
-  // état final — qui est aussi son état naturel. Les 26 animations liées au
-  // défilement sont alors retirées : plus aucun calcul pour un texte déjà lu.
-  // L'observateur ne regarde qu'une ligne (marges -50 %) : il se déclenche à
-  // l'entrée et à la sortie de la citation, jamais entre les deux.
-  const manifesto = document.querySelector<HTMLElement>(".mq-word")?.closest("section");
-  let read: IntersectionObserver | undefined;
-  if (manifesto) {
-    read = new IntersectionObserver(
-      ([entry]) => {
-        const passed = !entry.isIntersecting && entry.rootBounds !== null && entry.boundingClientRect.bottom <= entry.rootBounds.top;
-        if (!passed) return;
-        manifesto.classList.add("mq-read");
-        read?.disconnect();
-      },
-      { rootMargin: "-50% 0px -50% 0px" },
-    );
-    read.observe(manifesto);
-  }
-
-  // bfcache : la page restaurée garde son état, les observateurs n'ont plus rien à faire.
-  window.addEventListener(
-    "pagehide",
-    () => {
-      observer.disconnect();
-      read?.disconnect();
-    },
-    { once: true },
-  );
+  // bfcache : la page restaurée garde son état, l'observateur n'a plus rien à faire.
+  window.addEventListener("pagehide", () => observer.disconnect(), { once: true });
 }
 
-/**
- * Titres [data-split] : chaque mot devient un <span> en ligne, découpé au
- * dernier moment et seulement pour un titre encore hors écran. Le texte ne
- * change pas — mêmes mots, mêmes espaces —, il reste un seul titre pour les
- * technologies d'assistance.
- */
-function splitWords(el: HTMLElement) {
-  for (const node of [...el.childNodes]) {
-    if (node.nodeType !== Node.TEXT_NODE || !node.textContent?.trim()) continue;
-    const fragment = document.createDocumentFragment();
-    for (const part of node.textContent.split(/(\s+)/)) {
-      if (!part) continue;
-      if (/^\s+$/.test(part)) {
-        fragment.append(part);
-        continue;
-      }
-      const word = document.createElement("span");
-      word.dataset.word = "";
-      word.style.display = "inline-block";
-      word.textContent = part;
-      fragment.append(word);
-    }
-    node.replaceWith(fragment);
-  }
-}

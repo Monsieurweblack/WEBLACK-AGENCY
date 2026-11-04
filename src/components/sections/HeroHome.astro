@@ -89,11 +89,10 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     demandée, voir le rapport du bloc).
   */}
   <div
-    data-mark-recede
     class="pointer-events-none absolute inset-x-0 top-[calc(var(--header-h)+var(--hero-safe-gap))] z-[4] mx-auto w-(--hero-symbol-w) max-w-[300px] opacity-80 md:max-w-[420px] md:opacity-90 lg:inset-x-auto lg:right-[9%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] lg:-translate-y-1/2 lg:opacity-100"
     aria-hidden="true"
   >
-    <div data-mark-glow class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
+    <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
     {/*
       [data-mark-tilt] porte l'ouverture (motion.css, « mark » : opacity,
       translate, scale — des propriétés composées par le GPU) et la
@@ -331,28 +330,19 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   }
 
   /*
-   * Ouverture du monogramme : le halo monte (2,4 s), puis une seule lame de
-   * lumière traverse le W une fois construit (motion.css, « intro-mark »),
-   * et tout s'arrête — aucun mouvement permanent. Un toucher relance la lame
-   * sur écran tactile (.is-sweeping, monogram.ts).
+   * Ouverture du monogramme : le W monte et se pose (motion.css,
+   * « intro-mark »), puis une seule lame de lumière dorée le traverse, et
+   * tout s'arrête — aucun mouvement permanent. Un toucher relance la lame
+   * sur écran tactile (.is-sweeping, monogram.ts). Le halo derrière le W est
+   * fixe : un flou de 70 px qu'on anime se recompose à chaque image.
    */
   @media (prefers-reduced-motion: no-preference) {
-    [data-mark-glow] {
-      animation: mark-glow 2400ms var(--ease-signature) 300ms both;
-    }
-
     .hero-symbol::before {
       animation: mark-sweep 1600ms var(--ease-signature) 1100ms both;
     }
 
     .hero-symbol.is-sweeping::before {
       animation: mark-sweep-again 1400ms var(--ease-signature) both;
-    }
-  }
-
-  @keyframes mark-glow {
-    from {
-      opacity: 0;
     }
   }
 
@@ -390,22 +380,14 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   /*
    * Lumière de plateau : un halo très doux, centré là où se tient le
    * monogramme (en haut sur mobile, à droite sur grand écran), qui laisse les
-   * bords dans le noir. Sa respiration — une variation d'intensité de 24 s,
-   * imperceptible à l'arrêt — n'anime que l'opacité, et seulement quand
-   * l'ouverture est « vivante » ([data-live], posé par monogram.ts après le
-   * chargement et retiré dès que le hero quitte l'écran) : rien ne tourne
-   * pendant le premier rendu ni hors champ, rien en mouvement réduit.
+   * bords dans le noir. Fixe : une lumière qui « respire » en continu
+   * occupait le GPU tant que la page restait ouverte, pour un effet à peine
+   * perceptible.
    */
   [data-hero-light] {
     background:
       radial-gradient(60% 45% at 50% 30%, color-mix(in srgb, var(--color-gold) 7%, transparent), transparent 70%),
       radial-gradient(120% 90% at 50% 40%, transparent 55%, color-mix(in srgb, #000 55%, transparent));
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    [data-hero-section][data-live] [data-hero-light] {
-      animation: hero-light-breathe 24s ease-in-out infinite alternate;
-    }
   }
 
   @media (min-width: 1024px) {
@@ -427,24 +409,17 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     }
   }
 
-  @keyframes hero-light-breathe {
-    from {
-      opacity: 0.75;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
   /*
-   * Grain de pellicule, fixe : un bruit fractal (feTurbulence) en SVG inline,
-   * dessiné une fois puis répété — aucune requête, aucune animation. Juste
-   * assez pour que le noir ait une matière, jamais un motif.
+   * Grain de pellicule, fixe : une tuile de bruit précalculée (WebP de 11 Ko,
+   * public/textures/grain.webp), répétée, en fusion normale. Le bruit SVG
+   * (feTurbulence) qu'elle remplace ouvrait un document SVG isolé et était
+   * calculé par le navigateur au premier rendu, puis refondu en « overlay »
+   * à chaque image du hero. Juste assez pour que le noir ait une matière,
+   * jamais un motif.
    */
   [data-hero-grain] {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size: 180px 180px;
-    opacity: 0.05;
-    mix-blend-mode: overlay;
+    background-image: url("/textures/grain.webp");
+    background-size: 160px 160px;
+    opacity: 0.035;
   }
 </style>

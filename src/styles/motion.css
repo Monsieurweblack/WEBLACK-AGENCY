@@ -1,22 +1,21 @@
 /*
  * Système de mouvement WEBLACK — « le métier ».
  *
- * Un seul fil conducteur : le fil d'or qui se tend, traverse et relie. Tout
- * mouvement ici sert une de ces fonctions — orienter (transition de page),
- * relier (fil de la méthode, du parcours), révéler (image), installer
- * (ouverture de l'accueil) — et rien d'autre.
+ * Peu de mouvements, choisis : installer (l'ouverture de l'accueil et son
+ * monogramme), orienter (transition de page), révéler (chaque bloc une fois,
+ * à son arrivée près de l'écran — scroll-choreography.ts). Rien ne tourne en
+ * permanence, rien ne se rejoue à chaque défilement : les ressources vont
+ * aux moments qui comptent (mesuré : chaque effet continu ou démultiplié
+ * coûtait du temps de rendu à l'accueil).
  *
  * Règles du système :
  *   - une seule courbe, --ease-signature (@theme), trois durées ci-dessous ;
- *   - transform / opacity / clip-path uniquement : jamais de propriété qui
- *     relance la mise en page à chaque image ;
- *   - CSS d'abord. Les animations liées au défilement tournent hors du fil
- *     principal (animation-timeline) ; un navigateur qui ne les connaît pas
- *     affiche le contenu immobile et entièrement visible ;
- *   - prefers-reduced-motion: reduce coupe tout. La règle globale de
- *     global.css ramène les durées à ~0, mais une animation liée au
- *     défilement n'a pas de durée : chaque bloc est donc explicitement
- *     placé sous (prefers-reduced-motion: no-preference) ;
+ *   - opacity, transform, translate, scale uniquement — des propriétés que le
+ *     GPU compose sans repeindre ni relancer la mise en page ;
+ *   - une animation s'arrête quand elle a joué ; aucune boucle infinie
+ *     décorative ;
+ *   - prefers-reduced-motion: reduce coupe tout (règle globale de
+ *     global.css, et chaque bloc ci-dessous sous no-preference) ;
  *   - aucun contenu n'est masqué sans que l'animation qui le révèle ne soit
  *     garantie de tourner (pas d'état initial caché posé « en attendant » un
  *     script).
@@ -82,99 +81,18 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  /*
-   * Animations liées au défilement : TOUJOURS en propriétés détaillées, sans
-   * animation-delay / -iteration-count / -direction / -play-state. Avec le
-   * jeu complet, le minifieur CSS les fusionnait en un raccourci
-   * « animation: … --timeline » que Chrome rejette (animation-timeline ne se
-   * déclare pas dans le raccourci) : la règle entière était ignorée, le fil
-   * d'or et les dévoilements d'image ne tournaient pas en production
-   * (animation-name: none, constaté le 2026-11-04).
-   */
-  @supports (animation-timeline: view()) {
-    /*
-     * 2 — Le fil. Un trait d'or qui se tend sur la largeur d'une séquence
-     * (les cinq temps de WEBLACK Perspective, le parcours Talent) au rythme
-     * où on la lit. Sans support : le trait est simplement là, tendu.
-     */
-    /*
-     * Sortie de l'ouverture : en quittant l'écran, le monogramme recule et
-     * s'éteint — l'accueil passe la main à la section suivante. `scale` et
-     * `opacity` seulement : la position (translate de Tailwind) et la
-     * perspective du curseur (transform) restent indépendantes.
-     */
-    [data-hero-section] {
-      view-timeline-name: --hero;
-    }
-
-    [data-mark-recede] {
-      animation-name: mark-recede;
-      animation-duration: auto;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --hero;
-      animation-range: exit 0% exit 80%;
-    }
-
-    /*
-     * Le manifeste se lit au défilement : les mots arrivent dans l'ordre de
-     * la phrase, tous présents quand la citation atteint le centre de
-     * l'écran. Départ à opacité nulle — un mot à demi éteint serait un texte
-     * à contraste insuffisant, pas une lecture.
-     */
-    .mq-word {
-      display: inline-block;
-      animation-name: mq-read;
-      animation-duration: auto;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --manifesto;
-      animation-range: cover calc(5% + var(--p, 0%)) cover calc(20% + var(--p, 0%));
-    }
-
-    /* Citation lue (scroll-choreography.ts) : état final = état naturel, les animations sont libérées. */
-    .mq-read .mq-word {
-      animation: none;
-    }
-
-    [data-thread] {
-      view-timeline-name: --thread;
-    }
-
-    [data-thread]::before {
-      animation-name: thread-draw;
-      animation-duration: auto;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: --thread;
-      animation-range: entry 30% cover 50%;
-    }
-
-    /*
-     * 3 — Dévoilement d'image. Le cadre s'ouvre depuis le centre pendant que
-     * la photographie se pose — une révélation, pas un zoom décoratif. Le
-     * cadre garde sa taille : rien ne bouge autour.
-     */
-    [data-unveil] {
-      animation-name: unveil;
-      animation-duration: auto;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: view();
-      animation-range: entry 0% cover 35%;
-    }
-
-    [data-unveil] img {
-      animation-name: unveil-settle;
-      animation-duration: auto;
-      animation-timing-function: linear;
-      animation-fill-mode: both;
-      animation-timeline: view();
-      animation-range: entry 0% cover 50%;
-    }
-  }
-}
+/*
+ * Animations liées au défilement (animation-timeline) : aucune n'est retenue
+ * dans la direction actuelle — la narration avance par blocs, révélés une
+ * fois puis arrêtés (scroll-choreography.ts). Si l'une revient un jour, elle
+ * s'écrit TOUJOURS en propriétés détaillées, sans animation-delay /
+ * -iteration-count / -direction / -play-state : avec le jeu complet, le
+ * minifieur CSS les fusionne en un raccourci « animation: … --timeline » que
+ * Chrome rejette (animation-timeline ne se déclare pas dans le raccourci), et
+ * la règle entière est ignorée sans erreur — c'est ce qui avait désactivé le
+ * fil d'or et les dévoilements d'image en production (constaté le
+ * 2026-11-04).
+ */
 
 /*
  * Micro-interactions. Appui : les appels à l'action principaux ([data-press])
@@ -289,40 +207,5 @@ button[aria-busy="true"]::before {
     opacity: 1;
     translate: 0 0;
     scale: 1;
-  }
-}
-
-@keyframes mq-read {
-  from {
-    opacity: 0;
-    transform: translateY(0.35em);
-  }
-}
-
-@keyframes mark-recede {
-  to {
-    scale: 0.86;
-    opacity: 0.2;
-  }
-}
-
-@keyframes thread-draw {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes unveil {
-  from {
-    clip-path: inset(10% 8% 10% 8%);
-  }
-  to {
-    clip-path: inset(0);
-  }
-}
-
-@keyframes unveil-settle {
-  from {
-    transform: scale(1.12);
   }
 }

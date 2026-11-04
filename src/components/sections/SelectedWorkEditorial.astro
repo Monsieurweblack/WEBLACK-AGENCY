@@ -40,7 +40,7 @@ const secondaryHref = secondary ? localizedPath(lang, `/selected-work/${secondar
       {/* PROJET PHARE — pleine largeur, galerie quand elle existe */}
       <article class="group" data-reveal>
         <a href={leadHref} class="block">
-          <div class="relative aspect-[16/10] overflow-hidden bg-(--color-ink-soft) sm:aspect-[21/9]" data-unveil>
+          <div class="relative aspect-[16/10] overflow-hidden bg-(--color-ink-soft) sm:aspect-[21/9]">
             <RemoteImage
               src={lead.data.coverImage.url}
               alt={lead.data.coverImage.alt}
@@ -131,7 +131,7 @@ const secondaryHref = secondary ? localizedPath(lang, `/selected-work/${secondar
       {secondary && (
         <article class="group border-t border-(--color-line) pt-16" data-reveal>
           <a href={secondaryHref} class="grid grid-cols-1 gap-8 sm:grid-cols-[1fr_1.4fr] sm:items-center">
-            <div class="relative aspect-[4/3] overflow-hidden bg-(--color-ink-soft)" data-unveil>
+            <div class="relative aspect-[4/3] overflow-hidden bg-(--color-ink-soft)">
               <RemoteImage
                 src={secondary.data.coverImage.url}
                 alt={secondary.data.coverImage.alt}

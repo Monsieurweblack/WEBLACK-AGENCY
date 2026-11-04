@@ -117,7 +117,7 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
       work.data.galleryImages && work.data.galleryImages.length > 0 && (
         <div class="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2" data-after-lcp>
           {work.data.galleryImages.map((image) => (
-            <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)" data-reveal data-unveil>
+            <div class="aspect-[4/3] overflow-hidden bg-(--color-ink-soft)" data-reveal>
               <RemoteImage src={image.url} alt={image.alt} width={900} height={675} credit={image.credit} class="h-full w-full" />
             </div>
           ))}
