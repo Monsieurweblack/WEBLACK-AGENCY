@@ -1,5 +1,4 @@
 ---
-import RemoteImage from "../media/RemoteImage.astro";
 import { getImage } from "astro:assets";
 import weblackSymbol from "../../assets/logo/weblack-symbol-clean.png";
 import TalentsAppNotice from "./TalentsAppNotice.astro";
@@ -8,23 +7,17 @@ import type { HomepageHero } from "../../lib/content";
 
 interface Props {
   lang: Lang;
-  heroImage: {
-    url: string;
-    alt: string;
-    width: number;
-    height: number;
-    credit?: { photographer: string; photographerUrl?: string };
-  };
   /** From the "homepage" Sanity singleton — falls back to i18n copy below when a field isn't set. */
   hero?: HomepageHero;
 }
 
-const { lang, heroImage, hero } = Astro.props;
+const { lang, hero } = Astro.props;
 // Le symbole n'est utilisé que comme masque CSS (seul son canal alpha
 // compte) : WebP généré à la compilation (canal alpha encodé sans perte,
-// alphaQuality 100 par défaut) au lieu du PNG de
-// 190 Ko, mêmes dimensions, même alpha.
+// alphaQuality 100 par défaut) au lieu du PNG de 190 Ko, mêmes dimensions,
+// même alpha.
 const symbolMask = await getImage({ src: weblackSymbol, format: "webp", quality: 100 });
+const maskStyle = `-webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`;
 const t = useTranslations(lang);
 
 const tagline = hero?.eyebrow ?? t("home.hero.tagline");
@@ -33,122 +26,82 @@ const ctaExploreLabel = hero?.ctaPrimaryLabel ?? t("home.hero.cta.explore");
 /**
  * Le repli par défaut n'est pas /about : le Hero installe la marque ;
  * la découverte qu'il promet, dans l'architecture de l'accueil, c'est la
- * page elle-même — Preuve, Expertise, Méthode, Désir, Confiance, dans cet
- * ordre. Renvoyer vers /about court-circuiterait ce parcours au premier
- * clic. #work (voir l'ancre ajoutée sur SelectedWorkPreview.astro) garde
- * le visiteur dans la page et l'amène directement à la preuve — la
- * première chose que l'architecture veut montrer après l'identité.
+ * page elle-même. #work garde le visiteur dans la page et l'amène
+ * directement à la preuve — la première chose que l'architecture veut
+ * montrer après l'identité.
  */
 const ctaExploreHref = localizedPath(lang, hero?.ctaPrimaryUrl ?? "#work");
 
 /**
- * Le CTA secondaire n'a pas de repli i18n : « Travailler avec nous » vers
- * /contact, juste sous un en-tête qui porte déjà le sélecteur à six
- * profils, doublerait la même intention par un chemin plus pauvre — non
- * segmenté, avant toute preuve. Il ne s'affiche donc que si un contenu
- * Sanity l'active explicitement (label ET destination) ; aujourd'hui,
- * aucun des deux n'est renseigné, donc rien ne s'affiche. Le header reste
- * l'unique entrée commerciale persistante.
+ * Le CTA secondaire n'a pas de repli i18n : il ne s'affiche que si un
+ * contenu Sanity l'active explicitement (label ET destination). Le header
+ * reste l'unique entrée commerciale persistante.
  */
 const hasSecondaryCta = Boolean(hero?.ctaSecondaryLabel && hero?.ctaSecondaryUrl);
 const ctaWorkLabel = hero?.ctaSecondaryLabel;
 const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondaryUrl) : undefined;
 ---
 
-<section
-  data-hero-section
-  class="relative flex min-h-[100svh] items-start overflow-hidden bg-(--color-ink) lg:items-end"
->
-  <div class="absolute inset-0" aria-hidden="true">
-    <RemoteImage
-      src={heroImage.url}
-      alt=""
-      width={heroImage.width}
-      height={heroImage.height}
-      loading="eager"
-      fetchpriority="high"
-      class="h-full w-full opacity-45"
-      sizes="100vw"
-    />
-    <div
-      class="absolute inset-0 bg-gradient-to-t from-(--color-ink) via-(--color-ink)/60 to-(--color-ink)/20"
-    >
-    </div>
-    <div class="absolute inset-0 bg-(--color-ink)/20"></div>
-    {/* La trame (scripts/motion/weave.ts) : transparente tant qu'elle ne tourne pas. */}
-    <canvas data-weave class="absolute inset-0 h-full w-full opacity-0 transition-opacity duration-[1400ms]"></canvas>
-  </div>
+{/*
+  Le Hero : un noir profond, une lumière, le monogramme. Aucune photographie
+  ici, par décision de direction artistique (2026-11-04) : la photo du public
+  (champ « heroImage » de la page d'accueil dans Sanity, repli
+  /photos/hero-home.jpg) mettait un projecteur et des silhouettes derrière le
+  texte — du bruit, pas de la profondeur. La photographie arrive pleine page
+  juste après, dans les chapitres (DivisionsChapters.astro), où elle est le
+  sujet et non un fond.
 
+  La lumière est le fond de la section lui-même (dégradés, voir <style>) :
+  aucune couche plein écran superposée, aucun grain (mesuré : la trame de
+  grain était la couche la plus coûteuse du Hero, pour un effet à 3,5 %
+  d'opacité), aucun filtre de flou.
+*/}
+{/*
+  Le masque du W est l'image la plus grande du premier écran sur certaines
+  pages (/en/, dont la phrase des piliers est plus courte) : il devient alors
+  l'élément LCP. Préchargé ici, en tête du corps, où l'analyseur
+  d'anticipation le découvre aussitôt. crossorigin : une image de masque CSS
+  est demandée en mode CORS — sans lui, le préchargement serait ignoré et
+  l'image téléchargée deux fois.
+*/}
+<link rel="preload" as="image" href={symbolMask.src} type="image/webp" fetchpriority="high" crossorigin="anonymous" />
+<section data-hero-section class="hero-stage relative flex min-h-[100svh] items-start overflow-hidden lg:items-end">
   {/*
-    top calé sur --header-h (mesuré en direct par nav.ts) plutôt que sur un
-    pourcentage de la hauteur de la section : à 6%/10% de min-h-[100svh], le
-    symbole passait sous l'en-tête fixe — dont la hauteur réelle double en
-    dessous de 767px (l'en-tête bascule ses commandes sur une seconde ligne,
-    voir Header.astro). Le calcul reste le même jusqu'à lg: (le passage à la
-    composition desktop, inchangée) : un pourcentage de hauteur de viewport
-    ne peut pas rester sûr à la fois en portrait et en paysage large (812×375
-    mesuré : « 10% » d'un viewport court de 375px tombait à nouveau sous
-    l'en-tête, alors que ce même « 10% » était sûr sur les tailles portrait
-    plus hautes où il avait été validé à l'origine) — seul un calcul ancré à
-    la hauteur réelle de l'en-tête l'est dans les deux cas.
-
-    La largeur associe vw (comportement inchangé sur un téléphone standard)
-    et un plafond en svh : sur un écran court, le titre — ancré en bas via
-    items-end, donc indépendant de cette largeur — se retrouve mécaniquement
-    plus haut, et un symbole dimensionné en vw seul entrait dans son espace.
-    Le plafond svh le réduit alors juste assez pour tenir dans l'espace
-    réellement disponible. La largeur elle-même vit dans --hero-symbol-w
-    (défini plus bas) : le bloc de texte la réutilise pour calculer sa propre
-    hauteur minimale, plutôt que de deviner à quel point le symbole empiète —
-    les deux valeurs ne peuvent alors jamais diverger (mesuré à chaque taille
-    demandée, voir le rapport du bloc).
+    Placement inchangé depuis la production : top calé sur --header-h
+    (l'en-tête change de hauteur sous 767px), largeur unique dans
+    --hero-symbol-w, que le bloc de texte réutilise pour se placer sous le
+    symbole sans jamais le chevaucher (voir <style>).
   */}
   <div
-    class="pointer-events-none absolute inset-x-0 top-[calc(var(--header-h)+var(--hero-safe-gap))] z-[4] mx-auto w-(--hero-symbol-w) max-w-[300px] opacity-80 md:max-w-[420px] md:opacity-90 lg:inset-x-auto lg:right-[9%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] lg:-translate-y-1/2 lg:opacity-100"
+    class="pointer-events-none absolute inset-x-0 top-[calc(var(--header-h)+var(--hero-safe-gap))] z-[4] mx-auto w-(--hero-symbol-w) lg:inset-x-auto lg:right-[9%] xl:right-[8%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] xl:w-[40vw] xl:max-w-[700px] lg:-translate-y-1/2"
     aria-hidden="true"
   >
-    <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
-    <span data-hero-ring aria-hidden="true"></span>
-    <div
-      data-hero-mark
-      data-intro="mark"
-      style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
-      class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
-    >
+    {/*
+      Le monogramme vivant — trois étages, chacun avec un seul rôle :
+        .mark-recede  s'éloigne quand le Hero quitte l'écran (défilement, CSS) ;
+        .mark-tilt    perspective du curseur / du toucher (monogram.ts écrit
+                      directement son transform : un seul élément restylé) ;
+        couches       deux tranches dorées sombres en retrait (translateZ) =
+                      l'épaisseur du métal, déployées au réveil du W et
+                      visibles quand il pivote ; la face porte le reflet
+                      (.mark-sheen), qui glisse en transform.
+      Tout ce qui bouge est transform ou opacity sur une couche peinte une
+      seule fois : aucune image du W n'est repeinte pendant le mouvement.
+    */}
+    <div class="mark-recede">
+      <div data-mark-tilt class="mark-tilt" style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height};`}>
+        <div class="mark-layer mark-depth" style={`--z: -26px; --dy: 3px; ${maskStyle}`}></div>
+        <div class="mark-layer mark-depth mark-depth-near" style={`--z: -13px; --dy: 1.5px; ${maskStyle}`}></div>
+        <div data-hero-mark class="mark-layer mark-face" style={maskStyle}>
+          <span data-mark-sheen class="mark-sheen"></span>
+        </div>
+      </div>
     </div>
   </div>
 
-  {/*
-    Sur mobile/tablette, la section s'aligne désormais en haut
-    (items-start), pas en bas : ancrée en bas (comportement d'origine,
-    toujours vrai à lg:), le bloc de texte pouvait se retrouver très loin du
-    symbole sur un grand téléphone — le symbole reste près du Header, le
-    titre glissait vers le bas du viewport, avec un vide grandissant entre
-    les deux au lieu du "espacement court et maîtrisé" voulu. Symbole et
-    texte doivent former un seul bloc perçu comme une identité — items-start
-    fait commencer le titre exactement là où pt le place, plus jamais "ce
-    qu'il reste une fois le contenu poussé vers le bas".
-
-    pt n'a donc plus deux régimes à concilier : il place directement le
-    titre, toujours. La valeur empile ce qui doit réellement tenir avant lui
-    — Header, respiration, hauteur du symbole (--hero-symbol-h, dérivée de
-    la même largeur que le symbole affiche réellement), seconde respiration
-    — jamais moins, jamais plus. pb ferme le bloc par le bas avec sa propre
-    respiration, sensible à svh pour les écrans courts (paysage téléphone).
-  */}
   <div
     class="relative z-10 mx-auto w-full max-w-(--container-content) px-6 pb-[clamp(0.25rem,3svh,6rem)] pt-[calc(var(--header-h)+var(--hero-safe-gap)+var(--hero-symbol-h)+var(--hero-safe-gap))] md:px-10 md:pb-32 lg:pt-40"
   >
-    {/*
-      text-6xl/text-8xl en clamp() svh, plafonnés à leur taille actuelle (le
-      régime normal ne bouge pas) : sur les deux cas de paysage court
-      restants (812×375, 740×430 — tous deux ≥ 640px de large, donc dans le
-      palier sm:text-8xl, pas le palier de base), le H1 à lui seul valait
-      91px, et le budget vertical restant (après Header, symbole, respiration,
-      texte, CTA) ne suffisait plus. Le sigle WEBLACK reste présent et lisible
-      — seule sa taille cède, en dernier, une fois le symbole et l'espacement
-      déjà réduits au minimum.
-    */}
     <h1
       data-intro="title"
       class="font-display text-balance text-[clamp(2.25rem,10svh,3.75rem)] leading-[0.95] text-(--color-paper) sm:text-[clamp(1.875rem,10svh,6rem)] lg:text-9xl"
@@ -156,14 +109,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
       WEBLACK
     </h1>
     <p data-intro style="--intro-i: 1" class="label-tracked label-tracked-dot mt-[clamp(0.25rem,2svh,1.5rem)] text-(--color-gold) lg:mt-6">{tagline}</p>
-    {/*
-      max-w-xl vise un confort de lecture normal ; sur le paysage téléphone
-      le plus court et le plus étroit (667×375), cette même largeur forçait
-      un retour à la ligne de plus (3 lignes au lieu de 2) alors que la
-      largeur réelle du viewport, elle, en avait assez — desserré seulement
-      là où la hauteur manque vraiment (voir la règle @media plus bas),
-      jamais en hauteur normale.
-    */}
+    {/* La phrase des piliers n'est pas animée : c'est l'élément LCP de l'accueil. */}
     <p
       data-hero-pillars
       class="font-display mt-[clamp(0.25rem,1.5svh,1rem)] max-w-xl text-balance text-2xl text-(--color-paper)/85 sm:text-3xl lg:mt-4"
@@ -173,14 +119,17 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <div data-intro style="--intro-i: 3" class="mt-[clamp(0.5rem,3svh,2.5rem)] flex flex-wrap items-center gap-4 lg:mt-10">
       <a
         href={ctaExploreHref}
-        class="inline-flex items-center justify-center bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+        data-press
+        class="cta-arrow inline-flex items-center justify-center gap-3 bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color] duration-300 hover:bg-(--color-gold-bright)"
       >
         {ctaExploreLabel}
+        <span aria-hidden="true" class="cta-arrow-glyph">&rarr;</span>
       </a>
       {hasSecondaryCta && (
         <a
           href={ctaWorkHref}
-          class="inline-flex items-center justify-center border border-(--color-paper)/40 px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-paper) transition-[border-color,transform] duration-300 hover:-translate-y-0.5 hover:border-(--color-paper)"
+          data-press
+          class="inline-flex items-center justify-center border border-(--color-paper)/40 px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-paper) transition-[border-color] duration-300 hover:border-(--color-paper)"
         >
           {ctaWorkLabel}
         </a>
@@ -191,177 +140,244 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
 
   <a
     href="#work"
-    class="group absolute bottom-8 left-6 z-10 hidden items-center gap-3 text-(--color-paper)/50 transition-opacity duration-300 hover:text-(--color-paper)/70 focus-visible:text-(--color-paper) md:left-10 md:flex lg:bottom-12"
+    class="group absolute bottom-8 left-6 z-10 hidden items-center gap-3 text-(--color-paper)/50 transition-colors duration-300 hover:text-(--color-paper)/80 focus-visible:text-(--color-paper) md:left-10 md:flex lg:bottom-12"
   >
-    <span class="h-10 w-px bg-(--color-paper)/30 transition-[background-color] duration-300 group-hover:bg-(--color-paper)/50 group-focus-visible:bg-(--color-paper)"></span>
+    <span class="relative h-10 w-px overflow-hidden bg-(--color-paper)/20" aria-hidden="true">
+      <span class="scroll-cue-dot absolute inset-x-0 top-0 h-3 bg-(--color-paper)/70"></span>
+    </span>
     <span class="label-tracked">{t("home.hero.scroll")}</span>
   </a>
 </section>
 
 <script>
-  import { motionProfile } from "../../scripts/motion/capability";
+  import { initMonogram } from "../../scripts/motion/monogram";
 
-  // La trame n'arrive qu'après le chargement complet et un temps mort du
-  // navigateur : elle ne dispute jamais la bande passante ni le fil principal
-  // au premier rendu (l'élément LCP de l'accueil est la phrase des piliers).
-  const canvas = document.querySelector<HTMLCanvasElement>("[data-weave]");
   const section = document.querySelector<HTMLElement>("[data-hero-section]");
-  if (canvas && section && motionProfile() === "full") {
-    const start = async () => {
-      const { startWeave } = await import("../../scripts/motion/weave");
-      startWeave({ canvas, section, mark: section.querySelector<HTMLElement>("[data-hero-mark]") });
-    };
-    const whenIdle = () =>
-      "requestIdleCallback" in window ? requestIdleCallback(start, { timeout: 3000 }) : setTimeout(start, 300);
-    if (document.readyState === "complete") whenIdle();
-    else window.addEventListener("load", whenIdle, { once: true });
-  }
+  if (section) initMonogram(section);
 </script>
 
 <style>
   /*
    * Source unique pour la largeur du symbole (mobile/tablette) et
    * l'espacement de respiration, réutilisées telles quelles par le bloc de
-   * texte pour calculer sa propre position minimale — les deux ne peuvent
-   * alors jamais diverger, contrairement à une valeur répétée en dur à deux
-   * endroits (c'est exactement ce qui avait laissé le titre chevaucher le
-   * symbole après le premier correctif : les deux étaient ancrés au Header
-   * indépendamment, sans jamais tenir compte l'un de l'autre).
-   *
-   * --hero-symbol-h approxime la hauteur réellement rendue du symbole à
-   * partir de sa largeur : son fichier source fait 735×720px (mesuré), donc
-   * hauteur ≈ largeur × 720/735. C'est une approximation (arrondie dans le
-   * bon sens, légèrement généreuse) plutôt qu'une valeur exacte — largement
-   * suffisant pour garantir une respiration, pas pour un pixel-perfect.
-   *
-   * max() avec 300px/420px : Tailwind ne peut pas mélanger un plafond en px
-   * arbitraire dans une expression min()/max() imbriquée proprement en
-   * classe, donc le plafond reste porté par max-w-* sur l'élément lui-même,
-   * ces variables ne portant que le calcul fluide.
-   *
-   * Le plafond svh n'intervient que sous 750px de hauteur — un seul
-   * coefficient tentant de couvrir à la fois « laisser vw dominer sur un
-   * écran normal » et « protéger un écran très court » revenait toujours à
-   * sacrifier l'un des deux (mesuré : assez lâche pour un symbole présent
-   * en hauteur normale, il ne protégeait plus le CTA en paysage court ;
-   * assez serré pour protéger le CTA, il écrasait le symbole partout,
-   * y compris là où rien ne le justifiait). Une media query dédiée à la
-   * hauteur, distincte de celles déjà dédiées à la largeur, laisse vw
-   * gouverner sans réserve au-delà de 750px et ne resserre qu'en deçà.
+   * texte pour calculer sa propre position : les deux ne peuvent jamais
+   * diverger. Le plafond en px est dans la valeur elle-même (min()), pour
+   * que la hauteur dérivée corresponde toujours au symbole réellement
+   * affiché. --hero-symbol-h : le fichier source fait 735×720 px.
+   * Sous 750 px de hauteur, un plafond en svh protège le titre et l'appel
+   * (paysage téléphone) ; au-delà, la largeur gouverne seule.
    */
   [data-hero-section] {
-    --hero-symbol-w: 52vw;
+    --hero-symbol-w: min(62vw, 340px);
     --hero-symbol-h: calc(var(--hero-symbol-w) * 0.9796);
     --hero-safe-gap: clamp(0.125rem, 1svh, 1.5rem);
   }
 
   @media (min-width: 768px) {
     [data-hero-section] {
-      --hero-symbol-w: 44vw;
+      --hero-symbol-w: min(46vw, 480px);
     }
   }
 
   @media (max-height: 750px) {
     [data-hero-section] {
-      --hero-symbol-w: min(52vw, 16svh);
+      --hero-symbol-w: min(62vw, 340px, 16svh);
     }
   }
 
   @media (max-height: 750px) and (min-width: 768px) {
     [data-hero-section] {
-      --hero-symbol-w: min(44vw, 16svh);
+      --hero-symbol-w: min(46vw, 480px, 16svh);
     }
   }
 
-  /*
-   * Palier supplémentaire pour le paysage téléphone le plus court
-   * (~375-430px de haut) : à 16svh, le symbole tient déjà sa place, mais le
-   * CTA passait encore sous le pli sur ces hauteurs précises — resserré
-   * uniquement ici, sans toucher au palier 750px qui fonctionne déjà bien
-   * pour 375×667/430×740.
-   */
   @media (max-height: 450px) {
     [data-hero-section] {
-      --hero-symbol-w: min(52vw, 10svh);
+      --hero-symbol-w: min(62vw, 340px, 10svh);
+    }
+
+    /* Paysage téléphone le plus court : la phrase des piliers tient en deux lignes. */
+    [data-hero-pillars] {
+      max-width: none;
+      font-size: 1.5rem;
     }
   }
 
   @media (max-height: 450px) and (min-width: 768px) {
     [data-hero-section] {
-      --hero-symbol-w: min(44vw, 10svh);
+      --hero-symbol-w: min(46vw, 480px, 10svh);
     }
   }
 
-  @media (max-height: 450px) {
-    [data-hero-pillars] {
-      max-width: none;
-      /* sm:text-3xl (30px) exige plus de largeur par ligne que text-2xl (24px)
-         — un troisième retour à la ligne à 667×375 venait de là, pas d'un
-         manque d'espace en soi (mesuré : élargir le conteneur seul n'y
-         changeait rien). Toujours lisible, juste pas agrandi ici. */
-      font-size: 1.5rem;
+  /*
+   * La lumière, peinte une fois dans le fond de la section : un halo doré
+   * là où se tient le W, une douche de lumière froide venue d'en haut (le
+   * plateau, pas le soleil), un vignettage qui creuse les bords. Thème
+   * clair : le halo seul, sans assombrissement.
+   */
+  .hero-stage {
+    --halo: 50% calc(var(--header-h, 6rem) + var(--hero-symbol-h) * 0.5);
+    background:
+      radial-gradient(38% 30% at var(--halo), color-mix(in srgb, var(--color-gold) 14%, transparent), transparent 72%),
+      radial-gradient(70% 45% at 50% -8%, rgb(255 255 255 / 5%), transparent 70%),
+      radial-gradient(130% 95% at 50% 38%, transparent 52%, rgb(0 0 0 / 62%)),
+      var(--color-ink);
+  }
+
+  @media (min-width: 1024px) {
+    .hero-stage {
+      --halo: 72% 50%;
+      background:
+        radial-gradient(30% 42% at var(--halo), color-mix(in srgb, var(--color-gold) 13%, transparent), transparent 72%),
+        radial-gradient(50% 50% at 72% -12%, rgb(255 255 255 / 5%), transparent 70%),
+        radial-gradient(120% 100% at 60% 45%, transparent 50%, rgb(0 0 0 / 65%)),
+        var(--color-ink);
     }
   }
 
-  .hero-symbol {
+  :global(:root[data-theme="light"]) .hero-stage {
+    background:
+      radial-gradient(40% 40% at var(--halo), color-mix(in srgb, var(--color-gold) 12%, transparent), transparent 72%),
+      var(--color-ink);
+  }
+
+  /* — Le monogramme — */
+
+  .mark-tilt {
+    position: relative;
+    transform: perspective(1100px);
+    transform-style: preserve-3d;
+  }
+
+  .mark-layer {
+    position: absolute;
+    inset: 0;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
     mask-position: center;
     -webkit-mask-size: contain;
     mask-size: contain;
-    background: radial-gradient(
-      circle at 35% 28%,
-      var(--color-gold-bright),
-      var(--color-gold) 55%,
-      var(--color-gold-dim) 100%
-    );
+  }
+
+  /* L'or de la face : une lumière haute à gauche, l'ombre en bas à droite. */
+  .mark-face {
+    background:
+      linear-gradient(160deg, rgb(255 246 226 / 22%), transparent 38%),
+      radial-gradient(circle at 34% 26%, var(--color-gold-bright), var(--color-gold) 52%, var(--color-gold-dim) 100%);
   }
 
   /*
-   * The symbol is a single flattened image (W + its thin circle baked into
-   * one alpha mask, no separable layers) — isolating just the circle would
-   * mean reconstructing the artwork from an approximation, which risks
-   * visible degradation of the mark. Instead the W stays completely
-   * untouched and static, and an independent ring sits behind it, sized and
-   * centered to match the circle's actual footprint in the source file
-   * (measured from the asset's own alpha channel: a ~618px circle centered
-   * at roughly 50%/47.5% of the 735x720 frame, i.e. ~84% of its width).
-   * Rotation is transform-only, so it's cheap and covered by the site's
-   * existing global prefers-reduced-motion rule (global.css forces
-   * animation-duration to ~0 for every element under that setting).
+   * L'épaisseur : le métal vu de biais, plus sombre à mesure qu'il recule.
+   * Repliée derrière la face au premier rendu ; elle se déploie au réveil
+   * du W ([data-awake], posé par monogram.ts une fois la page chargée) —
+   * une transition de transform, jamais pendant l'analyse de la page.
    */
-  [data-hero-ring] {
+  .mark-depth {
+    background: linear-gradient(180deg, var(--color-gold-dim), color-mix(in srgb, var(--color-gold-dim) 45%, #000));
+    transition: transform 1600ms var(--ease-signature);
+  }
+
+  [data-awake] .mark-depth {
+    transform: translate3d(0, var(--dy), var(--z));
+  }
+
+  .mark-depth-near {
+    background: linear-gradient(180deg, var(--color-gold), var(--color-gold-dim));
+  }
+
+  /* Le reflet : une lame de lumière en diagonale, qui ne vit que sur la face (le masque la découpe). */
+  .mark-sheen {
     position: absolute;
-    left: 50%;
-    top: 47.5%;
-    width: 84%;
-    aspect-ratio: 1;
-    transform: translate(-50%, -50%);
-    border-radius: 9999px;
-    background: conic-gradient(
-      from 0deg,
-      color-mix(in srgb, var(--color-gold) 30%, transparent) 0deg,
-      color-mix(in srgb, var(--color-gold) 30%, transparent) 330deg,
-      var(--color-gold) 344deg,
-      var(--color-gold-bright) 356deg,
-      color-mix(in srgb, var(--color-gold) 30%, transparent) 360deg
+    inset: -10% -70%;
+    background: linear-gradient(
+      105deg,
+      transparent 43%,
+      rgb(255 243 220 / 62%) 50%,
+      transparent 57%
     );
-    -webkit-mask-image: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    mask-image: radial-gradient(closest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    animation: hero-ring-spin 22s linear infinite;
-    will-change: transform;
+    opacity: 0;
+    transform: translateX(-45%);
   }
 
-  @keyframes hero-ring-spin {
+  /*
+   * Le réveil : le W est là dès la première image ; quand la page a fini de
+   * se charger, ses tranches se déploient (ci-dessus) et une seule lame de
+   * lumière le traverse. Mesuré : lancée pendant l'analyse de la page,
+   * l'ouverture alourdissait les trames les plus longues du chargement.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-awake] .mark-sheen {
+      animation: mark-sheen-pass 1500ms cubic-bezier(0.45, 0, 0.2, 1) 350ms;
+    }
+
+    /* L'invitation à défiler : trois passages, puis elle se tait. */
+    [data-awake] .scroll-cue-dot {
+      animation: scroll-cue 2400ms var(--ease-signature) 900ms 3;
+    }
+  }
+
+  /*
+   * Le W s'éloigne à mesure que le Hero quitte l'écran : animation liée au
+   * défilement, calculée hors du fil principal. Propriétés détaillées
+   * uniquement (voir motion.css : le raccourci complet est rejeté par
+   * Chrome une fois minifié).
+   */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      [data-hero-section] {
+        view-timeline-name: --hero;
+      }
+
+      .mark-recede {
+        animation-name: mark-recede;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --hero;
+        animation-range: exit 0% exit 90%;
+      }
+    }
+  }
+
+  @keyframes mark-sheen-pass {
+    0% {
+      opacity: 0;
+      transform: translateX(-45%);
+    }
+    20%,
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(45%);
+    }
+  }
+
+  @keyframes mark-recede {
     to {
-      transform: translate(-50%, -50%) rotate(360deg);
+      opacity: 0.2;
+      transform: translateY(-10%) scale(0.86);
     }
   }
 
-  @media (max-width: 640px) {
-    [data-hero-ring] {
-      opacity: 0.75;
+  @keyframes scroll-cue {
+    from {
+      transform: translateY(-100%);
     }
+    to {
+      transform: translateY(340%);
+    }
+  }
+
+  /* Flèche de l'appel : elle avance d'un pas au survol, au clavier comme à la souris. */
+  .cta-arrow-glyph {
+    display: inline-block;
+    transition: transform var(--motion-fast, 240ms) var(--ease-signature);
+  }
+
+  .cta-arrow:hover .cta-arrow-glyph,
+  .cta-arrow:focus-visible .cta-arrow-glyph {
+    transform: translateX(4px);
   }
 </style>

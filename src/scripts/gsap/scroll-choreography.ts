@@ -26,14 +26,35 @@ export function initScrollChoreography() {
   if (!("IntersectionObserver" in window) || !("animate" in Element.prototype)) return;
 
   const reveals = [...document.querySelectorAll<HTMLElement>("[data-reveal]")];
-  if (!reveals.length) return;
+  const unveils = [...document.querySelectorAll<HTMLElement>("[data-unveil]")];
+  if (!reveals.length && !unveils.length) return;
 
+  // Premier rapport de l'observateur = état au chargement, calculé après la
+  // mise en page : un bloc déjà dans l'écran est laissé tel quel (l'animer
+  // ferait clignoter un contenu déjà lu). Aucune lecture synchrone de
+  // position ici — getBoundingClientRect() sur chaque bloc forçait un
+  // recalcul de style et de mise en page de tout le document au chargement.
+  const seen = new WeakSet<Element>();
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
         const el = entry.target as HTMLElement;
+        const first = !seen.has(el);
+        seen.add(el);
+        if (el.hasAttribute("data-unveil")) {
+          // Cadre photographique : couvert seulement s'il attend plus bas
+          // (rectangle fourni par l'observateur, sans lecture forcée), puis
+          // découvert à son arrivée — transitions CSS, voir motion.css.
+          if (first && !entry.isIntersecting && entry.boundingClientRect.top > 0) el.dataset.unveil = "pending";
+          else if (entry.isIntersecting) {
+            if (!first) el.dataset.unveil = "shown";
+            observer.unobserve(el);
+          }
+          continue;
+        }
+        if (!entry.isIntersecting) continue;
         observer.unobserve(el);
+        if (first) continue;
         el.animate(revealKeyframes, {
           duration: REVEAL_DURATION_MS,
           delay: Number(el.dataset.revealDelay || 0) * 1000,
@@ -47,13 +68,10 @@ export function initScrollChoreography() {
     { rootMargin: "0px 0px 40px 0px", threshold: 0 },
   );
 
-  // Les blocs déjà dans l'écran sont laissés tels quels : les animer ferait
-  // clignoter un contenu déjà lu. Une seule lecture de mise en page pour tous.
-  const visible = reveals.map((el) => el.getBoundingClientRect().top < window.innerHeight);
-  reveals.forEach((el, i) => {
-    if (!visible[i]) observer.observe(el);
-  });
+  reveals.forEach((el) => observer.observe(el));
+  unveils.forEach((el) => observer.observe(el));
 
   // bfcache : la page restaurée garde son état, l'observateur n'a plus rien à faire.
   window.addEventListener("pagehide", () => observer.disconnect(), { once: true });
 }
+

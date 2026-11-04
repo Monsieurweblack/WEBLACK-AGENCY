@@ -73,6 +73,11 @@ function setUp(form: HTMLFormElement) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
+    // Un envoi à la fois : le bouton est désactivé pendant la requête, mais
+    // Entrée dans le champ soumet quand même le formulaire — sans ce garde,
+    // une seconde inscription partait (mesuré : 2 requêtes).
+    if (submit.getAttribute("aria-busy") === "true") return;
+
     if (!valid()) {
       input.setAttribute("aria-invalid", "true");
       say(copy.invalid, "error");
@@ -81,6 +86,7 @@ function setUp(form: HTMLFormElement) {
     }
 
     submit.disabled = true;
+    submit.setAttribute("aria-busy", "true");
     label.textContent = copy.sending;
     say("", "");
 
@@ -105,6 +111,7 @@ function setUp(form: HTMLFormElement) {
         input.blur();
         label.textContent = initialLabel;
         submit.disabled = false;
+        submit.removeAttribute("aria-busy");
         return;
       }
 
@@ -116,5 +123,6 @@ function setUp(form: HTMLFormElement) {
 
     label.textContent = initialLabel;
     submit.disabled = false;
+    submit.removeAttribute("aria-busy");
   });
 }

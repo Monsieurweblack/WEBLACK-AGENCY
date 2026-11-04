@@ -1,0 +1,226 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import type { ExpertiseData, HomepageTextSection } from "../../lib/content";
+
+interface Props {
+  lang: Lang;
+  /** From the `expertise` Sanity type — falls back to i18n copy below when empty. */
+  expertises?: ExpertiseData[];
+  /** From the "homepage" Sanity singleton's expertisesSection — falls back to i18n copy when not set. */
+  section?: HomepageTextSection;
+}
+
+const { lang, expertises, section } = Astro.props;
+const t = useTranslations(lang);
+
+/**
+ * La photographie de chaque univers : celle que porte déjà sa propre page
+ * (Talent : ZÉ DÉFILÉ by WAXFASHION ; Créatif et Consulting : les bandeaux de
+ * /creative et /consulting). Aucune n'est présentée comme un projet : elles
+ * donnent un visage à une discipline. Une image choisie dans Sanity (champ
+ * « image » de l'expertise) l'emporte toujours.
+ */
+const PHOTOS: Record<string, { url: string; width: number; height: number; focus: string }> = {
+  talent: { url: "/photos/ze-defile-2026-cover.jpg", width: 1600, height: 900, focus: "27% 40%" },
+  creative: { url: "/photos/pole-creative-direction-hero.jpg", width: 1619, height: 2400, focus: "50% 30%" },
+  consulting: { url: "/photos/pole-studio-hero.jpg", width: 1732, height: 2400, focus: "50% 45%" },
+};
+
+const fallbackDivisions = ["talent", "creative", "consulting"] as const;
+
+const divisions = (
+  expertises && expertises.length > 0
+    ? expertises.map((e) => ({ key: e.slug, name: e.title, tagline: e.tagline ?? "", href: `/${e.slug}`, image: e.image }))
+    : fallbackDivisions.map((key) => ({
+        key,
+        name: t(`division.${key}.name` as UiKey),
+        tagline: t(`division.${key}.tagline` as UiKey),
+        href: `/${key}`,
+        image: undefined,
+      }))
+).map((d) => {
+  const local = PHOTOS[d.key];
+  const photo = d.image
+    ? { url: d.image.url, width: d.image.width, height: d.image.height, focus: "50% 50%" }
+    : local;
+  return { ...d, photo };
+});
+
+const total = String(divisions.length).padStart(2, "0");
+const eyebrow = t("home.divisions.eyebrow");
+const title = section?.title ?? t("home.divisions.title");
+---
+
+{/*
+  Les trois univers de WEBLACK, en chapitres. Grand écran : la photographie
+  reste en place (sticky) pendant que les chapitres défilent à côté ; elle
+  change de sujet au chapitre lu — fondu et mise au point (opacity, scale),
+  basculés par un IntersectionObserver, jamais recalculés à chaque image.
+  Téléphone et tablette : chaque chapitre porte sa propre photographie,
+  découverte à son arrivée ([data-unveil]) et en profondeur ([data-depth]).
+  Une seule image est chargée par univers et par format (l'autre jeu est en
+  display:none, jamais téléchargé).
+*/}
+<section id="practice" data-chapters class="bg-(--color-ink) py-24 md:py-32">
+  <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+    <div class="max-w-2xl" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{eyebrow}</p>
+      <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{title}</h2>
+    </div>
+
+    <div class="mt-14 lg:mt-20 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-20">
+      <div class="hidden lg:block" aria-hidden="true">
+        <div class="chapters-frame sticky top-[calc(var(--header-h)+2rem)] h-[calc(100svh-var(--header-h)-4rem)] overflow-hidden bg-(--color-ink-soft)">
+          {divisions.map((division, i) => division.photo && (
+            <div class="chapter-photo absolute inset-0" data-chapter-photo={i} data-current={i === 0 ? "" : undefined} style={`--focus: ${division.photo.focus}`}>
+              <RemoteImage
+                src={division.photo.url}
+                alt=""
+                width={division.photo.width}
+                height={division.photo.height}
+                class="h-full w-full"
+                sizes="(min-width: 1024px) 45vw, 100vw"
+              />
+            </div>
+          ))}
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-(--color-ink)/70 via-transparent to-transparent"></div>
+          <div class="absolute inset-x-8 bottom-8 flex items-end justify-between text-(--color-paper)">
+            <p class="font-display text-5xl leading-none tabular-nums">
+              <span data-chapter-count>01</span><span class="text-(--color-paper)/40"> / {total}</span>
+            </p>
+            <div class="flex gap-2">
+              {divisions.map((_, i) => (
+                <span class="chapter-tick h-[3px] w-10 bg-(--color-paper)/25" data-chapter-tick={i} data-current={i === 0 ? "" : undefined}></span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ol class="m-0 list-none border-t border-(--color-line) p-0">
+        {divisions.map((division, i) => (
+          <li data-chapter={i} class="border-b border-(--color-line) py-12 lg:flex lg:min-h-[72svh] lg:items-center lg:py-16">
+            <a href={localizedPath(lang, division.href)} class="chapter-link group block w-full focus-visible:outline-none">
+              {division.photo && (
+                <div class="mb-8 aspect-[4/5] overflow-hidden bg-(--color-ink-soft) sm:aspect-[16/10] lg:hidden" data-unveil data-depth style={`--focus: ${division.photo.focus}`}>
+                  <RemoteImage
+                    src={division.photo.url}
+                    alt=""
+                    width={division.photo.width}
+                    height={division.photo.height}
+                    class="chapter-inline-photo h-full w-full"
+                    sizes="100vw"
+                  />
+                </div>
+              )}
+              <span class="label-tracked text-(--color-paper)/50">{String(i + 1).padStart(2, "0")} — {total}</span>
+              <h3 class="font-display mt-5 text-5xl leading-[0.95] text-(--color-paper) transition-colors duration-500 group-hover:text-(--color-gold) group-focus-visible:text-(--color-gold) sm:text-7xl xl:text-8xl">
+                {division.name}
+              </h3>
+              <p class="mt-6 max-w-md text-lg text-(--color-paper)/65">{division.tagline}</p>
+              <span class="cta-arrow label-tracked mt-10 inline-flex items-center gap-3 text-(--color-paper)/60 transition-colors duration-300 group-hover:text-(--color-gold) group-focus-visible:text-(--color-gold)">
+                {t("common.discover")} {division.name}
+                <span aria-hidden="true" class="chapter-arrow">&rarr;</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+</section>
+
+<script>
+  /*
+   * Le chapitre lu = celui qui traverse la bande centrale de l'écran. Un
+   * IntersectionObserver le signale ; on bascule un attribut sur deux
+   * éléments (photo, repère) et un compteur. Aucune lecture de mise en page.
+   */
+  const section = document.querySelector<HTMLElement>("[data-chapters]");
+  const frame = section?.querySelector(".chapters-frame");
+  if (section && frame && "IntersectionObserver" in window) {
+    const photos = [...section.querySelectorAll<HTMLElement>("[data-chapter-photo]")];
+    const ticks = [...section.querySelectorAll<HTMLElement>("[data-chapter-tick]")];
+    const count = section.querySelector<HTMLElement>("[data-chapter-count]");
+    let current = 0;
+    const show = (index: number) => {
+      if (index === current) return;
+      current = index;
+      for (const list of [photos, ticks]) {
+        list.forEach((el, i) => el.toggleAttribute("data-current", i === index));
+      }
+      if (count) count.textContent = String(index + 1).padStart(2, "0");
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) show(Number((entry.target as HTMLElement).dataset.chapter));
+        }
+      },
+      { rootMargin: "-45% 0px -45% 0px" },
+    );
+    // Seulement là où la photographie fixe existe (grand écran) ; ailleurs, rien à suivre.
+    const wide = window.matchMedia("(min-width: 1024px)");
+    const chapters = [...section.querySelectorAll<HTMLElement>("[data-chapter]")];
+    const sync = () => {
+      io.disconnect();
+      if (wide.matches) chapters.forEach((el) => io.observe(el));
+    };
+    sync();
+    wide.addEventListener("change", sync);
+    window.addEventListener(
+      "pagehide",
+      (event) => {
+        if (event.persisted) return;
+        io.disconnect();
+        wide.removeEventListener("change", sync);
+      },
+      { once: true },
+    );
+  }
+</script>
+
+<style>
+  .chapter-photo {
+    opacity: 0;
+    scale: 1.06;
+    transition:
+      opacity 900ms var(--ease-signature),
+      scale 1400ms var(--ease-signature);
+  }
+
+  .chapter-photo[data-current] {
+    opacity: 1;
+    scale: 1;
+  }
+
+  .chapter-photo :global(img),
+  .chapter-inline-photo :global(img) {
+    object-position: var(--focus, 50% 50%);
+  }
+
+  .chapter-tick {
+    transition: background-color 600ms var(--ease-signature);
+  }
+
+  .chapter-tick[data-current] {
+    background-color: var(--color-paper);
+  }
+
+  .chapter-arrow {
+    display: inline-block;
+    transition: transform var(--motion-fast, 240ms) var(--ease-signature);
+  }
+
+  .chapter-link:hover .chapter-arrow,
+  .chapter-link:focus-visible .chapter-arrow {
+    transform: translateX(6px);
+  }
+
+  .chapter-link:focus-visible h3 {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+  }
+</style>

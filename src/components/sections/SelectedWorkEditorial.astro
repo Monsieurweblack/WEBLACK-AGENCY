@@ -40,7 +40,7 @@ const secondaryHref = secondary ? localizedPath(lang, `/selected-work/${secondar
       {/* PROJET PHARE — pleine largeur, galerie quand elle existe */}
       <article class="group" data-reveal>
         <a href={leadHref} class="block">
-          <div class="relative aspect-[16/10] overflow-hidden bg-(--color-ink-soft) sm:aspect-[21/9]" data-unveil>
+          <div class="relative aspect-[16/10] overflow-hidden bg-(--color-ink-soft) sm:aspect-[21/9]" data-unveil data-depth>
             <RemoteImage
               src={lead.data.coverImage.url}
               alt={lead.data.coverImage.alt}

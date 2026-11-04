@@ -23,13 +23,20 @@ const QUOTES: Partial<Record<Lang, [string, string]>> = {
 const [openQuote, closeQuote] = QUOTES[lang] ?? ["“", "”"];
 ---
 
-<section class="bg-(--color-paper) py-28 md:py-36" data-reveal>
-  <div class="mx-auto max-w-4xl px-6 text-center md:px-10">
+{/*
+  La conviction, lue au rythme du défilement : la phrase s'encre en
+  arrivant au centre de l'écran ([data-read], motion.css — compositeur seul,
+  le texte est toujours dans le document, entier et lisible sans support).
+  Un seul bloc, jamais découpé mot à mot.
+*/}
+<section class="bg-(--color-paper) py-32 md:py-44">
+  <div class="mx-auto max-w-5xl px-6 text-center md:px-10">
     <p
-      class="font-display text-balance text-3xl leading-[1.25] text-(--color-ink) sm:text-4xl lg:text-5xl"
+      data-read
+      class="font-display text-balance text-[2rem] leading-[1.2] text-(--color-ink) sm:text-5xl lg:text-[3.6rem] lg:leading-[1.15]"
     >
       {openQuote}{manifestoText}{closeQuote}
     </p>
-    <div class="mx-auto mt-8 h-px w-16 bg-(--color-gold)"></div>
+    <div data-read class="mx-auto mt-10 h-px w-16 bg-(--color-gold)"></div>
   </div>
 </section>

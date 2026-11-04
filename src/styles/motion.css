@@ -1,22 +1,29 @@
 /*
  * Système de mouvement WEBLACK — « le métier ».
  *
- * Un seul fil conducteur : le fil d'or qui se tend, traverse et relie. Tout
- * mouvement ici sert une de ces fonctions — orienter (transition de page),
- * relier (fil de la méthode, du parcours), révéler (image), installer
- * (ouverture de l'accueil) — et rien d'autre.
+ * Une narration, peu de gestes, chacun avec une fonction :
+ *   installer   l'ouverture de l'accueil — le W monte de l'ombre et prend
+ *               son épaisseur, puis ne bouge plus qu'en réponse au curseur
+ *               ou au toucher (HeroHome.astro, monogram.ts) ;
+ *   orienter    la transition entre pages (View Transitions) ;
+ *   révéler     chaque bloc une fois, à son arrivée ([data-reveal]) ; chaque
+ *               photographie découverte par un rideau qui se lève
+ *               ([data-unveil]) — scroll-choreography.ts ;
+ *   accompagner la lecture : profondeur des photographies ([data-depth]),
+ *               manifeste qui s'encre ([data-read]), W qui s'éloigne — liés au
+ *               défilement, donc calculés hors du fil principal, et sans
+ *               aucun coût tant qu'on ne défile pas.
+ * Les chapitres de l'accueil (DivisionsChapters.astro) enchaînent les trois
+ * univers sur une photographie qui change de sujet au fil de la lecture.
  *
  * Règles du système :
  *   - une seule courbe, --ease-signature (@theme), trois durées ci-dessous ;
- *   - transform / opacity / clip-path uniquement : jamais de propriété qui
- *     relance la mise en page à chaque image ;
- *   - CSS d'abord. Les animations liées au défilement tournent hors du fil
- *     principal (animation-timeline) ; un navigateur qui ne les connaît pas
- *     affiche le contenu immobile et entièrement visible ;
- *   - prefers-reduced-motion: reduce coupe tout. La règle globale de
- *     global.css ramène les durées à ~0, mais une animation liée au
- *     défilement n'a pas de durée : chaque bloc est donc explicitement
- *     placé sous (prefers-reduced-motion: no-preference) ;
+ *   - opacity, transform, translate, scale uniquement — des propriétés que le
+ *     GPU compose sans repeindre ni relancer la mise en page ;
+ *   - une animation s'arrête quand elle a joué ; aucune boucle infinie
+ *     décorative ;
+ *   - prefers-reduced-motion: reduce coupe tout (règle globale de
+ *     global.css, et chaque bloc ci-dessous sous no-preference) ;
  *   - aucun contenu n'est masqué sans que l'animation qui le révèle ne soit
  *     garantie de tourner (pas d'état initial caché posé « en attendant » un
  *     script).
@@ -75,46 +82,142 @@
   [data-intro="title"] {
     animation-name: intro-title;
   }
+}
 
-  [data-intro="mark"] {
-    animation-name: intro-mark;
-    animation-duration: 1800ms;
-  }
+/*
+ * Rideau photographique ([data-unveil]). L'état « pending » n'est posé que
+ * par scroll-choreography.ts, sur un cadre encore sous l'écran : sans script,
+ * ou en mouvement réduit, la photographie est simplement là. Le rideau se
+ * lève (transform), la photo se pose (transform) : aucune repeinture.
+ * `scale` reste libre pour les survols (utilitaires group-hover:scale-*).
+ */
+[data-unveil] {
+  position: relative;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    /*
-     * 2 — Le fil. Un trait d'or qui se tend sur la largeur d'une séquence
-     * (les cinq temps de WEBLACK Perspective, le parcours Talent) au rythme
-     * où on la lit. Sans support : le trait est simplement là, tendu.
-     */
-    [data-thread] {
-      view-timeline-name: --thread;
-    }
+  [data-unveil]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: var(--color-ink);
+    transform: scaleY(0);
+    transform-origin: 50% 0%;
+    transition: transform 1100ms var(--ease-signature);
+    pointer-events: none;
+  }
 
-    [data-thread]::before {
-      animation: thread-draw linear both;
-      animation-timeline: --thread;
-      animation-range: entry 30% cover 50%;
-    }
+  [data-unveil] img {
+    transition:
+      transform 1600ms var(--ease-signature),
+      scale 700ms var(--ease-signature),
+      filter 700ms var(--ease-signature);
+  }
 
-    /*
-     * 3 — Dévoilement d'image. Le cadre s'ouvre depuis le centre pendant que
-     * la photographie se pose — une révélation, pas un zoom décoratif. Le
-     * cadre garde sa taille : rien ne bouge autour.
-     */
-    [data-unveil] {
-      animation: unveil linear both;
+  [data-unveil="pending"]::after {
+    transform: scaleY(1);
+    transition: none;
+  }
+
+  [data-unveil="pending"] img {
+    transform: scale(1.14);
+    transition: none;
+  }
+}
+
+/*
+ * Animations liées au défilement (animation-timeline) — calculées par le
+ * compositeur, inertes tant qu'on ne défile pas. Elles s'écrivent TOUJOURS
+ * en propriétés détaillées, sans animation-delay / -iteration-count /
+ * -direction / -play-state : avec le jeu complet, le minifieur CSS les
+ * fusionne en un raccourci « animation: … --timeline » que Chrome rejette
+ * (animation-timeline ne se déclare pas dans le raccourci), et la règle
+ * entière est ignorée sans erreur — c'est ce qui avait désactivé le fil d'or
+ * et les dévoilements d'image en production (constaté le 2026-11-04).
+ * Sans support (Firefox, Safari ancien) : photographies et texte immobiles,
+ * entièrement visibles.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* Profondeur : la photographie (le <figure> de RemoteImage) glisse plus lentement que son cadre. */
+    [data-depth] > figure {
+      animation-name: depth-drift;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
       animation-timeline: view();
-      animation-range: entry 0% cover 35%;
+      animation-range: cover 0% cover 100%;
     }
 
-    [data-unveil] img {
-      animation: unveil-settle linear both;
+    /* Lecture : le texte s'encre en arrivant au centre de l'écran. */
+    [data-read] {
+      animation-name: read-ink;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
       animation-timeline: view();
-      animation-range: entry 0% cover 50%;
+      animation-range: entry 15% cover 42%;
     }
+  }
+}
+
+@keyframes depth-drift {
+  from {
+    transform: translateY(-6%) scale(1.14);
+  }
+  to {
+    transform: translateY(6%) scale(1.14);
+  }
+}
+
+@keyframes read-ink {
+  /* 0,5 : le texte encore en arrivée garde un contraste de 3:1 (grand texte, WCAG AA). */
+  from {
+    opacity: 0.5;
+    transform: translateY(1.5rem);
+  }
+}
+
+/*
+ * Micro-interactions. Appui : les appels à l'action principaux ([data-press])
+ * cèdent d'un pixel sous le doigt ou le clic — `transform`, indépendant du
+ * `translate` des survols Tailwind. Rien de plus : pas de rebond, pas d'écho.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-press] {
+    transition: transform var(--motion-fast) var(--ease-signature);
+  }
+
+  [data-press]:active {
+    transform: translateY(1px) scale(0.985);
+  }
+}
+
+/*
+ * Envoi en cours : tout bouton marqué aria-busy="true" par son script
+ * (candidature, newsletter) affiche un anneau à gauche de son libellé. En
+ * mouvement réduit, l'anneau reste visible mais ne tourne pas : l'état est
+ * un retour fonctionnel, pas une décoration.
+ */
+button[aria-busy="true"] {
+  cursor: progress;
+}
+
+button[aria-busy="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.6em;
+  vertical-align: -0.15em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: busy-spin 800ms linear infinite;
+}
+
+@keyframes busy-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -166,30 +269,3 @@
   }
 }
 
-@keyframes intro-mark {
-  from {
-    opacity: 0;
-    transform: scale(0.94);
-  }
-}
-
-@keyframes thread-draw {
-  from {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes unveil {
-  from {
-    clip-path: inset(10% 8% 10% 8%);
-  }
-  to {
-    clip-path: inset(0);
-  }
-}
-
-@keyframes unveil-settle {
-  from {
-    transform: scale(1.12);
-  }
-}

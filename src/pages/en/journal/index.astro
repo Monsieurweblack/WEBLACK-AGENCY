@@ -2,6 +2,7 @@
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import RemoteImage from "../../../components/media/RemoteImage.astro";
 import CardJournal from "../../../components/cards/CardJournal.astro";
+import ViewToggle from "../../../components/layout/ViewToggle.astro";
 import AgendaPreview from "../../../components/sections/AgendaPreview.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
 import { useTranslations, localizedPath, type UiKey } from "../../../i18n/utils";
@@ -118,13 +119,20 @@ const leadCategoryLabel = featuredFirst
 
       {
         rest.length > 0 ? (
-          <div id="journal-grid" class="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          <>
+            {rest.length > 1 && (
+              <div class="mt-8 flex justify-end">
+                <ViewToggle lang={lang} controls="journal-grid" />
+              </div>
+            )}
+            <div id="journal-grid" data-view-collection class="mt-6 grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
             {rest.map((article, i) => (
               <div data-category={article.data.category} class:list={["min-w-0", i === 0 && "sm:col-span-2"]}>
                 <CardJournal lang={lang} article={article} index={i} wide={i === 0} />
               </div>
             ))}
-          </div>
+            </div>
+          </>
         ) : !featuredFirst ? (
           <p class="text-(--color-paper)/60">{t("journal.empty")}</p>
         ) : null

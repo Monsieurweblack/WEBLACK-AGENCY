@@ -4,7 +4,7 @@ import HeroHome from "../components/sections/HeroHome.astro";
 import TalentsAppNotice from "../components/sections/TalentsAppNotice.astro";
 import LivePriority from "../components/sections/LivePriority.astro";
 import ManifestoQuote from "../components/sections/ManifestoQuote.astro";
-import DivisionsGrid from "../components/sections/DivisionsGrid.astro";
+import DivisionsChapters from "../components/sections/DivisionsChapters.astro";
 import SelectedWorkPreview from "../components/sections/SelectedWorkPreview.astro";
 import PartnersPreview from "../components/sections/PartnersPreview.astro";
 import Perspective from "../components/sections/Perspective.astro";
@@ -73,12 +73,6 @@ async function selectBoutiqueProducts(): Promise<BoutiqueProductData[]> {
 }
 const boutiqueProducts = await selectBoutiqueProducts();
 
-const heroImage = homepage?.hero.image ?? {
-  url: "/photos/hero-home.jpg",
-  alt: "Défilé de mode dans une salle comble, mannequin sous un projecteur.",
-  width: 1440,
-  height: 959,
-};
 
 /** Manual selection (by slug) wins when set; otherwise the featured-fallback flag decides the pool, sorted by date, capped to the configured count. */
 function selectBySlug<T extends { data: { slug: string; publishDate?: Date; startDate?: Date } }>(
@@ -137,7 +131,7 @@ const displayedWork = selectBySlug<WorkEntry>(
     d'être montré plutôt que de le précéder à vide ; WEBLACK NOW précède
     Journal (le coup d'œil avant la lecture longue). TalentNetworkPreview
     est volontairement absent — Talent a déjà sa place, à parité avec
-    Créatif et Consulting, dans Practice (DivisionsGrid) ; dupliquer sa
+    Créatif et Consulting, dans Practice (DivisionsChapters) ; dupliquer sa
     présence sur l'accueil via un second bloc à l'état vide n'ajouterait
     rien que la page dédiée /talent ne dise déjà mieux.
   */}
@@ -148,23 +142,28 @@ const displayedWork = selectBySlug<WorkEntry>(
   <LivePriority lang={lang} live={activeLive} />
 
   {/* ATTENTION */}
-  <HeroHome lang={lang} heroImage={heroImage} hero={homepage?.hero} />
+  <HeroHome lang={lang} hero={homepage?.hero} />
   <TalentsAppNotice lang={lang} variant="section" />
 
   {/* IDENTIFICATION — dans quel monde travaille WEBLACK */}
   <TerritoriesMarquee lang={lang} />
 
   {/* POSITIONNEMENT — une conviction, avant la preuve, pas après */}
+  <div class="defer-render">
   <ManifestoQuote lang={lang} text={homepage?.manifesto.text} />
 
   {/* PREUVE — le travail avant le discours sur le travail */}
   <SelectedWorkPreview lang={lang} work={displayedWork} />
 
   {/* EXPERTISE — comment WEBLACK intervient */}
-  <DivisionsGrid lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
+  </div>
+  <div class="defer-render">
+  <DivisionsChapters lang={lang} expertises={expertises} section={homepage?.expertisesSection} />
 
   {/* SYNTHÈSE DE MÉTHODE — la preuve et l'expertise qui précèdent,
       ramenées à une méthode unique (WEBLACK Perspective) */}
+  </div>
+  <div class="defer-render">
   <Perspective lang={lang} />
 
   {/* DÉSIR — le coup d'œil (NOW), puis la lecture longue (Journal),
@@ -177,6 +176,8 @@ const displayedWork = selectBySlug<WorkEntry>(
   <BoutiquePreview lang={lang} settings={boutiqueSettings} products={boutiqueProducts} />
 
   {/* CONFIANCE — la personne, puis les alliances qui la confirment */}
+  </div>
+  <div class="defer-render">
   <TeamPreview lang={lang} members={teamMembers} section={homepage?.teamSection} />
   <PartnersPreview lang={lang} partners={partnerLogos} section={homepage?.partnersSection} />
 
@@ -187,6 +188,7 @@ const displayedWork = selectBySlug<WorkEntry>(
     lead={homepage?.contactSection.text}
     buttonLabel={homepage?.contactSection.ctaLabel}
   />
+</div>
 </BaseLayout>
 
 <script>

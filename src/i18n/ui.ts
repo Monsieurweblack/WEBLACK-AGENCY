@@ -569,6 +569,9 @@ const translations = {
     "journal.seo.description":
       "Récits de projets, entretiens et regards sur la création, la mode et la culture par l’équipe WEBLACK.",
     "journal.filter.all": "Tous",
+    "view.label": "Affichage des articles",
+    "view.grid": "Grille",
+    "view.list": "Liste",
     "journal.category.projects": "Projets",
     "journal.category.interviews": "Entretiens",
     "journal.category.insights": "Analyses",
@@ -1340,6 +1343,9 @@ const translations = {
     "journal.seo.description":
       "Project stories, interviews and perspectives on creation, fashion and culture from the WEBLACK team.",
     "journal.filter.all": "All",
+    "view.label": "Article layout",
+    "view.grid": "Grid",
+    "view.list": "List",
     "journal.category.projects": "Projects",
     "journal.category.interviews": "Interviews",
     "journal.category.insights": "Analysis",

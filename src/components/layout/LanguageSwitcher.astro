@@ -58,7 +58,7 @@ const uid = `${lang}-${Math.random().toString(36).slice(2, 8)}`;
     aria-haspopup="menu"
     aria-expanded="false"
     aria-controls={`language-menu-${uid}`}
-    aria-label={t("common.language")}
+    aria-label={`${currentShortLabel} — ${t("common.language")}`}
     data-language-trigger
   >
     {currentShortLabel}

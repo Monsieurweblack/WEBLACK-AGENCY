@@ -23,14 +23,15 @@ export function initNav() {
    * the header's actual rendered height and re-measuring on resize covers
    * font-swap reflows, orientation changes, and breakpoint changes without
    * any hardcoded number.
+   *
+   * The initial value is already set before first paint by the inline
+   * script in Header.astro. From then on the ResizeObserver reports the
+   * header's border box after each layout — no getBoundingClientRect() on
+   * load: read while the page's styles were still being invalidated, it
+   * forced a synchronous recalculation of the whole document (measured on
+   * the home page: up to 227 ms at CPU ×4). It also covers every breakpoint
+   * and orientation change, so no window "resize" listener is needed.
    */
-  const setHeaderHeightVar = () => {
-    document.documentElement.style.setProperty("--header-h", `${header.getBoundingClientRect().height}px`);
-  };
-  setHeaderHeightVar();
-  window.addEventListener("resize", setHeaderHeightVar);
-  new ResizeObserver(setHeaderHeightVar).observe(header);
-
   const setHeaderSolid = (solid: boolean) => {
     header.classList.toggle("bg-(--color-ink)/90", solid);
     header.classList.toggle("backdrop-blur-md", solid);
@@ -39,7 +40,17 @@ export function initNav() {
   };
 
   const onScroll = () => setHeaderSolid(window.scrollY > 24 || isOpen);
-  onScroll();
+  let firstLayout = true;
+  new ResizeObserver(([entry]) => {
+    const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+    document.documentElement.style.setProperty("--header-h", `${height}px`);
+    // window.scrollY forces a layout too: read it here, once layout is clean,
+    // for a page restored mid-scroll (reload, back navigation).
+    if (firstLayout) {
+      firstLayout = false;
+      onScroll();
+    }
+  }).observe(header);
   window.addEventListener("scroll", onScroll, { passive: true });
 
   async function openMenu() {
