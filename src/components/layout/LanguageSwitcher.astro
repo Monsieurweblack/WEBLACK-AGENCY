@@ -10,7 +10,7 @@ interface Props {
    * src/i18n/utils.ts `resolveTranslations`. Omitted for pages whose slug
    * is identical across locales (the naive swap then applies). A locale
    * with no known translation for this page is never linked to — no naive
-   * `/fr/` → `/nb/` substitution, ever (see the brief this component
+   * `/journal/x/` → `/en/journal/x/` substitution for content that has no English version (see the brief this component
    * implements: resolve from content identity, not path guessing).
    */
   translations?: TranslationMap;
@@ -29,7 +29,7 @@ interface SwitcherItem {
 }
 
 /**
- * Registry order (fr, en, nb, zh), not resolution order, so the open menu
+ * Registry order (fr, en), not resolution order, so the open menu
  * always lists languages the same way regardless of which ones happen to
  * resolve on a given page. The active language is always included (it's
  * simply not a link); any other locale appears only when `resolved`

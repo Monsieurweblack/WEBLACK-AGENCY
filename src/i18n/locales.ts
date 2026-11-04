@@ -1,25 +1,19 @@
 /**
- * WEBLACK Locale Registry — single source of truth for every supported
+ * WEBLACK Locale Registry — single source of truth for every published
  * locale. Nothing else in the codebase should hardcode a locale list, a
  * BCP 47 tag, a native language name, or an `<html lang>` value — it should
  * import from here instead.
  *
- * Target set (per the WEBLACK internationalization brief):
- *   fr-FR, en, nb-NO, zh-CN
- *
- * `enabled: false` means "registered, typed, and safe to reference
- * anywhere — but not yet part of the live site." No route, sitemap entry,
- * hreflang tag, switcher item, or structured-data block should ever be
- * produced for a disabled locale. This mirrors how RELATED_TALENT /
- * RELATED_SERVICE / RELATED_EVENT are handled in src/lib/content-graph.ts:
- * a real, documented reservation, not a working feature.
- *
- * Flipping a locale to `enabled: true` is a deliberate, separate decision —
- * made only once real translated page files and content exist for it (see
- * docs/i18n.md, "Enabling a locale"). Nothing here does that automatically.
+ * WEBLACK is exclusively bilingual: French (default, site root) and English
+ * (/en/). Norwegian (nb) and Simplified Chinese (zh) were registered here
+ * and briefly served on /nb/, /nb/about/, /zh/ and /zh/about/; they were
+ * retired on 2026-11-04 by an explicit product decision. Those four URLs
+ * now answer with a 301 at the edge (public/_redirects, migration register
+ * in docs/i18n.md). Adding a locale back is a product decision first: real
+ * translated pages and content, then an entry here.
  */
 
-export type LocaleCode = "fr" | "en" | "nb" | "zh";
+export type LocaleCode = "fr" | "en";
 
 export interface LocaleDefinition {
   code: LocaleCode;
@@ -27,29 +21,16 @@ export interface LocaleDefinition {
   nativeName: string;
   /**
    * <html lang> value. Deliberately not always identical to `hreflang` —
-   * e.g. French is html lang="fr" but hreflang="fr-FR" (hreflang benefits
-   * from market specificity; <html lang> is a rendering/accessibility hint
-   * kept as general as correctly possible). Chinese is the one locale where
-   * script disambiguation ("zh" alone is ambiguous between Simplified and
-   * Traditional) makes the fuller tag necessary at the html-lang level too.
+   * French is html lang="fr" but hreflang="fr-FR" (hreflang benefits from
+   * market specificity; <html lang> is a rendering/accessibility hint kept
+   * as general as correctly possible).
    */
   htmlLang: string;
   /** Value used for <link rel="alternate" hreflang="..."> and schema.org inLanguage. */
   hreflang: string;
   /** URL path prefix segment. Empty string for the default locale (no prefix). */
   pathPrefix: string;
-  script: "Latin" | "Hans";
-  direction: "ltr";
-  /** Whether this locale currently has real, published pages. See module docblock. */
-  enabled: boolean;
-  /**
-   * Compact label for the language-switcher trigger button ("FR ▾"). An
-   * ISO code for Latin-script locales (unambiguous, universally recognized
-   * in that form); the language's own name in its own script for Chinese,
-   * since two Latin letters ("ZH") don't read as "Chinese" the way "中文"
-   * immediately does. Deliberately "NB", never the ISO macrolanguage code
-   * "no" — Bokmål-specific, matching every other locale field here.
-   */
+  /** Compact label for the language-switcher trigger button ("FR ▾"). */
   shortLabel: string;
 }
 
@@ -60,9 +41,6 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
     htmlLang: "fr",
     hreflang: "fr-FR",
     pathPrefix: "",
-    script: "Latin",
-    direction: "ltr",
-    enabled: true,
     shortLabel: "FR",
   },
   en: {
@@ -71,32 +49,7 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
     htmlLang: "en",
     hreflang: "en",
     pathPrefix: "en",
-    script: "Latin",
-    direction: "ltr",
-    enabled: true,
     shortLabel: "EN",
-  },
-  nb: {
-    code: "nb",
-    nativeName: "Norsk",
-    htmlLang: "nb",
-    hreflang: "nb-NO",
-    pathPrefix: "nb",
-    script: "Latin",
-    direction: "ltr",
-    enabled: false,
-    shortLabel: "NB",
-  },
-  zh: {
-    code: "zh",
-    nativeName: "中文",
-    htmlLang: "zh-CN",
-    hreflang: "zh-CN",
-    pathPrefix: "zh",
-    script: "Hans",
-    direction: "ltr",
-    enabled: false,
-    shortLabel: "中文",
   },
 };
 
@@ -110,8 +63,6 @@ export const LOCALES: Record<LocaleCode, LocaleDefinition> = {
 export const defaultLocale = "fr" as const;
 
 export const LOCALE_CODES = Object.keys(LOCALES) as LocaleCode[];
-
-export const ENABLED_LOCALE_CODES = LOCALE_CODES.filter((code) => LOCALES[code].enabled);
 
 /** Open Graph og:locale value — the hreflang tag with "-" swapped for "_" (fr-FR -> fr_FR, en -> en). */
 export function ogLocaleFor(code: LocaleCode): string {

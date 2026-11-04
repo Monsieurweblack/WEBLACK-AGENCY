@@ -20,7 +20,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@sanity/client";
-import { LOCALE_CODES, ENABLED_LOCALE_CODES } from "../src/i18n/locales.ts";
+import { LOCALE_CODES } from "../src/i18n/locales.ts";
 import { resolveContentId, CONTENT_ID_ALIASES } from "../src/lib/content-graph.ts";
 import { isEmpty, classifyImageUrl, isKnownWorkSlug, computeExitCode } from "./lib/content-checks.mjs";
 
@@ -251,22 +251,20 @@ for (const d of byType.work) {
 }
 
 // --- R4: locale / translation coverage --------------------------------------
-// Generic over every *enabled* locale (fr/en today) — nb/zh join this loop
-// automatically the day they're enabled in src/i18n/locales.ts, with zero
-// code change here. Matched by contentId, not raw slug, so a pair like the
+// Generic over every published locale (src/i18n/locales.ts: fr, en). Matched by contentId, not raw slug, so a pair like the
 // NTA journal article (different FR/EN slugs, unified via
 // content-graph.ts's CONTENT_ID_ALIASES) is correctly recognized as
 // translated instead of being flagged as missing on both sides.
 for (const type of Object.keys(byType)) {
   const slugsByLocale = new Map(
-    ENABLED_LOCALE_CODES.map((locale) => [
+    LOCALE_CODES.map((locale) => [
       locale,
       new Set(indexByTypeLangSlug.get(`${type}:${locale}`)?.keys() ?? []),
     ]),
   );
-  const localesWithContent = ENABLED_LOCALE_CODES.filter((locale) => slugsByLocale.get(locale).size > 0);
+  const localesWithContent = LOCALE_CODES.filter((locale) => slugsByLocale.get(locale).size > 0);
 
-  for (const locale of ENABLED_LOCALE_CODES) {
+  for (const locale of LOCALE_CODES) {
     if (slugsByLocale.get(locale).size === 0 && localesWithContent.length > 0) {
       report(
         "WARNING",
@@ -277,15 +275,15 @@ for (const type of Object.keys(byType)) {
   }
 
   const contentIdsByLocale = new Map(
-    ENABLED_LOCALE_CODES.map((locale) => [
+    LOCALE_CODES.map((locale) => [
       locale,
       new Set([...slugsByLocale.get(locale)].map((slug) => resolveContentId(type, locale, slug))),
     ]),
   );
-  for (const locale of ENABLED_LOCALE_CODES) {
+  for (const locale of LOCALE_CODES) {
     for (const slug of slugsByLocale.get(locale)) {
       const contentId = resolveContentId(type, locale, slug);
-      for (const other of ENABLED_LOCALE_CODES) {
+      for (const other of LOCALE_CODES) {
         if (other === locale) continue;
         if (!contentIdsByLocale.get(other).has(contentId)) {
           report("INFO", `[${type.toUpperCase()}]`, `No ${other.toUpperCase()} translation for slug "${slug}" (${locale.toUpperCase()})`);

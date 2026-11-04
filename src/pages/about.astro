@@ -3,7 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import RemoteImage from "../components/media/RemoteImage.astro";
 import CtaContact from "../components/sections/CtaContact.astro";
 import FounderBioModal from "../components/sections/FounderBioModal.astro";
-import { useTranslations, localizedPath, type UiKey, type TranslationMap } from "../i18n/utils";
+import { useTranslations, type UiKey } from "../i18n/utils";
 import { getTeamMembers } from "../lib/content";
 
 const lang = "fr" as const;
@@ -16,14 +16,9 @@ const founderRole = founder?.role ?? t("about.founder.role");
 const founderPhotoUrl = founder?.photo?.url ?? "/photos/founder-deo-gratias-kpodo.png";
 const founderPhotoAlt = founder?.photo?.alt || founderName;
 
-const translations: TranslationMap = {
-  en: localizedPath("en", "/about/"),
-  nb: localizedPath("nb", "/about/"),
-  zh: localizedPath("zh", "/about/"),
-};
 ---
 
-<BaseLayout lang={lang} title={t("about.hero.title")} description={t("about.intro")} translations={translations}>
+<BaseLayout lang={lang} title={t("about.hero.title")} description={t("about.intro")}>
   <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("about.hero.eyebrow")}</p>

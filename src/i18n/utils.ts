@@ -1,5 +1,5 @@
 import { ui, defaultLang, languages, type Lang, type UiKey } from "./ui";
-import { ENABLED_LOCALE_CODES } from "./locales";
+import { LOCALE_CODES } from "./locales";
 
 export { languages, defaultLang };
 export type { Lang, UiKey };
@@ -16,13 +16,9 @@ export function useTranslations(lang: Lang) {
   };
 }
 
-/**
- * All *enabled* locales other than the given one, in registry order. Used
- * by the language switcher to list every alternate version of the current
- * page — replaces the old two-way-only `otherLang()`.
- */
-export function otherEnabledLocales(lang: Lang): Lang[] {
-  return ENABLED_LOCALE_CODES.filter((code) => code !== lang);
+/** Every published locale other than the given one, in registry order. */
+export function otherLocales(lang: Lang): Lang[] {
+  return LOCALE_CODES.filter((code) => code !== lang);
 }
 
 /**
@@ -55,7 +51,7 @@ export function localizedPath(lang: Lang, path: string): string {
  * The distinction that matters to `resolveTranslations` below:
  * - `undefined` (the prop simply not passed) — this route never checks
  *   per-locale availability; assume the naive same-slug swap is valid for
- *   every enabled locale. Correct default for static pages.
+ *   every locale. Correct default for static pages.
  * - `{}` (an explicit, empty map) — this route DID check, and found no
  *   translation anywhere. Every locale is reported unavailable. This is
  *   NOT the same as `undefined` — passing `undefined` here by mistake for
@@ -76,17 +72,10 @@ export interface ResolvedTranslation {
 /**
  * Resolves this page's known translations to a path per locale, or omits a
  * locale entirely when no translation is known.
- * - No `translations` map supplied at all: naive slug-swap for every
- *   *enabled* locale (today's default behavior, unchanged) — safe only
- *   because it's limited to locales with full page parity.
- * - `translations` supplied: authoritative and trusted for ANY locale in
- *   the map, regardless of that locale's global `enabled` flag. This is
- *   what lets a single page (e.g. the homepage) opt in to a not-yet-`enabled`
- *   locale like nb/zh without that locale's `enabled: false` suppressing it
- *   — and, symmetrically, without flipping `enabled` globally and breaking
- *   every other page's naive-swap fallback for a locale that doesn't have
- *   pages yet. A locale missing from the map is reported as unavailable,
- *   full stop, never guessed.
+ * - No `translations` map supplied at all: naive slug-swap to the other
+ *   locale — safe because every static page exists in both FR and EN.
+ * - `translations` supplied: authoritative. A locale missing from the map
+ *   is reported as unavailable, full stop, never guessed.
  */
 export function resolveTranslations(
   lang: Lang,
@@ -98,7 +87,7 @@ export function resolveTranslations(
       .filter((targetLang) => targetLang !== lang)
       .map((targetLang): ResolvedTranslation => ({ lang: targetLang, path: translations[targetLang]! }));
   }
-  return otherEnabledLocales(lang).map((targetLang): ResolvedTranslation => ({
+  return otherLocales(lang).map((targetLang): ResolvedTranslation => ({
     lang: targetLang,
     path: switchLocalePath(pathname, targetLang),
   }));

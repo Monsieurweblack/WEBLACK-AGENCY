@@ -11,10 +11,9 @@ interface Props {
 
 const { lang, member } = Astro.props;
 const t = useTranslations(lang);
-// nb/zh have no bio content yet and fall back to the French text — the
-// quote marks must match whichever language the *quoted text* is actually
-// in, not the page's own lang, or a French quote would render inside
-// English-style curly quotes on an nb/zh page.
+// A locale without bio content falls back to the French text — the quote
+// marks must match whichever language the *quoted text* is actually in, not
+// the page's own lang.
 const bioLang = founderBio[lang] ? lang : defaultLang;
 const fallbackBio = founderBio[bioLang]!;
 

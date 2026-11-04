@@ -68,9 +68,7 @@ export interface ContentIdAlias {
  * inferred automatically — every entry is a deliberate human decision,
  * re-verified against the live Sanity data before being added (see
  * docs/content-graph.md, "Adding an alias"). Do not add an entry here on a
- * guess. Generic across every locale in the registry (fr/en today, nb/zh
- * the day either has content that needs it) — nothing here is hardcoded to
- * exactly two languages.
+ * guess. Generic across every locale in the registry (src/i18n/locales.ts).
  *
  * Empty since 2026-11-03: the only entry (NTA partnership announcement,
  * fr "l-agence-weblack-annonce-un-partenariat-avec-la-nuit-du-textile-africain-une-nouvelle-ambition-pour-la-creation-africaine"

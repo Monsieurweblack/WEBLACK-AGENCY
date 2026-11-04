@@ -21,3 +21,13 @@
 /en/actualites    /en/journal  301
 /partenaires      /partners    301
 /en/partenaires   /en/partners 301
+
+# Langues retirées le 2026-11-04 (WEBLACK est exclusivement FR / EN).
+# Seules /nb/, /nb/about/, /zh/ et /zh/about/ ont été publiées ; chacune
+# renvoie vers son équivalent anglais exact — pour un lecteur norvégien ou
+# chinois, l'anglais est la langue la plus probablement lue. Le joker garde
+# le chemin (jamais tout vers l'accueil) ; registre dans docs/i18n.md.
+/nb     /en/          301
+/nb/*   /en/:splat    301
+/zh     /en/          301
+/zh/*   /en/:splat    301

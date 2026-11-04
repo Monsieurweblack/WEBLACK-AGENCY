@@ -32,7 +32,6 @@ import {
   type WorkEntry,
   type BoutiqueProductData,
 } from "../../lib/content";
-import { localizedPath, type TranslationMap } from "../../i18n/utils";
 
 const lang = "en" as const;
 
@@ -119,14 +118,9 @@ const displayedWork = selectBySlug<WorkEntry>(
   3,
 );
 
-const translations: TranslationMap = {
-  fr: localizedPath("fr", "/"),
-  nb: localizedPath("nb", "/"),
-  zh: localizedPath("zh", "/"),
-};
 ---
 
-<BaseLayout lang={lang} translations={translations}>
+<BaseLayout lang={lang}>
   {/*
     Architecture construite autour d'un parcours, pas d'un empilement de
     sections, dans l'ordre :
