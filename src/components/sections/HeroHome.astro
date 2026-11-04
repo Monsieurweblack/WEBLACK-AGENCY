@@ -89,16 +89,25 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     demandée, voir le rapport du bloc).
   */}
   <div
+    data-mark-recede
     class="pointer-events-none absolute inset-x-0 top-[calc(var(--header-h)+var(--hero-safe-gap))] z-[4] mx-auto w-(--hero-symbol-w) max-w-[300px] opacity-80 md:max-w-[420px] md:opacity-90 lg:inset-x-auto lg:right-[9%] lg:top-1/2 lg:mx-0 lg:w-[36vw] lg:max-w-[620px] lg:-translate-y-1/2 lg:opacity-100"
     aria-hidden="true"
   >
-    <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
-    <div
-      data-hero-mark
-      data-intro="mark"
-      style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
-      class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
-    >
+    <div data-mark-glow class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
+    {/*
+      Deux niveaux, deux rôles : [data-mark-tilt] porte la perspective qui
+      suit le curseur (scripts/motion/monogram.ts), le monogramme porte son
+      ouverture (motion.css, « mark ») — jamais deux animations sur la même
+      propriété du même élément.
+    */}
+    <div data-mark-tilt class="mark-tilt">
+      <div
+        data-hero-mark
+        data-intro="mark"
+        style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
+        class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
+      >
+      </div>
     </div>
   </div>
 
@@ -157,6 +166,7 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <div data-intro style="--intro-i: 3" class="mt-[clamp(0.5rem,3svh,2.5rem)] flex flex-wrap items-center gap-4 lg:mt-10">
       <a
         href={ctaExploreHref}
+        data-press
         class="inline-flex items-center justify-center bg-(--color-gold) px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
       >
         {ctaExploreLabel}
@@ -181,6 +191,13 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     <span class="label-tracked">{t("home.hero.scroll")}</span>
   </a>
 </section>
+
+<script>
+  import { initMonogram } from "../../scripts/motion/monogram";
+
+  const section = document.querySelector<HTMLElement>("[data-hero-section]");
+  if (section) initMonogram(section);
+</script>
 
 <style>
   /*
@@ -267,7 +284,18 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     }
   }
 
+  /*
+   * Le monogramme vivant. Le reflet ::after (position --lx/--ly, intensité
+   * --lo, pilotés par monogram.ts) et le balayage ::before sont des
+   * pseudo-éléments du monogramme : son masque les découpe à la forme exacte
+   * du W, ils ne débordent jamais sur le fond.
+   */
+  .mark-tilt {
+    transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  }
+
   .hero-symbol {
+    position: relative;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -280,6 +308,81 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
       var(--color-gold) 55%,
       var(--color-gold-dim) 100%
     );
+  }
+
+  .hero-symbol::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--lx, 35%) var(--ly, 28%), rgb(255 240 214 / 55%), transparent 42%);
+    mix-blend-mode: soft-light;
+    opacity: var(--lo, 0);
+  }
+
+  .hero-symbol::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 38%, rgb(255 238 205 / 60%) 50%, transparent 62%);
+    transform: translateX(-130%);
+    opacity: 0;
+  }
+
+  /*
+   * Ouverture du monogramme : le halo monte (2,4 s), puis une seule lame de
+   * lumière traverse le W une fois construit (motion.css, « intro-mark »),
+   * et tout s'arrête — aucun mouvement permanent. Un toucher relance la lame
+   * sur écran tactile (.is-sweeping, monogram.ts).
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    [data-mark-glow] {
+      animation: mark-glow 2400ms var(--ease-signature) 300ms both;
+    }
+
+    .hero-symbol::before {
+      animation: mark-sweep 1600ms var(--ease-signature) 1100ms both;
+    }
+
+    .hero-symbol.is-sweeping::before {
+      animation: mark-sweep-again 1400ms var(--ease-signature) both;
+    }
+  }
+
+  @keyframes mark-glow {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mark-sweep {
+    0% {
+      transform: translateX(-130%);
+      opacity: 0;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(130%);
+      opacity: 0;
+    }
+  }
+
+  /* Même geste, autre nom : réassigner un nom identique ne relance pas l'animation. */
+  @keyframes mark-sweep-again {
+    0% {
+      transform: translateX(-130%);
+      opacity: 0;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(130%);
+      opacity: 0;
+    }
   }
 
   /*

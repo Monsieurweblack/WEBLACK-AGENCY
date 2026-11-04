@@ -21,14 +21,29 @@ const QUOTES: Partial<Record<Lang, [string, string]>> = {
   fr: ["« ", " »"],
 };
 const [openQuote, closeQuote] = QUOTES[lang] ?? ["“", "”"];
+
+/**
+ * Lecture au défilement (motion.css, « .mq-word ») : chaque mot reçoit son
+ * moment dans la traversée de la section, du premier au dernier, sur 30 %
+ * de la course. Le texte reste un seul paragraphe, lu d'un trait par les
+ * technologies d'assistance.
+ */
+const words = manifestoText.trim().split(/\s+/);
+const step = (index: number) => `${Math.round((index / words.length) * 30)}%`;
 ---
 
-<section class="bg-(--color-paper) py-28 md:py-36" data-reveal>
+<section class="bg-(--color-paper) py-28 md:py-36 [view-timeline-name:--manifesto]" data-reveal>
   <div class="mx-auto max-w-4xl px-6 text-center md:px-10">
     <p
       class="font-display text-balance text-3xl leading-[1.25] text-(--color-ink) sm:text-4xl lg:text-5xl"
     >
-      {openQuote}{manifestoText}{closeQuote}
+      {openQuote}{
+        words.map((word, i) => (
+          <>
+            <span class="mq-word" style={`--p: ${step(i)}`}>{word}</span>{i < words.length - 1 ? " " : ""}
+          </>
+        ))
+      }{closeQuote}
     </p>
     <div class="mx-auto mt-8 h-px w-16 bg-(--color-gold)"></div>
   </div>

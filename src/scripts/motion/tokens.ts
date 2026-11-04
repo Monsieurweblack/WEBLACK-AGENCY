@@ -11,3 +11,10 @@ export const revealKeyframes: Keyframe[] = [
   { opacity: 0, transform: "translateY(28px)" },
   { opacity: 1, transform: "none" },
 ];
+
+/** Titres [data-split] : chaque mot se lève à son tour, 45 ms d'écart. */
+export const WORD_STAGGER_MS = 45;
+export const wordKeyframes: Keyframe[] = [
+  { opacity: 0, transform: "translateY(0.45em)" },
+  { opacity: 1, transform: "none" },
+];

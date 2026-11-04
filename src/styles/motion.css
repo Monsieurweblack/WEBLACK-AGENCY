@@ -89,6 +89,35 @@
      * (les cinq temps de WEBLACK Perspective, le parcours Talent) au rythme
      * où on la lit. Sans support : le trait est simplement là, tendu.
      */
+    /*
+     * Sortie de l'ouverture : en quittant l'écran, le monogramme recule et
+     * s'éteint — l'accueil passe la main à la section suivante. `scale` et
+     * `opacity` seulement : la position (translate de Tailwind) et la
+     * perspective du curseur (transform) restent indépendantes.
+     */
+    [data-hero-section] {
+      view-timeline-name: --hero;
+    }
+
+    [data-mark-recede] {
+      animation: mark-recede linear both;
+      animation-timeline: --hero;
+      animation-range: exit 0% exit 80%;
+    }
+
+    /*
+     * Le manifeste se lit au défilement : les mots arrivent dans l'ordre de
+     * la phrase, tous présents quand la citation atteint le centre de
+     * l'écran. Départ à opacité nulle — un mot à demi éteint serait un texte
+     * à contraste insuffisant, pas une lecture.
+     */
+    .mq-word {
+      display: inline-block;
+      animation: mq-read linear both;
+      animation-timeline: --manifesto;
+      animation-range: cover calc(5% + var(--p, 0%)) cover calc(20% + var(--p, 0%));
+    }
+
     [data-thread] {
       view-timeline-name: --thread;
     }
@@ -115,6 +144,50 @@
       animation-timeline: view();
       animation-range: entry 0% cover 50%;
     }
+  }
+}
+
+/*
+ * Micro-interactions. Appui : les appels à l'action principaux ([data-press])
+ * cèdent d'un pixel sous le doigt ou le clic — `transform`, indépendant du
+ * `translate` des survols Tailwind. Rien de plus : pas de rebond, pas d'écho.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-press] {
+    transition: transform var(--motion-fast) var(--ease-signature);
+  }
+
+  [data-press]:active {
+    transform: translateY(1px) scale(0.985);
+  }
+}
+
+/*
+ * Envoi en cours : tout bouton marqué aria-busy="true" par son script
+ * (candidature, newsletter) affiche un anneau à gauche de son libellé. En
+ * mouvement réduit, l'anneau reste visible mais ne tourne pas : l'état est
+ * un retour fonctionnel, pas une décoration.
+ */
+button[aria-busy="true"] {
+  cursor: progress;
+}
+
+button[aria-busy="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.6em;
+  vertical-align: -0.15em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: busy-spin 800ms linear infinite;
+}
+
+@keyframes busy-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -166,10 +239,38 @@
   }
 }
 
+/*
+ * Le W se construit : il monte de sa base, se redresse d'un léger basculement
+ * en profondeur et se pose. Bornes négatives à la fin : l'ombre portée du
+ * monogramme ne doit pas rester rognée.
+ */
 @keyframes intro-mark {
+  0% {
+    opacity: 0;
+    clip-path: inset(100% -20% -20% -20%);
+    transform: perspective(1100px) rotateX(22deg) translateY(4%) scale(0.96);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(-20% -20% -20% -20%);
+    transform: none;
+  }
+}
+
+@keyframes mq-read {
   from {
     opacity: 0;
-    transform: scale(0.94);
+    transform: translateY(0.35em);
+  }
+}
+
+@keyframes mark-recede {
+  to {
+    scale: 0.86;
+    opacity: 0.2;
   }
 }
 

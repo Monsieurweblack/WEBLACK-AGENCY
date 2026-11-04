@@ -1,0 +1,72 @@
+---
+import { useTranslations, type Lang } from "../../i18n/utils";
+
+interface Props {
+  lang: Lang;
+  /** id de la collection pilotée (aria-controls). La collection porte [data-view-collection]. */
+  controls: string;
+}
+
+const { lang, controls } = Astro.props;
+const t = useTranslations(lang);
+const views = [
+  { id: "grid", label: t("view.grid") },
+  { id: "list", label: t("view.list") },
+] as const;
+---
+
+{/*
+  Grille / liste. Le choix ne recharge rien : il change la mise en page de
+  la collection ([data-view-collection], global.css) — ordre, filtres et
+  adresse restent ceux de la page. Il est retenu d'une visite à l'autre et
+  rétabli avant le premier rendu (script en ligne ci-dessous) : la page ne
+  saute jamais d'une présentation à l'autre sous les yeux.
+*/}
+<div role="group" aria-label={t("view.label")} class="inline-flex border border-(--color-line)" data-view-toggle>
+  {
+    views.map((view) => (
+      <button
+        type="button"
+        data-view={view.id}
+        aria-pressed={view.id === "grid" ? "true" : "false"}
+        aria-controls={controls}
+        title={view.label}
+        class="inline-flex h-11 w-11 items-center justify-center text-(--color-paper)/60 transition-colors duration-200 hover:text-(--color-gold) focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--color-gold) aria-pressed:bg-(--color-gold)/10 aria-pressed:text-(--color-gold)"
+      >
+        {
+          view.id === "grid" ? (
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="1.5" y="1.5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+              <rect x="10.5" y="1.5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+              <rect x="1.5" y="10.5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+              <rect x="10.5" y="10.5" width="6" height="6" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="1.5" y="2.5" width="4" height="3" stroke="currentColor" stroke-width="1.5" />
+              <rect x="1.5" y="12.5" width="4" height="3" stroke="currentColor" stroke-width="1.5" />
+              <path d="M8 4h8.5M8 14h8.5" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          )
+        }
+        <span class="sr-only">{view.label}</span>
+      </button>
+    ))
+  }
+</div>
+<script is:inline>
+  (function () {
+    try {
+      if (localStorage.getItem("weblack-collection-view") !== "list") return;
+      document.documentElement.dataset.collectionView = "list";
+      document.currentScript.previousElementSibling.querySelectorAll("[data-view]").forEach(function (button) {
+        button.setAttribute("aria-pressed", String(button.dataset.view === "list"));
+      });
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  import { initViewToggle } from "../../scripts/view-toggle";
+  initViewToggle();
+</script>
