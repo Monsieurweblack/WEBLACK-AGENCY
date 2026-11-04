@@ -66,6 +66,13 @@ if (dryRun) {
   process.exit(0);
 }
 
+// Cloudflare refuse explicitement un retour arrière vers le déploiement déjà
+// en production (erreur 8000039, constatée le 2026-11-04) : rien à faire.
+if (active?.id === target.id) {
+  console.log("La cible est déjà le déploiement de production : aucune bascule nécessaire.");
+  process.exit(0);
+}
+
 await api(`${base}/deployments/${target.id}/rollback`, { method: "POST" });
 const now = (await api(base)).canonical_deployment;
 const status = (await fetch(SITE, { signal: AbortSignal.timeout(30000) })).status;

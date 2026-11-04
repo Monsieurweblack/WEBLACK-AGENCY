@@ -10,6 +10,63 @@
 @import "@fontsource-variable/manrope";
 @import "./motion.css";
 
+/*
+ * Polices de repli calibrées. Tant que Fraunces et Manrope ne sont pas
+ * arrivées (font-display: swap), le texte s'affiche dans une police système
+ * ramenée aux mêmes métriques : même largeur (size-adjust), même hauteur de
+ * capitale et de jambage (ascent/descent-override, = métrique de la police
+ * web ÷ size-adjust). La bascule change alors au minimum les retours à la
+ * ligne et la hauteur des blocs.
+ *
+ * Valeurs mesurées sur le rendu réel, pas sur un canvas : largeur de chaque
+ * bloc de texte de 7 pages (FR/EN), à sa taille, sa graisse, sa casse et son
+ * interlettrage réels — Fraunces a un axe de taille optique (opsz) : mesurée
+ * à 100 px, sa coupe « display » paraissait 16 % plus étroite que Georgia,
+ * alors qu'aux tailles du site (20–49 px, 9 582 caractères) elle est 2,5 %
+ * plus large. Métriques verticales lues dans le navigateur — 2026-11-04.
+ * Une famille par police locale réelle : chacune a ses propres proportions.
+ */
+@font-face {
+  font-family: "Fraunces Fallback Georgia";
+  src: local("Georgia");
+  size-adjust: 102.5%;
+  ascent-override: 95.61%;
+  descent-override: 25.37%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Fraunces Fallback Times";
+  src: local("Times New Roman");
+  size-adjust: 112%;
+  ascent-override: 87.5%;
+  descent-override: 23.21%;
+  line-gap-override: 0%;
+}
+
+/* Manrope 400 contre Arial : 39 134 caractères, rapport 102,4 %. */
+@font-face {
+  font-family: "Manrope Fallback Arial";
+  src: local("Arial");
+  font-weight: 100 500;
+  size-adjust: 102.4%;
+  ascent-override: 104.49%;
+  descent-override: 29.3%;
+  line-gap-override: 0%;
+}
+
+/* Graisses 600+ (libellés capitales espacées, boutons) : la vraie coupe grasse,
+   pas une graisse synthétique — 6 420 caractères, rapport 92,5 %. */
+@font-face {
+  font-family: "Manrope Fallback Arial";
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  font-weight: 600 900;
+  size-adjust: 92.5%;
+  ascent-override: 115.68%;
+  descent-override: 32.43%;
+  line-gap-override: 0%;
+}
+
 @theme {
   /* Palette — noir / blanc / or subtil. Dark mode is the default/signature
      expression of WEBLACK; these are the dark-mode values. Light mode
@@ -41,8 +98,8 @@
   --color-gold-inverse: #7d5f34;
 
   /* Type */
-  --font-display: "Fraunces Variable", "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", "Fraunces", "Fraunces Fallback Georgia", "Fraunces Fallback Times", ui-serif, Georgia, serif;
+  --font-sans: "Manrope Variable", "Manrope", "Manrope Fallback Arial", ui-sans-serif, system-ui, sans-serif;
 
   /* Motion */
   --ease-signature: cubic-bezier(0.16, 1, 0.3, 1);

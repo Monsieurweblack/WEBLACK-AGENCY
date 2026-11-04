@@ -114,9 +114,21 @@ const lcpPreload = lcpPreloads.length > 0;
       font-display:swap, cela se voit à l'œil sous forme de bascule de
       police. Les URL sont importées plutôt qu'écrites en dur : leur
       empreinte change à chaque build.
+
+      Sauf quand la page précharge une image LCP (bandeaux Talent, études de
+      cas) : les fontes (91 Ko) partageaient alors la bande passante avec
+      l'image et l'arrivaient avant elle. Le texte s'affiche d'abord dans les
+      polices de repli calibrées (global.css), aux mêmes métriques : la
+      bascule ne décale rien (mesuré, bascule forcée sur 6 routes × 6 largeurs).
     -->
-    <link rel="preload" as="font" type="font/woff2" href={fraunces} crossorigin />
-    <link rel="preload" as="font" type="font/woff2" href={manrope} crossorigin />
+    {
+      !lcpPreload && (
+        <>
+          <link rel="preload" as="font" type="font/woff2" href={fraunces} crossorigin />
+          <link rel="preload" as="font" type="font/woff2" href={manrope} crossorigin />
+        </>
+      )
+    }
     <script is:inline>
       (function () {
         try {
