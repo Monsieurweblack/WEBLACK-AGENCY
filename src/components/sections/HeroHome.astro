@@ -95,17 +95,19 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   >
     <div data-mark-glow class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
     {/*
-      Deux niveaux, deux rôles : [data-mark-tilt] porte la perspective qui
-      suit le curseur (scripts/motion/monogram.ts), le monogramme porte son
-      ouverture (motion.css, « mark ») — jamais deux animations sur la même
-      propriété du même élément.
+      [data-mark-tilt] porte l'ouverture (motion.css, « mark » : opacity,
+      translate, scale — des propriétés composées par le GPU) et la
+      perspective du curseur (scripts/motion/monogram.ts : transform) ; le
+      monogramme masqué ne s'anime jamais lui-même, son rendu est peint une
+      fois. Pas de filtre sur l'élément masqué : un drop-shadow y était
+      entièrement découpé par le masque (0 pixel de différence, mesuré) et
+      recalculé à chaque image de la lame de lumière.
     */}
-    <div data-mark-tilt class="mark-tilt">
+    <div data-mark-tilt data-intro="mark" class="mark-tilt">
       <div
         data-hero-mark
-        data-intro="mark"
         style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
-        class="hero-symbol w-full drop-shadow-[0_35px_70px_rgba(0,0,0,0.55)]"
+        class="hero-symbol w-full"
       >
       </div>
     </div>
@@ -389,14 +391,21 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
    * Lumière de plateau : un halo très doux, centré là où se tient le
    * monogramme (en haut sur mobile, à droite sur grand écran), qui laisse les
    * bords dans le noir. Sa respiration — une variation d'intensité de 24 s,
-   * imperceptible à l'arrêt — n'anime que l'opacité (composée par le GPU) ;
-   * sous prefers-reduced-motion, la règle globale de global.css la fige.
+   * imperceptible à l'arrêt — n'anime que l'opacité, et seulement quand
+   * l'ouverture est « vivante » ([data-live], posé par monogram.ts après le
+   * chargement et retiré dès que le hero quitte l'écran) : rien ne tourne
+   * pendant le premier rendu ni hors champ, rien en mouvement réduit.
    */
   [data-hero-light] {
     background:
       radial-gradient(60% 45% at 50% 30%, color-mix(in srgb, var(--color-gold) 7%, transparent), transparent 70%),
       radial-gradient(120% 90% at 50% 40%, transparent 55%, color-mix(in srgb, #000 55%, transparent));
-    animation: hero-light-breathe 24s ease-in-out infinite alternate;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-hero-section][data-live] [data-hero-light] {
+      animation: hero-light-breathe 24s ease-in-out infinite alternate;
+    }
   }
 
   @media (min-width: 1024px) {

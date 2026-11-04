@@ -28,12 +28,22 @@ export function initScrollChoreography() {
   const reveals = [...document.querySelectorAll<HTMLElement>("[data-reveal], [data-split]")];
   if (!reveals.length) return;
 
+  // Premier rapport de l'observateur = état au chargement, calculé après la
+  // mise en page : un bloc déjà dans l'écran est laissé tel quel (l'animer
+  // ferait clignoter un contenu déjà lu). Aucune lecture synchrone de
+  // position ici — getBoundingClientRect() sur chaque bloc forçait un
+  // recalcul de style et de mise en page de tout le document au chargement.
+  const seen = new WeakSet<Element>();
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
         const el = entry.target as HTMLElement;
+        const first = !seen.has(el);
+        seen.add(el);
+        if (!entry.isIntersecting) continue;
         observer.unobserve(el);
+        if (first) continue;
+        if (el.hasAttribute("data-split")) splitWords(el);
         if (el.hasAttribute("data-reveal")) {
           el.animate(revealKeyframes, {
             duration: REVEAL_DURATION_MS,
@@ -59,17 +69,38 @@ export function initScrollChoreography() {
     { rootMargin: "0px 0px 40px 0px", threshold: 0 },
   );
 
-  // Les blocs déjà dans l'écran sont laissés tels quels : les animer ferait
-  // clignoter un contenu déjà lu. Une seule lecture de mise en page pour tous.
-  const visible = reveals.map((el) => el.getBoundingClientRect().top < window.innerHeight);
-  reveals.forEach((el, i) => {
-    if (visible[i]) return;
-    if (el.hasAttribute("data-split")) splitWords(el);
-    observer.observe(el);
-  });
+  reveals.forEach((el) => observer.observe(el));
 
-  // bfcache : la page restaurée garde son état, l'observateur n'a plus rien à faire.
-  window.addEventListener("pagehide", () => observer.disconnect(), { once: true });
+  // Manifeste lu au défilement (motion.css, .mq-word) : quand la citation a
+  // franchi la ligne médiane de l'écran vers le haut, chaque mot est à son
+  // état final — qui est aussi son état naturel. Les 26 animations liées au
+  // défilement sont alors retirées : plus aucun calcul pour un texte déjà lu.
+  // L'observateur ne regarde qu'une ligne (marges -50 %) : il se déclenche à
+  // l'entrée et à la sortie de la citation, jamais entre les deux.
+  const manifesto = document.querySelector<HTMLElement>(".mq-word")?.closest("section");
+  let read: IntersectionObserver | undefined;
+  if (manifesto) {
+    read = new IntersectionObserver(
+      ([entry]) => {
+        const passed = !entry.isIntersecting && entry.rootBounds !== null && entry.boundingClientRect.bottom <= entry.rootBounds.top;
+        if (!passed) return;
+        manifesto.classList.add("mq-read");
+        read?.disconnect();
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    read.observe(manifesto);
+  }
+
+  // bfcache : la page restaurée garde son état, les observateurs n'ont plus rien à faire.
+  window.addEventListener(
+    "pagehide",
+    () => {
+      observer.disconnect();
+      read?.disconnect();
+    },
+    { once: true },
+  );
 }
 
 /**

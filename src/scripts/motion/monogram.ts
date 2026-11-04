@@ -80,8 +80,18 @@ export function initMonogram(section: HTMLElement): void {
     mark.classList.add("is-sweeping");
   };
 
+  // L'ouverture devient « vivante » (lumière qui respire, voir HeroHome)
+  // seulement une fois la page chargée, et tant qu'elle est à l'écran.
+  let loaded = document.readyState === "complete";
+  const setLive = () => {
+    if (loaded && inView) section.dataset.live = "";
+    else delete section.dataset.live;
+  };
+  if (!loaded) window.addEventListener("load", () => ((loaded = true), setLive()), { once: true });
+
   const io = new IntersectionObserver(([entry]) => {
     inView = entry.isIntersecting;
+    setLive();
     if (!inView) {
       cancelAnimationFrame(raf);
       raf = 0;
