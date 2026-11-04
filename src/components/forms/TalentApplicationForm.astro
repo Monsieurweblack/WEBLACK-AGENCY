@@ -31,14 +31,21 @@ const t = useTranslations(lang);
 const k = (key: string) => t(key as UiKey);
 
 /**
- * Formulaire en une seule page, 5 étapes affichées/masquées en JS — rien
- * n'est retiré du DOM entre deux étapes, ce qui conserve les réponses sans
- * jamais toucher à localStorage (voir scripts/talent-application/form.ts).
+ * Formulaire en une seule page : cinq étapes, puis un écran de vérification,
+ * affichés et masqués en JS — rien n'est retiré du DOM entre deux étapes, ce
+ * qui conserve les réponses (et les photos déjà envoyées) sans jamais toucher
+ * à localStorage (voir scripts/talent-application/form.ts).
  *
  * Toutes les listes viennent de functions/lib/talentOptions.ts, la même
  * source que la validation serveur : une option affichée ici est forcément
- * acceptée là-bas, et inversement. Pays et langues sont nommés par
+ * acceptée là-bas, et inversement. Les valeurs envoyées (name/value) sont
+ * inchangées ; seule leur présentation l'est. Pays et langues sont nommés par
  * Intl.DisplayNames dans la langue de la page — jamais traduits à la main.
+ *
+ * Mineurs : aucun champ « représentant légal » dans le parcours public. Le
+ * programme n'accepte que les 18 ans et plus ; le navigateur bloque la suite
+ * du parcours, et le serveur (functions/lib/validation.ts) refuse de toute
+ * façon toute date de naissance mineure tant que Sanity ne l'autorise pas.
  */
 
 const collator = new Intl.Collator(intlTagFor(lang));
@@ -56,25 +63,54 @@ const languages = LANGUAGES.map((code) => ({ code, name: capitalize(languageName
 const fieldClass = "form-input";
 const labelClass = "label-tracked text-(--color-paper)/70";
 const helpClass = "mt-2 text-sm text-(--color-paper)/50";
+const required = `<span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span>`;
+const optional = `<span class="normal-case tracking-normal text-(--color-paper)/55" data-label-extra>· ${k("talentApplication.optional")}</span>`;
+
+const stepNumbers = [1, 2, 3, 4, 5] as const;
 
 const clientStrings = {
   progress: k("talentApplication.progress"),
-  stepTitles: [1, 2, 3, 4, 5].map((n) => k(`talentApplication.step.${n}.title`)),
+  progressValidated: k("talentApplication.progress.validated"),
+  stepTitles: [...stepNumbers.map((n) => k(`talentApplication.step.${n}.title`)), k("talentApplication.review.stepTitle")],
+  stepperDone: k("talentApplication.stepper.done"),
+  stepperCurrent: k("talentApplication.stepper.current"),
+  stepperTodo: k("talentApplication.stepper.todo"),
+  errorSummary: k("talentApplication.errorSummary"),
   navContinue: k("talentApplication.nav.continue"),
+  navReview: k("talentApplication.nav.review"),
+  navBackToReview: k("talentApplication.nav.backToReview"),
   navSubmit: k("talentApplication.nav.submit"),
   navSubmitting: k("talentApplication.nav.submitting"),
   navRetry: k("talentApplication.nav.retry"),
   photoChoose: k("talentApplication.photo.choose"),
   photoReplace: k("talentApplication.photo.replace"),
+  photoPreparing: k("talentApplication.photo.preparing"),
   photoUploading: k("talentApplication.photo.uploading"),
   photoUploaded: k("talentApplication.photo.uploaded"),
   photoRetry: k("talentApplication.photo.retry"),
   photoError: k("talentApplication.photo.error"),
   photoInvalidType: k("talentApplication.photo.invalidType"),
   photoTooLarge: k("talentApplication.photo.tooLarge"),
+  photoDropInvalid: k("talentApplication.photo.dropInvalid"),
   reviewEdit: k("talentApplication.review.edit"),
-  reviewPhotos: k("talentApplication.review.photos"),
+  reviewEmpty: k("talentApplication.review.empty"),
+  reviewSections: {
+    identity: k("talentApplication.review.section.identity"),
+    contact: k("talentApplication.review.section.contact"),
+    professional: k("talentApplication.review.section.professional"),
+    measurements: k("talentApplication.review.section.measurements"),
+    photos: k("talentApplication.review.section.photos"),
+    languages: k("talentApplication.review.section.languages"),
+    presentation: k("talentApplication.review.section.presentation"),
+  },
+  photoRoles: {
+    portrait: k("talentApplication.photo.portrait"),
+    profile: k("talentApplication.photo.profile"),
+    full_length: k("talentApplication.photo.full_length"),
+    extra: k("talentApplication.photo.extra"),
+  },
   languagesSelected: k("talentApplication.languagesSelected"),
+  languagesRemove: k("talentApplication.languages.remove"),
   charactersLeft: k("talentApplication.charactersLeft"),
   successDefault: k("talentApplication.success.default"),
   successEmailSent: k("talentApplication.success.emailSent"),
@@ -107,7 +143,6 @@ const clientStrings = {
 
 const clientConfig = {
   lang,
-  minorsAllowed: settings.minorsAllowed,
   minorsMessage: settings.minorsMessage ?? k("talentApplication.minors.title"),
   confirmationMessage: settings.confirmationMessage ?? "",
   privacyNoticeVersion: settings.privacyNoticeVersion,
@@ -126,381 +161,898 @@ const measureFields = [
   { name: "hipsCm", always: false },
   { name: "inseamCm", always: false },
 ] as const;
+
+const requiredRoles = ["portrait", "profile", "full_length"] as const;
+const acceptTypes = UPLOAD_LIMITS.acceptedTypes.join(",");
+
+/** Pictogrammes de cadrage : un trait fin, la silhouette attendue — jamais une photo d'exemple. */
+const pictograms: Record<string, string> = {
+  portrait:
+    '<circle cx="40" cy="38" r="15"/><path d="M14 92c3-17 14-27 26-27s23 10 26 27"/>',
+  profile:
+    '<path d="M44 23c-10 0-17 7-17 17 0 6 3 11 7 14l-2 9h12l2-6c7-1 12-7 12-14l4-4-4-3c-1-8-7-13-14-13z"/><path d="M18 92c3-14 12-22 22-23"/>',
+  full_length:
+    '<circle cx="40" cy="14" r="7"/><path d="M40 21v34M28 30l12 6 12-6M40 55l-8 37M40 55l8 37"/>',
+  extra: '<rect x="16" y="20" width="48" height="60"/><path d="M16 66l14-14 12 10 8-6 14 12"/><circle cx="52" cy="34" r="4"/>',
+};
 ---
 
-<form id="talent-application-form" novalidate data-config={JSON.stringify(clientConfig)} data-i18n={JSON.stringify(clientStrings)}>
-  <div class="mb-10" data-reveal>
-    <p class="label-tracked text-(--color-paper)/50" data-step-progress aria-live="polite"></p>
-    <div class="mt-3 h-[2px] w-full bg-(--color-line)" aria-hidden="true">
-      <div class="h-full bg-(--color-gold) transition-[width] duration-300" data-step-bar style="width:20%"></div>
-    </div>
-    <h2 class="font-display mt-4 text-2xl text-(--color-paper)" data-step-title tabindex="-1"></h2>
-    <p class="mt-3 text-sm text-(--color-paper)/50">{k("talentApplication.requiredNote")}</p>
-  </div>
-
-  {/* 01 · Profil */}
-  <fieldset data-step="1" class="space-y-6">
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-      <div>
-        <label for="firstName" class={labelClass}>{k("talentApplication.field.firstName")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-        <input id="firstName" name="firstName" type="text" required maxlength={TEXT_LIMITS.name} autocomplete="given-name" class={fieldClass} aria-describedby="firstName-error" />
-        <p id="firstName-error" class="field-error" data-error-for="firstName" hidden></p>
+<form
+  id="talent-application-form"
+  class="application-form"
+  novalidate
+  data-config={JSON.stringify(clientConfig)}
+  data-i18n={JSON.stringify(clientStrings)}
+>
+  <div class="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-16">
+    {/* Progression : verticale et persistante sur grand écran, compacte sur téléphone. */}
+    <nav class="application-stepper mb-10 lg:mb-0" aria-label={k("talentApplication.stepper.label")}>
+      <div class="lg:sticky lg:top-[calc(var(--header-h,6rem)+2rem)]">
+        <ol class="m-0 grid list-none grid-cols-6 gap-1.5 p-0 lg:grid-cols-1 lg:gap-0" data-stepper>
+          {[...stepNumbers, 6].map((n) => (
+            <li>
+              <button type="button" class="stepper-item group" data-stepper-go={n} data-state={n === 1 ? "current" : "todo"} aria-current={n === 1 ? "step" : undefined}>
+                <span class="stepper-bar" aria-hidden="true"></span>
+                <span class="stepper-num font-display" aria-hidden="true">{n === 6 ? "✓" : `0${n}`}</span>
+                <span class="stepper-text">
+                  <span class="stepper-title">{n === 6 ? k("talentApplication.review.stepTitle") : k(`talentApplication.step.${n}.title`)}</span>
+                  {n < 6 && <span class="stepper-summary">{k(`talentApplication.step.${n}.summary`)}</span>}
+                </span>
+                <span class="sr-only" data-stepper-state>{n === 1 ? clientStrings.stepperCurrent : clientStrings.stepperTodo}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <p class="mt-3 text-sm text-(--color-paper)/50 lg:mt-6" data-progress-validated aria-live="polite"></p>
       </div>
-      <div>
-        <label for="lastName" class={labelClass}>{k("talentApplication.field.lastName")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-        <input id="lastName" name="lastName" type="text" required maxlength={TEXT_LIMITS.name} autocomplete="family-name" class={fieldClass} aria-describedby="lastName-error" />
-        <p id="lastName-error" class="field-error" data-error-for="lastName" hidden></p>
-      </div>
-    </div>
+    </nav>
 
-    <div>
-      <label for="birthDate" class={labelClass}>{k("talentApplication.field.birthDate")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-      <input id="birthDate" name="birthDate" type="date" required autocomplete="bday" min="1925-01-01" class={`${fieldClass} sm:max-w-xs`} aria-describedby="birthDate-help birthDate-error" />
-      <p id="birthDate-help" class={helpClass}>{k("talentApplication.help.birthDate")}</p>
-      <p id="birthDate-error" class="field-error" data-error-for="birthDate" hidden></p>
-    </div>
-
-    <div hidden data-minor-block class="border border-(--color-gold)/40 bg-(--color-ink-soft) p-5 text-(--color-paper)/80" role="alert"></div>
-
-    <div data-minor-gated class="space-y-6">
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
-          <label for="city" class={labelClass}>{k("talentApplication.field.city")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-          <input id="city" name="city" type="text" required maxlength={TEXT_LIMITS.city} autocomplete="address-level2" class={fieldClass} aria-describedby="city-error" />
-          <p id="city-error" class="field-error" data-error-for="city" hidden></p>
-        </div>
-        <div>
-          <label for="countrySearch" class={labelClass}>{k("talentApplication.field.country")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-          <input id="countrySearch" type="text" list="country-options" autocomplete="country-name" class={fieldClass} aria-describedby="countrySearch-help countrySearch-error" data-country-search />
-          <input type="hidden" name="country" data-country-code />
-          <datalist id="country-options">
-            {countries.map((c) => <option value={c.name} data-code={c.code} />)}
-          </datalist>
-          <p id="countrySearch-help" class={helpClass}>{k("talentApplication.help.country")}</p>
-          <p id="countrySearch-error" class="field-error" data-error-for="country" hidden></p>
-        </div>
+    <div class="min-w-0">
+      <div class="mb-10">
+        <p class="label-tracked text-(--color-paper)/50" data-step-progress aria-live="polite"></p>
+        <h2 class="font-display mt-3 text-3xl text-(--color-paper) outline-none sm:text-4xl" data-step-title tabindex="-1"></h2>
+        <p class="mt-4 max-w-2xl text-sm text-(--color-paper)/50" data-required-note>{k("talentApplication.requiredNote")}</p>
       </div>
 
-      <div>
-        <label for="email" class={labelClass}>{k("talentApplication.field.email")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-        <input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" class={fieldClass} aria-describedby="email-help email-error" />
-        <p id="email-help" class={helpClass}>{k("talentApplication.help.email")}</p>
-        <p id="email-error" class="field-error" data-error-for="email" hidden></p>
+      <div hidden data-error-summary role="alert" class="error-summary mb-10 border-l-2 border-red-300 bg-(--color-ink-soft) px-5 py-4" tabindex="-1">
+        <p class="text-sm text-(--color-paper)" data-error-summary-title></p>
+        <ul class="mt-2 list-none space-y-1 p-0 text-sm" data-error-summary-list></ul>
       </div>
 
-      <div>
-        <span id="phone-label" class={labelClass}>{k("talentApplication.field.phone")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></span>
-        <div class="mt-2 grid grid-cols-[6.5rem_1fr] gap-4">
+      <div class="application-steps">
+        {/* 01 · Identité et coordonnées */}
+        <fieldset data-step="1" class="space-y-8">
+          <legend class="sr-only">{k("talentApplication.step.1.title")}</legend>
+          <p class="notice">{k("talentApplication.step1.ageNotice")}</p>
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label for="firstName" class={labelClass}>{k("talentApplication.field.firstName")} <Fragment set:html={required} /></label>
+              <input id="firstName" name="firstName" type="text" required maxlength={TEXT_LIMITS.name} autocomplete="given-name" class={fieldClass} aria-describedby="firstName-error" />
+              <p id="firstName-error" class="field-error" data-error-for="firstName" hidden></p>
+            </div>
+            <div>
+              <label for="lastName" class={labelClass}>{k("talentApplication.field.lastName")} <Fragment set:html={required} /></label>
+              <input id="lastName" name="lastName" type="text" required maxlength={TEXT_LIMITS.name} autocomplete="family-name" class={fieldClass} aria-describedby="lastName-error" />
+              <p id="lastName-error" class="field-error" data-error-for="lastName" hidden></p>
+            </div>
+          </div>
+
           <div>
-            <label for="phoneDialCode" class="sr-only">{k("talentApplication.field.phoneDialCode")}</label>
-            <input id="phoneDialCode" type="text" inputmode="tel" autocomplete="tel-country-code" placeholder="+33" maxlength="5" class={`${fieldClass} mt-0`} aria-describedby="phone-help phone-error" data-dial-code />
+            <label for="birthDate" class={labelClass}>{k("talentApplication.field.birthDate")} <Fragment set:html={required} /></label>
+            <input id="birthDate" name="birthDate" type="date" required autocomplete="bday" min="1925-01-01" class={`${fieldClass} sm:max-w-xs`} aria-describedby="birthDate-help birthDate-error" />
+            <p id="birthDate-help" class={helpClass}>{k("talentApplication.help.birthDate")}</p>
+            <p id="birthDate-error" class="field-error" data-error-for="birthDate" hidden></p>
+          </div>
+
+          <div hidden data-minor-block class="border border-(--color-gold)/40 bg-(--color-ink-soft) p-5 text-(--color-paper)/85" role="alert"></div>
+
+          <div data-minor-gated class="space-y-8">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label for="city" class={labelClass}>{k("talentApplication.field.city")} <Fragment set:html={required} /></label>
+                <input id="city" name="city" type="text" required maxlength={TEXT_LIMITS.city} autocomplete="address-level2" class={fieldClass} aria-describedby="city-error" />
+                <p id="city-error" class="field-error" data-error-for="city" hidden></p>
+              </div>
+              <div>
+                <label for="countrySearch" class={labelClass}>{k("talentApplication.field.country")} <Fragment set:html={required} /></label>
+                <input id="countrySearch" type="text" list="country-options" autocomplete="country-name" class={fieldClass} aria-describedby="countrySearch-help countrySearch-error" data-country-search />
+                <input type="hidden" name="country" data-country-code />
+                <datalist id="country-options">
+                  {countries.map((c) => <option value={c.name} data-code={c.code} />)}
+                </datalist>
+                <p id="countrySearch-help" class={helpClass}>{k("talentApplication.help.country")}</p>
+                <p id="countrySearch-error" class="field-error" data-error-for="country" hidden></p>
+              </div>
+            </div>
+
+            <div>
+              <label for="email" class={labelClass}>{k("talentApplication.field.email")} <Fragment set:html={required} /></label>
+              <input id="email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email" class={fieldClass} aria-describedby="email-help email-error" />
+              <p id="email-help" class={helpClass}>{k("talentApplication.help.email")}</p>
+              <p id="email-error" class="field-error" data-error-for="email" hidden></p>
+            </div>
+
+            <div>
+              <span id="phone-label" class={labelClass}>{k("talentApplication.field.phone")} <Fragment set:html={required} /></span>
+              <div class="mt-2 grid grid-cols-[6.5rem_1fr] gap-4">
+                <div>
+                  <label for="phoneDialCode" class="sr-only">{k("talentApplication.field.phoneDialCode")}</label>
+                  <input id="phoneDialCode" type="text" inputmode="tel" autocomplete="tel-country-code" placeholder="+33" maxlength="5" class={`${fieldClass} mt-0`} aria-describedby="phone-help phone-error" data-dial-code />
+                </div>
+                <div>
+                  <label for="phoneNumber" class="sr-only">{k("talentApplication.field.phone")}</label>
+                  <input id="phoneNumber" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="20" class={`${fieldClass} mt-0`} aria-labelledby="phone-label" aria-describedby="phone-help phone-error" />
+                </div>
+              </div>
+              <p id="phone-help" class={helpClass}>{k("talentApplication.help.phone")}</p>
+              <p id="phone-error" class="field-error" data-error-for="phone" hidden></p>
+            </div>
+          </div>
+        </fieldset>
+
+        {/* 02 · Profil et expérience */}
+        <fieldset data-step="2" hidden class="space-y-10">
+          <legend class="sr-only">{k("talentApplication.step.2.title")}</legend>
+          <div role="radiogroup" aria-labelledby="category-label" aria-describedby="category-error">
+            <p id="category-label" class={labelClass}>{k("talentApplication.field.category")} <Fragment set:html={required} /></p>
+            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {TALENT_CATEGORIES.map((value) => (
+                <label class="choice">
+                  <input type="radio" name="category" value={value} class="choice-input" data-category />
+                  <span class="choice-mark" aria-hidden="true"></span>
+                  <span class="choice-label">{k(`talentApplication.option.category.${value}`)}</span>
+                </label>
+              ))}
+            </div>
+            <p id="category-error" class="field-error" data-error-for="category" hidden></p>
+          </div>
+          <div hidden data-category-other>
+            <label for="categoryOther" class={labelClass}>{k("talentApplication.field.categoryOther")} <Fragment set:html={required} /></label>
+            <input id="categoryOther" name="categoryOther" type="text" maxlength={TEXT_LIMITS.categoryOther} class={fieldClass} aria-describedby="categoryOther-error" />
+            <p id="categoryOther-error" class="field-error" data-error-for="categoryOther" hidden></p>
+          </div>
+
+          <div class="border-l border-(--color-gold) pl-5">
+            <p class="font-display text-xl text-(--color-paper)">{k("talentApplication.beginnersWelcome")}</p>
+            <p class="mt-1 text-sm text-(--color-paper)/60">{k("talentApplication.beginnersWelcome.text")}</p>
+          </div>
+
+          <div role="radiogroup" aria-labelledby="experienceLevel-label" aria-describedby="experience-help experienceLevel-error">
+            <p id="experienceLevel-label" class={labelClass}>{k("talentApplication.field.experienceLevel")} <Fragment set:html={required} /></p>
+            <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {EXPERIENCE_LEVELS.map((value) => (
+                <label class="choice choice-compact">
+                  <input type="radio" name="experienceLevel" value={value} class="choice-input" />
+                  <span class="choice-label">{k(`talentApplication.option.level.${value}`)}</span>
+                </label>
+              ))}
+            </div>
+            <p id="experienceLevel-error" class="field-error" data-error-for="experienceLevel" hidden></p>
+          </div>
+
+          <div role="radiogroup" aria-labelledby="experienceDuration-label" aria-describedby="experience-help experienceDuration-error">
+            <p id="experienceDuration-label" class={labelClass}>{k("talentApplication.field.experienceDuration")} <Fragment set:html={required} /></p>
+            <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              {EXPERIENCE_DURATIONS.map((value) => (
+                <label class="choice choice-compact">
+                  <input type="radio" name="experienceDuration" value={value} class="choice-input" />
+                  <span class="choice-label">{k(`talentApplication.option.duration.${value}`)}</span>
+                </label>
+              ))}
+            </div>
+            <p id="experienceDuration-error" class="field-error" data-error-for="experienceDuration" hidden></p>
+            <p id="experience-help" class={helpClass}>{k("talentApplication.help.experience")}</p>
+          </div>
+
+          <div>
+            <label for="portfolioLinks" class={labelClass}>{k("talentApplication.field.portfolioLinks")} <Fragment set:html={optional} /></label>
+            <textarea id="portfolioLinks" name="portfolioLinks" rows="3" inputmode="url" class={`${fieldClass} resize-none`} aria-describedby="portfolioLinks-help portfolioLinks-error"></textarea>
+            <p id="portfolioLinks-help" class={helpClass}>{k("talentApplication.help.portfolioLinks")}</p>
+            <p id="portfolioLinks-error" class="field-error" data-error-for="portfolioLinks" hidden></p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label for="instagram" class={labelClass}>{k("talentApplication.field.instagram")} <Fragment set:html={optional} /></label>
+              <input id="instagram" name="instagram" type="text" maxlength={TEXT_LIMITS.instagram} autocomplete="off" class={fieldClass} aria-describedby="instagram-help instagram-error" />
+              <p id="instagram-help" class={helpClass}>{k("talentApplication.help.instagram")}</p>
+              <p id="instagram-error" class="field-error" data-error-for="instagram" hidden></p>
+            </div>
+            <div>
+              <label for="currentAgency" class={labelClass}>{k("talentApplication.field.currentAgency")} <Fragment set:html={optional} /></label>
+              <input id="currentAgency" name="currentAgency" type="text" maxlength={TEXT_LIMITS.agency} class={fieldClass} aria-describedby="currentAgency-error" />
+              <p id="currentAgency-error" class="field-error" data-error-for="currentAgency" hidden></p>
+            </div>
           </div>
           <div>
-            <label for="phoneNumber" class="sr-only">{k("talentApplication.field.phone")}</label>
-            <input id="phoneNumber" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="20" class={`${fieldClass} mt-0`} aria-labelledby="phone-label" aria-describedby="phone-help phone-error" />
+            <label for="exclusivity" class={labelClass}>{k("talentApplication.field.exclusivity")} <Fragment set:html={optional} /></label>
+            <input id="exclusivity" name="exclusivity" type="text" maxlength={TEXT_LIMITS.exclusivity} class={fieldClass} aria-describedby="exclusivity-error" />
+            <p id="exclusivity-error" class="field-error" data-error-for="exclusivity" hidden></p>
           </div>
-        </div>
-        <p id="phone-help" class={helpClass}>{k("talentApplication.help.phone")}</p>
-        <p id="phone-error" class="field-error" data-error-for="phone" hidden></p>
-      </div>
+        </fieldset>
 
-      <div hidden data-guardian-fields class="space-y-6 border-t border-(--color-line) pt-6">
-        <p class="text-sm text-(--color-paper)/70">{k("talentApplication.minorGuardianNotice")}</p>
-        {["legalGuardianName", "legalGuardianEmail", "legalGuardianPhone"].map((name) => (
+        {/* 03 · Profil et mensurations */}
+        <fieldset data-step="3" hidden class="space-y-8">
+          <legend class="sr-only">{k("talentApplication.step.3.title")}</legend>
+          <p class="notice">{k("talentApplication.field.measurementsNote")}</p>
+          <p hidden class="text-sm text-(--color-gold)" data-measurements-limited>{k("talentApplication.field.measurementsLimitedNote")}</p>
+
+          <div class="grid grid-cols-2 gap-6 sm:grid-cols-3">
+            {measureFields.map(({ name, always }) => (
+              <div data-measure={always ? "always" : "model"}>
+                <label for={name} class={labelClass}>{k(`talentApplication.field.${name}`)}</label>
+                <div class="unit-field">
+                  <input
+                    id={name}
+                    name={name}
+                    type="text"
+                    inputmode="decimal"
+                    class={fieldClass}
+                    placeholder={`${MEASUREMENT_LIMITS[name][0]}–${MEASUREMENT_LIMITS[name][1]}`}
+                    aria-describedby={`${name}-error`}
+                    data-decimal
+                    data-min={MEASUREMENT_LIMITS[name][0]}
+                    data-max={MEASUREMENT_LIMITS[name][1]}
+                  />
+                  <span class="unit" aria-hidden="true">{k("talentApplication.option.unit.cm")}</span>
+                </div>
+                <p id={`${name}-error`} class="field-error" data-error-for={name} hidden></p>
+              </div>
+            ))}
+          </div>
+
+          <div class="grid grid-cols-2 gap-6 sm:grid-cols-3" data-measure="model">
+            <div>
+              <label for="shoeSize" class={labelClass}>{k("talentApplication.field.shoeSize")}</label>
+              <input id="shoeSize" name="shoeSize" type="text" inputmode="decimal" class={fieldClass} placeholder={`${SHOE_SIZE_LIMITS[0]}–${SHOE_SIZE_LIMITS[1]}`} aria-describedby="shoeSize-error" data-decimal data-min={SHOE_SIZE_LIMITS[0]} data-max={SHOE_SIZE_LIMITS[1]} />
+              <p id="shoeSize-error" class="field-error" data-error-for="shoeSize" hidden></p>
+            </div>
+            <div>
+              <label for="shoeSystem" class={labelClass}>{k("talentApplication.field.shoeSystem")}</label>
+              <select id="shoeSystem" name="shoeSystem" class={fieldClass} aria-describedby="shoeSystem-error">
+                <option value="">{k("talentApplication.selectPlaceholder")}</option>
+                {SHOE_SYSTEMS.map((value) => <option value={value}>{value}</option>)}
+              </select>
+              <p id="shoeSystem-error" class="field-error" data-error-for="shoeSystem" hidden></p>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <label for="clothingSize" class={labelClass}>{k("talentApplication.field.clothingSize")}</label>
+              <input id="clothingSize" name="clothingSize" type="text" maxlength={TEXT_LIMITS.clothingSize} class={fieldClass} aria-describedby="clothingSize-error" />
+              <p id="clothingSize-error" class="field-error" data-error-for="clothingSize" hidden></p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label for="eyeColor" class={labelClass}>{k("talentApplication.field.eyeColor")}</label>
+              <select id="eyeColor" name="eyeColor" class={fieldClass}>
+                <option value="">{k("talentApplication.selectPlaceholder")}</option>
+                {EYE_COLORS.map((value) => <option value={value}>{k(`talentApplication.option.eye.${value}`)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label for="hairColor" class={labelClass}>{k("talentApplication.field.hairColor")}</label>
+              <select id="hairColor" name="hairColor" class={fieldClass}>
+                <option value="">{k("talentApplication.selectPlaceholder")}</option>
+                {HAIR_COLORS.map((value) => <option value={value}>{k(`talentApplication.option.hair.${value}`)}</option>)}
+              </select>
+            </div>
+          </div>
+        </fieldset>
+
+        {/* 04 · Photographies et univers */}
+        <fieldset data-step="4" hidden class="space-y-10">
+          <legend class="sr-only">{k("talentApplication.step.4.title")}</legend>
+          <div class="space-y-2">
+            <p class="notice">{k("talentApplication.photo.formats")}</p>
+            <p class="text-sm text-(--color-paper)/50">{k("talentApplication.photo.noFilters")}</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-5">
+            {requiredRoles.map((role, i) => (
+              <div class="photo-slot" data-photo-role={role} data-state="empty">
+                <div class="flex items-baseline justify-between gap-3">
+                  <p id={`photo-${role}-label`} class={labelClass}>{k(`talentApplication.photo.${role}`)} <Fragment set:html={required} /></p>
+                  <span class="font-display text-sm text-(--color-paper)/55" aria-hidden="true">0{i + 1}</span>
+                </div>
+                <p id={`photo-${role}-guide`} class="mt-2 min-h-[2.5rem] text-sm text-(--color-paper)/50">{k(`talentApplication.photo.guide.${role}`)}</p>
+                <div class="photo-frame" data-photo-drop>
+                  <svg class="photo-pictogram" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true" set:html={pictograms[role]}></svg>
+                  <img data-photo-preview alt="" hidden />
+                  <span class="photo-drop-hint" aria-hidden="true">{k("talentApplication.photo.drop")}</span>
+                  <span class="photo-progress" aria-hidden="true"><span data-photo-bar></span></span>
+                  <span class="photo-check" aria-hidden="true">✓</span>
+                </div>
+                <p class="mt-2 truncate text-xs text-(--color-paper)/50" data-photo-name></p>
+                <input type="file" accept={acceptTypes} class="sr-only" data-photo-input id={`photo-${role}`} tabindex="-1" aria-hidden="true" />
+                <input type="hidden" data-photo-id-field />
+                <div class="mt-3 flex gap-2">
+                  <button type="button" data-photo-trigger class="photo-button flex-1" aria-describedby={`photo-${role}-label photo-${role}-guide`}>
+                    {k("talentApplication.photo.choose")}
+                  </button>
+                  <button type="button" data-photo-remove class="photo-button photo-button-quiet" hidden>{k("talentApplication.photo.remove")}</button>
+                </div>
+                <p role="status" aria-live="polite" class="mt-2 min-h-[1.25em] text-sm text-(--color-paper)/70" data-photo-status></p>
+                <p class="field-error" data-error-for={`photo.${role}`} hidden></p>
+              </div>
+            ))}
+          </div>
+
+          <div class="border-t border-(--color-line) pt-10">
+            <p class={labelClass}>{k("talentApplication.photo.extra")} <Fragment set:html={optional} /></p>
+            <p class="mt-2 text-sm text-(--color-paper)/50">{k("talentApplication.photo.guide.extra")}</p>
+            <div data-extra-photos-container class="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-5"></div>
+            <button type="button" data-add-extra-photo class="photo-button mt-6 px-6">
+              + {k("talentApplication.photo.addExtra")}
+            </button>
+            <template data-extra-photo-template>
+              <div class="photo-slot" data-photo-role="extra" data-extra-entry data-state="empty">
+                <div class="photo-frame" data-photo-drop>
+                  <svg class="photo-pictogram" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true" set:html={pictograms.extra}></svg>
+                  <img data-photo-preview alt="" hidden />
+                  <span class="photo-drop-hint" aria-hidden="true">{k("talentApplication.photo.drop")}</span>
+                  <span class="photo-progress" aria-hidden="true"><span data-photo-bar></span></span>
+                  <span class="photo-check" aria-hidden="true">✓</span>
+                </div>
+                <p class="mt-2 truncate text-xs text-(--color-paper)/50" data-photo-name></p>
+                <input type="file" accept={acceptTypes} class="sr-only" data-photo-input tabindex="-1" aria-hidden="true" />
+                <input type="hidden" data-photo-id-field />
+                <div class="mt-3 flex gap-2">
+                  <button type="button" data-photo-trigger class="photo-button flex-1">{k("talentApplication.photo.choose")}</button>
+                  <button type="button" data-remove-extra class="photo-button photo-button-quiet">{k("talentApplication.photo.removeExtra")}</button>
+                </div>
+                <p role="status" aria-live="polite" class="mt-2 min-h-[1.25em] text-sm text-(--color-paper)/70" data-photo-status></p>
+              </div>
+            </template>
+          </div>
+        </fieldset>
+
+        {/* 05 · Langues, mobilité et finalisation */}
+        <fieldset data-step="5" hidden class="space-y-12">
+          <legend class="sr-only">{k("talentApplication.step.5.title")}</legend>
           <div>
-            <label for={name} class={labelClass}>{k(`talentApplication.field.${name}`)} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-            <input id={name} name={name} type={name.endsWith("Email") ? "email" : name.endsWith("Phone") ? "tel" : "text"} class={fieldClass} aria-describedby={`${name}-error`} data-guardian-field />
-            <p id={`${name}-error`} class="field-error" data-error-for={name} hidden></p>
+            <p id="languages-label" class={labelClass}>{k("talentApplication.field.languages")} <Fragment set:html={required} /> <span class="ml-2 normal-case tracking-normal text-(--color-paper)/55" data-languages-count data-label-extra></span></p>
+            <div class="mt-4 flex flex-wrap gap-2" data-languages-chips aria-live="polite"></div>
+            <label for="languagesSearch" class="sr-only">{k("talentApplication.field.languagesSearch")}</label>
+            <input id="languagesSearch" type="search" placeholder={k("talentApplication.field.languagesSearch")} autocomplete="off" class={fieldClass} data-languages-search aria-describedby="languages-error" />
+            <div role="group" aria-labelledby="languages-label" class="mt-3 grid max-h-64 grid-cols-1 gap-x-6 overflow-y-auto border border-(--color-line) p-4 sm:grid-cols-2" data-languages-list>
+              {languages.map((language) => (
+                <label class="flex min-h-11 cursor-pointer items-center gap-3 text-(--color-paper)/80" data-language-option data-search={language.name.toLocaleLowerCase(intlTagFor(lang))}>
+                  <input type="checkbox" name="languages" value={language.code} class="h-5 w-5 shrink-0 accent-(--color-gold)" />
+                  <span>{language.name}</span>
+                </label>
+              ))}
+              <p hidden class="text-sm text-(--color-paper)/50" data-languages-empty>{k("talentApplication.languages.noMatch")}</p>
+            </div>
+            <div class="mt-6">
+              <label for="languagesOther" class={labelClass}>{k("talentApplication.field.languagesOther")} <Fragment set:html={optional} /></label>
+              <input id="languagesOther" name="languagesOther" type="text" maxlength={TEXT_LIMITS.languagesOther} class={fieldClass} />
+            </div>
+            <p id="languages-error" class="field-error" data-error-for="languages" hidden></p>
           </div>
-        ))}
+
+          <div role="radiogroup" aria-labelledby="mobility-label" aria-describedby="mobility-error">
+            <p id="mobility-label" class={labelClass}>{k("talentApplication.field.mobility")} <Fragment set:html={required} /></p>
+            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {MOBILITY_OPTIONS.map((value) => (
+                <label class="choice choice-tall">
+                  <input type="radio" name="mobility" value={value} class="choice-input" />
+                  <span class="choice-mark" aria-hidden="true"></span>
+                  <span>
+                    <span class="choice-label block">{k(`talentApplication.option.mobility.${value}`)}</span>
+                    <span class="mt-1 block text-sm text-(--color-paper)/50">{k(`talentApplication.option.mobilityHint.${value}`)}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p id="mobility-error" class="field-error" data-error-for="mobility" hidden></p>
+          </div>
+
+          <div role="group" aria-labelledby="projects-label">
+            <p id="projects-label" class={labelClass}>{k("talentApplication.field.desiredProjects")} <Fragment set:html={optional} /></p>
+            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {PROJECT_TYPES.map((value) => (
+                <label class="choice">
+                  <input type="checkbox" name="desiredProjects" value={value} class="choice-input" />
+                  <span class="choice-mark choice-mark-square" aria-hidden="true"></span>
+                  <span class="choice-label">{k(`talentApplication.option.project.${value}`)}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label for="motivation" class={labelClass}>{k("talentApplication.field.motivation")} <Fragment set:html={optional} /></label>
+            <textarea id="motivation" name="motivation" rows="6" maxlength={TEXT_LIMITS.motivation} class={`${fieldClass} resize-y`} aria-describedby="motivation-count motivation-error"></textarea>
+            <p id="motivation-count" class={helpClass} data-motivation-count></p>
+            <p id="motivation-error" class="field-error" data-error-for="motivation" hidden></p>
+          </div>
+        </fieldset>
+
+        {/* Vérification et envoi */}
+        <fieldset data-step="6" hidden class="space-y-12">
+          <legend class="sr-only">{k("talentApplication.review.stepTitle")}</legend>
+          <p class="text-(--color-paper)/70">{k("talentApplication.review.intro")}</p>
+          <div class="space-y-0 border-t border-(--color-line)" data-review></div>
+
+          {
+            settings.privacyNoticeHtml && (
+              <details class="group border border-(--color-line) p-6">
+                <summary class="label-tracked flex min-h-11 cursor-pointer items-center justify-between gap-4 text-(--color-gold)">
+                  {k("talentApplication.privacyNotice.title")}
+                  <span aria-hidden="true" class="transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <div class="prose-weblack mt-4 max-w-none text-sm" set:html={settings.privacyNoticeHtml} />
+              </details>
+            )
+          }
+
+          <div class="space-y-4">
+            <p class={labelClass}>{k("talentApplication.review.confirmations")}</p>
+            <label class="choice choice-tall">
+              <input type="checkbox" name="accuracyConfirmed" class="choice-input" aria-describedby="accuracyConfirmed-error" />
+              <span class="choice-mark choice-mark-square" aria-hidden="true"></span>
+              <span class="text-(--color-paper)/85">{k("talentApplication.field.accuracyConfirmed")} <Fragment set:html={required} /></span>
+            </label>
+            <p id="accuracyConfirmed-error" class="field-error" data-error-for="accuracyConfirmed" hidden></p>
+            <label class="choice choice-tall">
+              <input type="checkbox" name="privacyNoticeAccepted" class="choice-input" aria-describedby="privacyNoticeAccepted-error privacy-scope" />
+              <span class="choice-mark choice-mark-square" aria-hidden="true"></span>
+              <span class="text-(--color-paper)/85">{k("talentApplication.field.privacyNoticeAccepted")} <Fragment set:html={required} /></span>
+            </label>
+            <p id="privacy-scope" class="text-sm text-(--color-paper)/50">{k("talentApplication.privacyScope")}</p>
+            <p id="privacyNoticeAccepted-error" class="field-error" data-error-for="privacyNoticeAccepted" hidden></p>
+          </div>
+
+          {/* Leurre anti-robot : hors écran et hors lecteur d'écran, jamais rempli par une personne. */}
+          <div class="absolute -left-[9999px]" aria-hidden="true">
+            <label for="company">Company</label>
+            <input type="text" id="company" name="company" tabindex="-1" autocomplete="off" />
+          </div>
+        </fieldset>
       </div>
-    </div>
-  </fieldset>
 
-  {/* 02 · Profil professionnel */}
-  <fieldset data-step="2" hidden class="space-y-6">
-    <div>
-      <label for="category" class={labelClass}>{k("talentApplication.field.category")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-      <select id="category" name="category" required class={fieldClass} aria-describedby="category-error" data-category>
-        <option value="">{k("talentApplication.selectPlaceholder")}</option>
-        {TALENT_CATEGORIES.map((value) => <option value={value}>{k(`talentApplication.option.category.${value}`)}</option>)}
-      </select>
-      <p id="category-error" class="field-error" data-error-for="category" hidden></p>
-    </div>
-    <div hidden data-category-other>
-      <label for="categoryOther" class={labelClass}>{k("talentApplication.field.categoryOther")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-      <input id="categoryOther" name="categoryOther" type="text" maxlength={TEXT_LIMITS.categoryOther} class={fieldClass} aria-describedby="categoryOther-error" />
-      <p id="categoryOther-error" class="field-error" data-error-for="categoryOther" hidden></p>
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-      <div>
-        <label for="experienceLevel" class={labelClass}>{k("talentApplication.field.experienceLevel")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-        <select id="experienceLevel" name="experienceLevel" required class={fieldClass} aria-describedby="experience-help experienceLevel-error">
-          <option value="">{k("talentApplication.selectPlaceholder")}</option>
-          {EXPERIENCE_LEVELS.map((value) => <option value={value}>{k(`talentApplication.option.level.${value}`)}</option>)}
-        </select>
-        <p id="experienceLevel-error" class="field-error" data-error-for="experienceLevel" hidden></p>
-      </div>
-      <div>
-        <label for="experienceDuration" class={labelClass}>{k("talentApplication.field.experienceDuration")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></label>
-        <select id="experienceDuration" name="experienceDuration" required class={fieldClass} aria-describedby="experience-help experienceDuration-error">
-          <option value="">{k("talentApplication.selectPlaceholder")}</option>
-          {EXPERIENCE_DURATIONS.map((value) => <option value={value}>{k(`talentApplication.option.duration.${value}`)}</option>)}
-        </select>
-        <p id="experienceDuration-error" class="field-error" data-error-for="experienceDuration" hidden></p>
-      </div>
-    </div>
-    <p id="experience-help" class="-mt-2 text-sm text-(--color-paper)/50">{k("talentApplication.help.experience")}</p>
-
-    <div>
-      <label for="portfolioLinks" class={labelClass}>{k("talentApplication.field.portfolioLinks")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></label>
-      <textarea id="portfolioLinks" name="portfolioLinks" rows="3" inputmode="url" class={`${fieldClass} resize-none`} aria-describedby="portfolioLinks-help portfolioLinks-error"></textarea>
-      <p id="portfolioLinks-help" class={helpClass}>{k("talentApplication.help.portfolioLinks")}</p>
-      <p id="portfolioLinks-error" class="field-error" data-error-for="portfolioLinks" hidden></p>
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-      <div>
-        <label for="instagram" class={labelClass}>{k("talentApplication.field.instagram")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></label>
-        <input id="instagram" name="instagram" type="text" maxlength={TEXT_LIMITS.instagram} autocomplete="off" class={fieldClass} aria-describedby="instagram-help instagram-error" />
-        <p id="instagram-help" class={helpClass}>{k("talentApplication.help.instagram")}</p>
-        <p id="instagram-error" class="field-error" data-error-for="instagram" hidden></p>
-      </div>
-      <div>
-        <label for="currentAgency" class={labelClass}>{k("talentApplication.field.currentAgency")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></label>
-        <input id="currentAgency" name="currentAgency" type="text" maxlength={TEXT_LIMITS.agency} class={fieldClass} aria-describedby="currentAgency-error" />
-        <p id="currentAgency-error" class="field-error" data-error-for="currentAgency" hidden></p>
-      </div>
-    </div>
-    <div>
-      <label for="exclusivity" class={labelClass}>{k("talentApplication.field.exclusivity")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></label>
-      <input id="exclusivity" name="exclusivity" type="text" maxlength={TEXT_LIMITS.exclusivity} class={fieldClass} aria-describedby="exclusivity-error" />
-      <p id="exclusivity-error" class="field-error" data-error-for="exclusivity" hidden></p>
-    </div>
-  </fieldset>
-
-  {/* 03 · Mensurations */}
-  <fieldset data-step="3" hidden class="space-y-6">
-    <p class="text-sm text-(--color-paper)/60">{k("talentApplication.field.measurementsNote")}</p>
-    <p hidden class="text-sm text-(--color-gold)/80" data-measurements-limited>{k("talentApplication.field.measurementsLimitedNote")}</p>
-
-    <div class="grid grid-cols-2 gap-6 sm:grid-cols-3">
-      {measureFields.map(({ name, always }) => (
-        <div data-measure={always ? "always" : "model"}>
-          <label for={name} class={labelClass}>{k(`talentApplication.field.${name}`)}</label>
-          <input
-            id={name}
-            name={name}
-            type="text"
-            inputmode="decimal"
-            class={fieldClass}
-            placeholder={`${MEASUREMENT_LIMITS[name][0]}–${MEASUREMENT_LIMITS[name][1]}`}
-            aria-describedby={`${name}-error`}
-            data-decimal
-            data-min={MEASUREMENT_LIMITS[name][0]}
-            data-max={MEASUREMENT_LIMITS[name][1]}
-          />
-          <p id={`${name}-error`} class="field-error" data-error-for={name} hidden></p>
+      <div hidden data-success-panel class="application-success" tabindex="-1">
+        <svg class="success-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" />
+          <path d="M20 33l8 8 16-18" />
+        </svg>
+        <h2 class="font-display mt-8 text-4xl text-(--color-paper) sm:text-5xl">{k("talentApplication.success.title")}</h2>
+        <p class="mt-5 max-w-xl text-lg text-(--color-paper)/80" data-success-message></p>
+        <div class="mt-10 inline-block border border-(--color-gold)/50 px-6 py-5">
+          <p class="label-tracked text-(--color-paper)/60">{k("talentApplication.success.reference")}</p>
+          <p class="font-display mt-2 text-3xl tracking-wide text-(--color-gold)" data-success-reference></p>
         </div>
-      ))}
-    </div>
-
-    <div class="grid grid-cols-2 gap-6 sm:grid-cols-3" data-measure="model">
-      <div>
-        <label for="shoeSize" class={labelClass}>{k("talentApplication.field.shoeSize")}</label>
-        <input id="shoeSize" name="shoeSize" type="text" inputmode="decimal" class={fieldClass} placeholder={`${SHOE_SIZE_LIMITS[0]}–${SHOE_SIZE_LIMITS[1]}`} aria-describedby="shoeSize-error" data-decimal data-min={SHOE_SIZE_LIMITS[0]} data-max={SHOE_SIZE_LIMITS[1]} />
-        <p id="shoeSize-error" class="field-error" data-error-for="shoeSize" hidden></p>
-      </div>
-      <div>
-        <label for="shoeSystem" class={labelClass}>{k("talentApplication.field.shoeSystem")}</label>
-        <select id="shoeSystem" name="shoeSystem" class={fieldClass} aria-describedby="shoeSystem-error">
-          <option value="">{k("talentApplication.selectPlaceholder")}</option>
-          {SHOE_SYSTEMS.map((value) => <option value={value}>{value}</option>)}
-        </select>
-        <p id="shoeSystem-error" class="field-error" data-error-for="shoeSystem" hidden></p>
-      </div>
-      <div>
-        <label for="clothingSize" class={labelClass}>{k("talentApplication.field.clothingSize")}</label>
-        <input id="clothingSize" name="clothingSize" type="text" maxlength={TEXT_LIMITS.clothingSize} class={fieldClass} aria-describedby="clothingSize-error" />
-        <p id="clothingSize-error" class="field-error" data-error-for="clothingSize" hidden></p>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-      <div>
-        <label for="eyeColor" class={labelClass}>{k("talentApplication.field.eyeColor")}</label>
-        <select id="eyeColor" name="eyeColor" class={fieldClass}>
-          <option value="">{k("talentApplication.selectPlaceholder")}</option>
-          {EYE_COLORS.map((value) => <option value={value}>{k(`talentApplication.option.eye.${value}`)}</option>)}
-        </select>
-      </div>
-      <div>
-        <label for="hairColor" class={labelClass}>{k("talentApplication.field.hairColor")}</label>
-        <select id="hairColor" name="hairColor" class={fieldClass}>
-          <option value="">{k("talentApplication.selectPlaceholder")}</option>
-          {HAIR_COLORS.map((value) => <option value={value}>{k(`talentApplication.option.hair.${value}`)}</option>)}
-        </select>
-      </div>
-    </div>
-  </fieldset>
-
-  {/* 04 · Portfolio et photos */}
-  <fieldset data-step="4" hidden class="space-y-8">
-    <p class="text-sm text-(--color-paper)/60">{k("talentApplication.photo.formats")}</p>
-
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
-      {(["portrait", "profile", "full_length"] as const).map((role) => (
-        <div class="photo-slot" data-photo-role={role}>
-          <p class={labelClass}>{k(`talentApplication.photo.${role}`)} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></p>
-          <div class="mt-3 aspect-[3/4] w-full border border-(--color-line) bg-(--color-ink-soft)" data-photo-preview></div>
-          <input type="file" accept={UPLOAD_LIMITS.acceptedTypes.join(",")} class="sr-only" data-photo-input id={`photo-${role}`} tabindex="-1" />
-          <input type="hidden" data-photo-id-field />
-          <button type="button" data-photo-trigger class="mt-3 min-h-12 w-full border border-(--color-line) py-3 text-sm text-(--color-paper)/80 hover:border-(--color-gold) hover:text-(--color-gold)">
-            {k("talentApplication.photo.choose")}
-          </button>
-          <p role="status" aria-live="polite" class="mt-2 min-h-[1.25em] text-sm" data-photo-status></p>
-          <p class="field-error" data-error-for={`photo.${role}`} hidden></p>
+        <p class="mt-6 max-w-xl text-sm text-(--color-paper)/70" data-success-email></p>
+        <div class="mt-12 max-w-xl border-t border-(--color-line) pt-8">
+          <h3 class="label-tracked text-(--color-paper)/60">{k("talentApplication.success.next.title")}</h3>
+          <p class="mt-3 text-(--color-paper)/80">{k("talentApplication.success.next.text")}</p>
         </div>
-      ))}
-    </div>
-
-    <div>
-      <p class={labelClass}>{k("talentApplication.photo.extra")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></p>
-      <div data-extra-photos-container class="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-3"></div>
-      <button type="button" data-add-extra-photo class="mt-4 min-h-12 label-tracked border-b border-(--color-line) pb-1 text-(--color-paper)/60 hover:border-(--color-gold) hover:text-(--color-gold)">
-        + {k("talentApplication.photo.addExtra")}
-      </button>
-      <template data-extra-photo-template>
-        <div class="photo-slot" data-photo-role="extra" data-extra-entry>
-          <div class="mt-3 aspect-[3/4] w-full border border-(--color-line) bg-(--color-ink-soft)" data-photo-preview></div>
-          <input type="file" accept={UPLOAD_LIMITS.acceptedTypes.join(",")} class="sr-only" data-photo-input tabindex="-1" />
-          <input type="hidden" data-photo-id-field />
-          <button type="button" data-photo-trigger class="mt-3 min-h-12 w-full border border-(--color-line) py-3 text-sm text-(--color-paper)/80 hover:border-(--color-gold) hover:text-(--color-gold)">
-            {k("talentApplication.photo.choose")}
-          </button>
-          <p role="status" aria-live="polite" class="mt-2 min-h-[1.25em] text-sm" data-photo-status></p>
-          <button type="button" data-remove-extra class="mt-2 min-h-12 text-sm text-(--color-paper)/50 hover:text-(--color-gold)">{k("talentApplication.photo.removeExtra")}</button>
-        </div>
-      </template>
-    </div>
-  </fieldset>
-
-  {/* 05 · Disponibilités et confirmation */}
-  <fieldset data-step="5" hidden class="space-y-10">
-    <div>
-      <p id="languages-label" class={labelClass}>{k("talentApplication.field.languages")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span> <span class="ml-2 normal-case tracking-normal text-(--color-paper)/40" data-languages-count data-label-extra></span></p>
-      <label for="languagesSearch" class="sr-only">{k("talentApplication.field.languagesSearch")}</label>
-      <input id="languagesSearch" type="search" placeholder={k("talentApplication.field.languagesSearch")} autocomplete="off" class={fieldClass} data-languages-search />
-      <div role="group" aria-labelledby="languages-label" class="mt-3 grid max-h-64 grid-cols-1 gap-x-6 overflow-y-auto border border-(--color-line) p-4 sm:grid-cols-2" data-languages-list>
-        {languages.map((language) => (
-          <label class="flex min-h-11 items-center gap-3 text-(--color-paper)/80" data-language-option data-search={language.name.toLocaleLowerCase(intlTagFor(lang))}>
-            <input type="checkbox" name="languages" value={language.code} class="h-5 w-5 shrink-0 accent-(--color-gold)" />
-            <span>{language.name}</span>
-          </label>
-        ))}
       </div>
-      <div class="mt-4">
-        <label for="languagesOther" class={labelClass}>{k("talentApplication.field.languagesOther")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></label>
-        <input id="languagesOther" name="languagesOther" type="text" maxlength={TEXT_LIMITS.languagesOther} class={fieldClass} />
+
+      <div data-nav-controls class="application-nav">
+        <button type="button" data-nav-back class="label-tracked min-h-12 shrink-0 whitespace-nowrap text-(--color-paper)/60 transition-colors hover:text-(--color-gold)" hidden>
+          &larr; {k("talentApplication.nav.back")}
+        </button>
+        <button type="button" data-nav-to-review class="label-tracked min-h-12 text-(--color-gold) underline underline-offset-4" hidden>
+          {k("talentApplication.nav.backToReview")}
+        </button>
+        <button
+          type="button"
+          data-nav-continue
+          data-press
+          class="ml-auto inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,opacity] duration-300 hover:bg-(--color-gold-bright) disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {k("talentApplication.nav.continue")}
+        </button>
       </div>
-      <p class="field-error" data-error-for="languages" hidden></p>
+
+      <p role="alert" class="mt-4 min-h-[1.25em] text-sm text-red-300" data-form-status></p>
     </div>
-
-    <div role="radiogroup" aria-labelledby="mobility-label">
-      <p id="mobility-label" class={labelClass}>{k("talentApplication.field.mobility")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></p>
-      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {MOBILITY_OPTIONS.map((value) => (
-          <label class="flex min-h-12 cursor-pointer items-start gap-3 border border-(--color-line) p-4 transition-colors has-[:checked]:border-(--color-gold)">
-            <input type="radio" name="mobility" value={value} class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold)" />
-            <span>
-              <span class="block text-(--color-paper)">{k(`talentApplication.option.mobility.${value}`)}</span>
-              <span class="block text-sm text-(--color-paper)/50">{k(`talentApplication.option.mobilityHint.${value}`)}</span>
-            </span>
-          </label>
-        ))}
-      </div>
-      <p class="field-error" data-error-for="mobility" hidden></p>
-    </div>
-
-    <div role="group" aria-labelledby="projects-label">
-      <p id="projects-label" class={labelClass}>{k("talentApplication.field.desiredProjects")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></p>
-      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {PROJECT_TYPES.map((value) => (
-          <label class="flex min-h-12 cursor-pointer items-center gap-3 border border-(--color-line) px-4 py-3 transition-colors has-[:checked]:border-(--color-gold)">
-            <input type="checkbox" name="desiredProjects" value={value} class="h-5 w-5 shrink-0 accent-(--color-gold)" />
-            <span class="text-(--color-paper)/80">{k(`talentApplication.option.project.${value}`)}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-
-    <div>
-      <label for="motivation" class={labelClass}>{k("talentApplication.field.motivation")} <span class="text-(--color-paper)/40" data-label-extra>· {k("talentApplication.optional")}</span></label>
-      <textarea id="motivation" name="motivation" rows="5" maxlength={TEXT_LIMITS.motivation} class={`${fieldClass} resize-none`} aria-describedby="motivation-count motivation-error"></textarea>
-      <p id="motivation-count" class={helpClass} data-motivation-count></p>
-      <p id="motivation-error" class="field-error" data-error-for="motivation" hidden></p>
-    </div>
-
-    <div>
-      <h3 class="label-tracked text-(--color-gold)">{k("talentApplication.review.title")}</h3>
-      <div class="mt-4 space-y-6 border-t border-(--color-line) pt-6" data-review></div>
-    </div>
-
-    {
-      settings.privacyNoticeHtml && (
-        <div class="border border-(--color-line) p-6">
-          <p class="label-tracked text-(--color-gold)">{k("talentApplication.privacyNotice.title")}</p>
-          <div class="prose-weblack mt-4 max-w-none text-sm" set:html={settings.privacyNoticeHtml} />
-        </div>
-      )
-    }
-
-    <div class="space-y-4">
-      <label class="flex min-h-12 items-start gap-3">
-        <input type="checkbox" name="accuracyConfirmed" class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold)" aria-describedby="accuracyConfirmed-error" />
-        <span class="text-(--color-paper)/80">{k("talentApplication.field.accuracyConfirmed")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></span>
-      </label>
-      <p id="accuracyConfirmed-error" class="field-error" data-error-for="accuracyConfirmed" hidden></p>
-      <label class="flex min-h-12 items-start gap-3">
-        <input type="checkbox" name="privacyNoticeAccepted" class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold)" aria-describedby="privacyNoticeAccepted-error privacy-scope" />
-        <span class="text-(--color-paper)/80">{k("talentApplication.field.privacyNoticeAccepted")} <span class="text-(--color-gold)" aria-hidden="true" data-label-extra>*</span></span>
-      </label>
-      <p id="privacy-scope" class="pl-8 text-sm text-(--color-paper)/50">{k("talentApplication.privacyScope")}</p>
-      <p id="privacyNoticeAccepted-error" class="field-error" data-error-for="privacyNoticeAccepted" hidden></p>
-    </div>
-
-    {/* Leurre anti-robot : hors écran et hors lecteur d'écran, jamais rempli par une personne. */}
-    <div class="absolute -left-[9999px]" aria-hidden="true">
-      <label for="company">Company</label>
-      <input type="text" id="company" name="company" tabindex="-1" autocomplete="off" />
-    </div>
-  </fieldset>
-
-  <div hidden data-success-panel class="space-y-4" tabindex="-1">
-    <h2 class="font-display text-3xl text-(--color-paper)">{k("talentApplication.success.title")}</h2>
-    <p class="text-(--color-paper)/70" data-success-message></p>
-    <p class="label-tracked text-(--color-gold)">{k("talentApplication.success.reference")}{lang === "fr" ? " :" : ":"} <span data-success-reference></span></p>
-    <p class="text-sm text-(--color-paper)/60" data-success-email></p>
   </div>
-
-  <div data-nav-controls class="mt-12 flex items-center justify-between gap-6 border-t border-(--color-line) pt-8">
-    <button type="button" data-nav-back class="label-tracked min-h-12 text-(--color-paper)/60 hover:text-(--color-gold)" hidden>
-      &larr; {k("talentApplication.nav.back")}
-    </button>
-    <button
-      type="button"
-      data-nav-continue
-      class="ml-auto inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright) disabled:opacity-60 disabled:hover:translate-y-0"
-    >
-      {k("talentApplication.nav.continue")}
-    </button>
-  </div>
-
-  <p role="alert" class="mt-4 min-h-[1.25em] text-sm text-red-300" data-form-status></p>
 </form>
 
 <script>
   import { initTalentApplicationForm } from "../../scripts/talent-application/form";
   initTalentApplicationForm();
 </script>
+
+<style>
+  /* Champ rempli et conforme (form.ts, à la sortie du champ) : un filet doré discret. */
+  .form-input[data-valid]:not([aria-invalid="true"]) {
+    border-color: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  }
+
+  .notice {
+    max-width: 42rem;
+    border-left: 1px solid var(--color-gold);
+    padding-inline-start: 1.25rem;
+    color: color-mix(in srgb, var(--color-paper) 75%, transparent);
+  }
+
+  /* — Progression — */
+  .stepper-item {
+    display: grid;
+    width: 100%;
+    min-height: 2.75rem;
+    align-content: start;
+    gap: 0.4rem;
+    text-align: start;
+    color: color-mix(in srgb, var(--color-paper) 55%, transparent);
+    transition: color 300ms var(--ease-signature);
+  }
+
+  .stepper-item:disabled {
+    cursor: default;
+  }
+
+  .stepper-bar {
+    display: block;
+    height: 3px;
+    background: var(--color-line);
+    background-image: linear-gradient(var(--color-gold), var(--color-gold));
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    transition: background-size 500ms var(--ease-signature);
+  }
+
+  .stepper-num {
+    font-size: 0.875rem;
+  }
+
+  .stepper-text {
+    display: none;
+  }
+
+  .stepper-item[data-state="current"] {
+    color: var(--color-paper);
+  }
+
+  .stepper-item[data-state="current"] .stepper-bar {
+    background-size: 50% 100%;
+  }
+
+  .stepper-item[data-state="done"] {
+    color: var(--color-gold);
+  }
+
+  .stepper-item[data-state="done"] .stepper-bar {
+    background-size: 100% 100%;
+  }
+
+  .stepper-item:focus-visible {
+    outline: 1px solid var(--color-gold);
+    outline-offset: 4px;
+  }
+
+  @media (min-width: 1024px) {
+    .stepper-item {
+      grid-template-columns: 2.5rem minmax(0, 1fr);
+      gap: 0 0.75rem;
+      padding-block: 1.1rem;
+      border-top: 1px solid var(--color-line);
+    }
+
+    .stepper-bar {
+      display: none;
+    }
+
+    .stepper-num {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .stepper-text {
+      display: block;
+    }
+
+    .stepper-title {
+      display: block;
+      font-size: 0.95rem;
+    }
+
+    .stepper-summary {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.8rem;
+      color: color-mix(in srgb, var(--color-paper) 55%, transparent);
+    }
+
+    .stepper-item[data-state="current"] .stepper-num {
+      color: var(--color-gold);
+    }
+
+    .stepper-item:not(:disabled):hover {
+      color: var(--color-paper);
+    }
+  }
+
+  /* — Choix (cartes radio / cases) — l'input natif reste focalisable et lu ; la carte n'est que sa présentation. */
+  .choice {
+    position: relative;
+    display: flex;
+    min-height: 3.25rem;
+    cursor: pointer;
+    align-items: center;
+    gap: 0.85rem;
+    border: 1px solid var(--color-line);
+    padding: 0.85rem 1rem;
+    color: color-mix(in srgb, var(--color-paper) 85%, transparent);
+    transition:
+      border-color 200ms var(--ease-signature),
+      background-color 200ms var(--ease-signature);
+  }
+
+  .choice-tall {
+    align-items: flex-start;
+  }
+
+  .choice-compact {
+    justify-content: center;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  .choice:hover {
+    border-color: color-mix(in srgb, var(--color-paper) 35%, transparent);
+  }
+
+  .choice-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .choice:has(.choice-input:checked) {
+    border-color: var(--color-gold);
+    background-color: color-mix(in srgb, var(--color-gold) 9%, transparent);
+    color: var(--color-paper);
+  }
+
+  .choice:has(.choice-input:focus-visible) {
+    outline: 1px solid var(--color-gold);
+    outline-offset: 3px;
+  }
+
+  .choice:has(.choice-input[aria-invalid="true"]) {
+    border-color: #f87171;
+  }
+
+  .choice-mark {
+    position: relative;
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.1rem;
+    border: 1px solid color-mix(in srgb, var(--color-paper) 45%, transparent);
+    border-radius: 9999px;
+  }
+
+  .choice-mark-square {
+    border-radius: 0;
+  }
+
+  .choice-mark::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: inherit;
+    background: var(--color-gold);
+    transform: scale(0);
+    transition: transform 200ms var(--ease-signature);
+  }
+
+  .choice:has(.choice-input:checked) .choice-mark {
+    border-color: var(--color-gold);
+  }
+
+  .choice:has(.choice-input:checked) .choice-mark::after {
+    transform: scale(1);
+  }
+
+  /* — Mesures avec unité — */
+  .unit-field {
+    position: relative;
+  }
+
+  .unit-field .form-input {
+    padding-inline-end: 2.5rem;
+  }
+
+  .unit {
+    position: absolute;
+    inset-inline-end: 0;
+    bottom: 0.85rem;
+    font-size: 0.85rem;
+    color: color-mix(in srgb, var(--color-paper) 55%, transparent);
+  }
+
+  /* — Photographies — */
+  .photo-frame {
+    position: relative;
+    display: grid;
+    place-items: center;
+    margin-top: 0.75rem;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border: 1px dashed color-mix(in srgb, var(--color-paper) 22%, transparent);
+    background: var(--color-ink-soft);
+    color: color-mix(in srgb, var(--color-paper) 28%, transparent);
+    transition: border-color 200ms var(--ease-signature);
+  }
+
+  .photo-pictogram {
+    width: 42%;
+    height: auto;
+  }
+
+  .photo-frame img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .photo-drop-hint {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 1rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: color-mix(in srgb, var(--color-paper) 55%, transparent);
+  }
+
+  @media (hover: none) {
+    .photo-drop-hint {
+      display: none;
+    }
+  }
+
+  .photo-slot[data-drag] .photo-frame {
+    border-color: var(--color-gold);
+    border-style: solid;
+  }
+
+  .photo-slot[data-state="done"] .photo-frame {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--color-gold) 70%, transparent);
+  }
+
+  .photo-slot[data-state="error"] .photo-frame {
+    border-color: #f87171;
+  }
+
+  .photo-slot[data-state="done"] .photo-drop-hint,
+  .photo-slot[data-state="uploading"] .photo-drop-hint,
+  .photo-slot[data-state="preparing"] .photo-drop-hint {
+    display: none;
+  }
+
+  .photo-progress {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 3px;
+    background: rgb(0 0 0 / 45%);
+    opacity: 0;
+    transition: opacity 300ms var(--ease-signature);
+  }
+
+  .photo-progress > span {
+    display: block;
+    height: 100%;
+    background: var(--color-gold);
+    transform-origin: left center;
+    transform: scaleX(var(--progress, 0));
+    transition: transform 200ms linear;
+  }
+
+  .photo-slot[data-state="uploading"] .photo-progress,
+  .photo-slot[data-state="preparing"] .photo-progress {
+    opacity: 1;
+  }
+
+  .photo-check {
+    position: absolute;
+    top: 0.75rem;
+    inset-inline-end: 0.75rem;
+    display: grid;
+    width: 1.75rem;
+    height: 1.75rem;
+    place-items: center;
+    border-radius: 9999px;
+    background: var(--color-gold);
+    color: var(--color-on-gold);
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 300ms var(--ease-signature),
+      transform 400ms var(--ease-signature);
+  }
+
+  .photo-slot[data-state="done"] .photo-check {
+    opacity: 1;
+    transform: none;
+  }
+
+  .photo-button {
+    min-height: 3rem;
+    border: 1px solid var(--color-line);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: color-mix(in srgb, var(--color-paper) 85%, transparent);
+    transition:
+      border-color 200ms var(--ease-signature),
+      color 200ms var(--ease-signature);
+  }
+
+  .photo-button:hover,
+  .photo-button:focus-visible {
+    border-color: var(--color-gold);
+    color: var(--color-gold);
+  }
+
+  .photo-button-quiet {
+    border-color: transparent;
+    color: color-mix(in srgb, var(--color-paper) 55%, transparent);
+  }
+
+  /* — Navigation : toujours à portée de pouce sur téléphone — */
+  .application-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-top: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    border-top: 1px solid var(--color-line);
+    background: color-mix(in srgb, var(--color-ink) 94%, transparent);
+    padding-block: 1rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 1024px) {
+    .application-nav {
+      position: static;
+      padding-block: 2rem 0;
+      background: none;
+    }
+  }
+
+  .application-success {
+    padding-block: 2rem 1rem;
+    outline: none;
+  }
+
+  .success-mark {
+    width: 4rem;
+    height: 4rem;
+    color: var(--color-gold);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .success-mark circle {
+      stroke-dasharray: 190;
+      stroke-dashoffset: 190;
+      animation: success-draw 1100ms var(--ease-signature) 150ms forwards;
+    }
+
+    .success-mark path {
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: success-draw 600ms var(--ease-signature) 900ms forwards;
+    }
+  }
+
+  @keyframes success-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+</style>

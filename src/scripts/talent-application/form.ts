@@ -1,8 +1,15 @@
 /**
- * Formulaire de candidature Talent — une seule page, 5 étapes affichées et
- * masquées en JS. Rien n'est retiré du DOM entre deux étapes : les réponses
- * survivent nativement dans les champs, sans localStorage. Seul un départ de
- * la page les perdrait : une confirmation est alors demandée (beforeunload).
+ * Formulaire de candidature Talent — une seule page : cinq étapes puis un
+ * écran de vérification, affichés et masqués en JS. Rien n'est retiré du DOM
+ * entre deux étapes : les réponses (et les photos déjà envoyées) survivent
+ * nativement dans les champs, sans localStorage ni sessionStorage — aucune
+ * donnée personnelle n'est écrite dans le navigateur. Seul un départ de la
+ * page les perdrait : une confirmation est alors demandée (beforeunload).
+ *
+ * Progression honnête : une étape n'est « validée » que lorsque ses contrôles
+ * ont réellement réussi, et redevient « à compléter » dès qu'un de ses champs
+ * change. L'écran de vérification n'est accessible qu'une fois les cinq
+ * étapes validées.
  *
  * Les messages d'erreur sont écrits ici, dans la langue de la page — jamais
  * par la bulle de validation native du navigateur, qui suit la langue du
@@ -11,9 +18,10 @@
  * dont les erreurs sont reprises champ par champ.
  */
 
+import { SIGNATURE_EASING } from "../motion/tokens";
+
 interface Config {
   lang: "fr" | "en";
-  minorsAllowed: boolean;
   minorsMessage: string;
   confirmationMessage: string;
   privacyNoticeVersion: string;
@@ -22,27 +30,42 @@ interface Config {
   measurementLimits: Record<string, [number, number]>;
   shoeSizeLimits: [number, number];
   textLimits: Record<string, number>;
-  upload: { originalMaxBytes: number; maxDimension: number; acceptedTypes: string[] };
+  upload: { originalMaxBytes: number; maxDimension: number; acceptedTypes: string[]; maxExtraPhotos: number };
 }
+
+type PhotoRoleKey = "portrait" | "profile" | "full_length" | "extra";
+type ReviewSectionKey = "identity" | "contact" | "professional" | "measurements" | "photos" | "languages" | "presentation";
 
 interface Strings {
   progress: string;
+  progressValidated: string;
   stepTitles: string[];
+  stepperDone: string;
+  stepperCurrent: string;
+  stepperTodo: string;
+  errorSummary: string;
   navContinue: string;
+  navReview: string;
+  navBackToReview: string;
   navSubmit: string;
   navSubmitting: string;
   navRetry: string;
   photoChoose: string;
   photoReplace: string;
+  photoPreparing: string;
   photoUploading: string;
   photoUploaded: string;
   photoRetry: string;
   photoError: string;
   photoInvalidType: string;
   photoTooLarge: string;
+  photoDropInvalid: string;
   reviewEdit: string;
-  reviewPhotos: string;
+  reviewEmpty: string;
+  reviewSections: Record<ReviewSectionKey, string>;
+  photoRoles: Record<PhotoRoleKey, string>;
   languagesSelected: string;
+  languagesRemove: string;
   charactersLeft: string;
   successDefault: string;
   successEmailSent: string;
@@ -77,7 +100,10 @@ interface Strings {
 type FieldControl = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 
 const TOTAL_STEPS = 5;
+const REVIEW_STEP = 6;
 const JPEG_QUALITY = 0.85;
+/** Aperçu local : une vignette légère, jamais l'image envoyée relue en entier. */
+const PREVIEW_MAX = 480;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const E164_RE = /^\+[1-9]\d{6,14}$/;
 const INSTAGRAM_RE = /^(@?[A-Za-z0-9._]{1,30}|https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?)$/;
@@ -94,21 +120,32 @@ export function initTalentApplicationForm() {
 
   const config = JSON.parse(form.dataset.config || "{}") as Config;
   const i18n = JSON.parse(form.dataset.i18n || "{}") as Strings;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const q = <T extends Element>(selector: string) => form.querySelector<T>(selector);
   const steps = Array.from(form.querySelectorAll<HTMLFieldSetElement>("fieldset[data-step]"));
   const progressEl = q<HTMLElement>("[data-step-progress]")!;
-  const barEl = q<HTMLElement>("[data-step-bar]")!;
   const titleEl = q<HTMLElement>("[data-step-title]")!;
+  const requiredNote = q<HTMLElement>("[data-required-note]")!;
   const backBtn = q<HTMLButtonElement>("[data-nav-back]")!;
+  const toReviewBtn = q<HTMLButtonElement>("[data-nav-to-review]")!;
   const continueBtn = q<HTMLButtonElement>("[data-nav-continue]")!;
   const statusEl = q<HTMLElement>("[data-form-status]")!;
   const navControls = q<HTMLElement>("[data-nav-controls]")!;
+  const summaryEl = q<HTMLElement>("[data-error-summary]")!;
+  const summaryTitle = q<HTMLElement>("[data-error-summary-title]")!;
+  const summaryList = q<HTMLElement>("[data-error-summary-list]")!;
+  const stepperButtons = Array.from(form.querySelectorAll<HTMLButtonElement>("[data-stepper-go]"));
+  const validatedEl = q<HTMLElement>("[data-progress-validated]")!;
 
   let currentStep = 1;
   let dirty = false;
   let submitted = false;
   let pendingUploads = 0;
+  /** Étapes dont les contrôles ont réussi, et qui n'ont pas été modifiées depuis. */
+  const validated = new Set<number>();
+  /** Vrai quand on modifie une section depuis l'écran de vérification : « Retour à la vérification » est proposé. */
+  let editingFromReview = false;
   // Tiré une fois pour ce formulaire : chaque nouvel essai d'envoi porte le
   // même identifiant, le serveur reconnaît un dossier déjà enregistré.
   const submissionId = crypto.randomUUID();
@@ -117,8 +154,8 @@ export function initTalentApplicationForm() {
 
   /**
    * Toujours un élément, jamais une RadioNodeList : pour un groupe de cases
-   * (langues, projets, mobilité), namedItem() renvoie la liste entière, qui
-   * n'a ni focus() ni setAttribute() — on prend alors sa première case.
+   * (catégorie, langues, mobilité…), namedItem() renvoie la liste entière,
+   * qui n'a ni focus() ni setAttribute() — on prend alors sa première case.
    */
   const control = (name: string): FieldControl | null => {
     const named = form.elements.namedItem(name);
@@ -132,21 +169,24 @@ export function initTalentApplicationForm() {
     return (element as FieldControl | null)?.value.trim() ?? "";
   };
 
-  const checkedValues = (name: string): string[] =>
-    Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`)).map((input) => input.value);
+  const checkedInputs = (name: string) => Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`));
+  const checkedValues = (name: string): string[] => checkedInputs(name).map((input) => input.value);
+  /** Libellé visible d'une case cochée (carte de choix ou case simple). */
+  const choiceLabel = (input: HTMLInputElement) =>
+    (input.closest("label")?.querySelector(".choice-label, span:not([aria-hidden])")?.textContent ?? input.value).trim();
+  const checkedLabels = (name: string): string[] => checkedInputs(name).map(choiceLabel);
 
   /** L'élément qui reçoit le focus et aria-invalid pour un nom d'erreur donné. */
   function focusTargetFor(name: string): HTMLElement | null {
     if (name === "phone") return q("#phoneNumber");
     if (name === "country") return q("#countrySearch");
     if (name === "languages") return q("#languagesSearch");
-    if (name === "mobility") return q('input[name="mobility"]');
     if (name.startsWith("photo.")) return q(`.photo-slot[data-photo-role="${name.slice(6)}"] [data-photo-trigger]`);
     return control(name);
   }
 
   function setError(name: string, message: string) {
-    const target = q<HTMLElement>(`[data-error-for="${name}"]`);
+    const target = q<HTMLElement>(`[data-error-for="${CSS.escape(name)}"]`);
     if (target) {
       target.textContent = message;
       target.hidden = false;
@@ -156,7 +196,7 @@ export function initTalentApplicationForm() {
   }
 
   function clearError(name: string) {
-    const target = q<HTMLElement>(`[data-error-for="${name}"]`);
+    const target = q<HTMLElement>(`[data-error-for="${CSS.escape(name)}"]`);
     if (target) {
       target.textContent = "";
       target.hidden = true;
@@ -200,30 +240,69 @@ export function initTalentApplicationForm() {
     return age;
   }
 
-  // --- Navigation ---------------------------------------------------------------
+  // --- Progression et navigation -----------------------------------------------
 
-  function showStep(step: number, focusTitle = true) {
+  /** Une étape est accessible si toutes celles qui la précèdent sont validées. */
+  const reachable = (step: number) => Array.from({ length: step - 1 }, (_, i) => i + 1).every((n) => validated.has(n));
+
+  function renderStepper() {
+    for (const button of stepperButtons) {
+      const n = Number(button.dataset.stepperGo);
+      const state = n === currentStep && !submitted ? "current" : validated.has(n) || (submitted && n === REVIEW_STEP) ? "done" : "todo";
+      button.dataset.state = state;
+      button.toggleAttribute("aria-current", state === "current");
+      if (state === "current") button.setAttribute("aria-current", "step");
+      button.disabled = submitted || (n !== currentStep && !reachable(n));
+      button.querySelector<HTMLElement>("[data-stepper-state]")!.textContent =
+        state === "done" ? i18n.stepperDone : state === "current" ? i18n.stepperCurrent : i18n.stepperTodo;
+    }
+    const count = Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).filter((n) => validated.has(n)).length;
+    validatedEl.textContent = i18n.progressValidated.replace("{n}", String(count));
+  }
+
+  function hideSummary() {
+    summaryEl.hidden = true;
+    summaryList.replaceChildren();
+  }
+
+  function showStep(step: number, { focusTitle = true, fromReview = false, scroll = true } = {}) {
+    const previous = currentStep;
     currentStep = step;
+    editingFromReview = fromReview || (editingFromReview && step !== REVIEW_STEP);
+    if (step === REVIEW_STEP) editingFromReview = false;
     for (const fieldset of steps) fieldset.hidden = Number(fieldset.dataset.step) !== step;
-    progressEl.textContent = i18n.progress.replace("{n}", String(step));
+    progressEl.textContent = step === REVIEW_STEP ? "" : i18n.progress.replace("{n}", String(step));
     titleEl.textContent = i18n.stepTitles[step - 1] ?? "";
-    barEl.style.width = `${(step / TOTAL_STEPS) * 100}%`;
     backBtn.hidden = step === 1;
-    continueBtn.textContent = step === TOTAL_STEPS ? i18n.navSubmit : i18n.navContinue;
+    toReviewBtn.hidden = !(editingFromReview && step !== REVIEW_STEP);
+    continueBtn.textContent = step === REVIEW_STEP ? i18n.navSubmit : step === TOTAL_STEPS ? i18n.navReview : i18n.navContinue;
     statusEl.textContent = "";
-    if (step === TOTAL_STEPS) buildReview();
-    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    hideSummary();
+    if (step === REVIEW_STEP) buildReview();
+    renderStepper();
+    // Transition entre étapes : un glissé court, dans le sens du parcours.
+    // Jamais d'opacité nulle maintenue : le contenu est lisible à chaque image.
+    const shown = steps.find((s) => Number(s.dataset.step) === step);
+    if (shown && !reducedMotion && previous !== step) {
+      shown.animate(
+        [
+          { opacity: 0.35, transform: `translateX(${step > previous ? 18 : -18}px)` },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 420, easing: SIGNATURE_EASING },
+      );
+    }
+    if (scroll) form.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     if (focusTitle) titleEl.focus({ preventScroll: true });
   }
 
   const stepOf = (element: Element | null): number => Number(element?.closest<HTMLElement>("fieldset[data-step]")?.dataset.step ?? 0);
 
-  // --- Étape 1 : profil -----------------------------------------------------------
+  // --- Étape 1 : identité et coordonnées -------------------------------------------
 
   const birthInput = q<HTMLInputElement>("#birthDate")!;
   const minorBlock = q<HTMLElement>("[data-minor-block]")!;
   const minorGated = q<HTMLElement>("[data-minor-gated]")!;
-  const guardianFields = q<HTMLElement>("[data-guardian-fields]")!;
   // La date du jour bornant le sélecteur : une naissance ne peut pas être future.
   birthInput.max = new Date().toISOString().slice(0, 10);
 
@@ -232,14 +311,14 @@ export function initTalentApplicationForm() {
     return typeof age === "number" && age >= 0 && age < 18;
   };
 
+  // Programme réservé aux 18 ans et plus : un âge mineur ferme la suite du
+  // parcours dans le navigateur ; le serveur le refuse de toute façon.
   function updateMinorUi() {
     const minor = isMinor();
-    const blocked = minor && !config.minorsAllowed;
-    minorBlock.hidden = !blocked;
-    minorBlock.textContent = blocked ? config.minorsMessage : "";
-    minorGated.hidden = blocked;
-    continueBtn.disabled = blocked;
-    guardianFields.hidden = !(minor && config.minorsAllowed);
+    minorBlock.hidden = !minor;
+    minorBlock.textContent = minor ? config.minorsMessage : "";
+    minorGated.hidden = minor;
+    if (currentStep === 1) continueBtn.disabled = minor;
   }
   birthInput.addEventListener("change", updateMinorUi);
   birthInput.addEventListener("input", updateMinorUi);
@@ -273,20 +352,15 @@ export function initTalentApplicationForm() {
     return dialDigits && numberDigits ? `+${dialDigits}${numberDigits}` : "";
   }
 
-  function validateStep1(): string[] {
-    const invalid: string[] = [];
-    const fail = (name: string, message: string) => {
-      setError(name, message);
-      invalid.push(name);
-    };
+  function validateStep1(fail: (name: string, message: string) => void) {
     for (const name of ["firstName", "lastName"]) if (!value(name)) fail(name, i18n.errors.required);
     if (!birthInput.value) fail("birthDate", i18n.errors.required);
     else {
       const age = computeAge(birthInput.value);
       if (age === undefined || age < 0 || age > 100) fail("birthDate", i18n.errors.date);
-      else if (age < 18 && !config.minorsAllowed) fail("birthDate", config.minorsMessage);
+      else if (age < 18) fail("birthDate", config.minorsMessage);
     }
-    if (minorGated.hidden) return invalid;
+    if (minorGated.hidden) return;
     if (!value("city")) fail("city", i18n.errors.required);
     syncCountry();
     if (!countrySearch.value.trim()) fail("country", i18n.errors.required);
@@ -297,29 +371,23 @@ export function initTalentApplicationForm() {
     const phoneNumber = q<HTMLInputElement>("#phoneNumber")!;
     if (!phoneNumber.value.trim()) fail("phone", i18n.errors.required);
     else if (!E164_RE.test(phoneValue(dialInput, phoneNumber))) fail("phone", i18n.errors.phone);
-    if (!guardianFields.hidden) {
-      if (!value("legalGuardianName")) fail("legalGuardianName", i18n.errors.required);
-      if (!EMAIL_RE.test(value("legalGuardianEmail"))) fail("legalGuardianEmail", i18n.errors.email);
-      if (!E164_RE.test(value("legalGuardianPhone").replace(/[\s.\-()]/g, ""))) fail("legalGuardianPhone", i18n.errors.phone);
-    }
-    return invalid;
   }
 
-  // --- Étape 2 : profil professionnel --------------------------------------------
+  // --- Étape 2 : profil et expérience ------------------------------------------------
 
-  const categorySelect = q<HTMLSelectElement>("[data-category]")!;
   const categoryOtherBlock = q<HTMLElement>("[data-category-other]")!;
-  const isModelCategory = () => config.modelCategories.includes(categorySelect.value);
+  const category = () => value("category");
+  const isModelCategory = () => config.modelCategories.includes(category());
 
   function updateCategoryUi() {
-    categoryOtherBlock.hidden = categorySelect.value !== "other";
+    categoryOtherBlock.hidden = category() !== "other";
     // Mensurations complètes seulement là où elles servent un casting ; pour
     // un talent créatif, la taille, les yeux et les cheveux suffisent.
-    const limited = categorySelect.value !== "" && !isModelCategory();
+    const limited = category() !== "" && !isModelCategory();
     for (const block of form.querySelectorAll<HTMLElement>('[data-measure="model"]')) block.hidden = limited;
     q<HTMLElement>("[data-measurements-limited]")!.hidden = !limited;
   }
-  categorySelect.addEventListener("change", updateCategoryUi);
+  for (const radio of form.querySelectorAll<HTMLInputElement>("[data-category]")) radio.addEventListener("change", updateCategoryUi);
 
   function portfolioLinks(): string[] {
     return value("portfolioLinks")
@@ -328,14 +396,9 @@ export function initTalentApplicationForm() {
       .filter(Boolean);
   }
 
-  function validateStep2(): string[] {
-    const invalid: string[] = [];
-    const fail = (name: string, message: string) => {
-      setError(name, message);
-      invalid.push(name);
-    };
-    if (!categorySelect.value) fail("category", i18n.errors.required);
-    if (categorySelect.value === "other" && !value("categoryOther")) fail("categoryOther", i18n.errors.required);
+  function validateStep2(fail: (name: string, message: string) => void) {
+    if (!category()) fail("category", i18n.errors.required);
+    if (category() === "other" && !value("categoryOther")) fail("categoryOther", i18n.errors.required);
     if (!value("experienceLevel")) fail("experienceLevel", i18n.errors.required);
     if (!value("experienceDuration")) fail("experienceDuration", i18n.errors.required);
     const links = portfolioLinks();
@@ -344,54 +407,62 @@ export function initTalentApplicationForm() {
     }
     const instagram = value("instagram");
     if (instagram && !INSTAGRAM_RE.test(instagram)) fail("instagram", i18n.errors.instagram);
-    return invalid;
   }
 
-  // --- Étape 3 : mensurations -------------------------------------------------------
+  // --- Étape 3 : mensurations (facultatives, jamais éliminatoires) --------------------
 
-  function validateStep3(): string[] {
-    const invalid: string[] = [];
+  function validateStep3(fail: (name: string, message: string) => void) {
     for (const input of form.querySelectorAll<HTMLInputElement>("[data-decimal]")) {
-      if (input.closest<HTMLElement>("[hidden]") || input.value.trim() === "") continue;
+      if (input.closest<HTMLElement>("[hidden]:not(fieldset)") || input.value.trim() === "") continue;
       const parsed = parseDecimal(input.value);
       const min = Number(input.dataset.min);
       const max = Number(input.dataset.max);
       const shoeStep = input.name === "shoeSize" && parsed !== undefined && (parsed * 2) % 1 !== 0;
-      if (parsed === undefined || parsed < min || parsed > max || shoeStep) {
-        setError(input.name, rangeMessage(min, max));
-        invalid.push(input.name);
-      }
+      if (parsed === undefined || parsed < min || parsed > max || shoeStep) fail(input.name, rangeMessage(min, max));
     }
-    if (isModelCategory() && value("shoeSize") && !value("shoeSystem")) {
-      setError("shoeSystem", i18n.errors.shoeSystem);
-      invalid.push("shoeSystem");
-    }
-    return invalid;
+    if (isModelCategory() && value("shoeSize") && !value("shoeSystem")) fail("shoeSystem", i18n.errors.shoeSystem);
   }
 
-  // --- Étape 4 : photos ----------------------------------------------------------------
+  // --- Étape 4 : photographies ---------------------------------------------------------
 
-  async function reencodeToJpeg(file: File): Promise<Blob> {
+  /**
+   * Une seule lecture du fichier : il est décodé une fois (createImageBitmap),
+   * puis dessiné deux fois — en JPEG ≤ 1600 px pour l'envoi (format uniforme,
+   * HEIC d'iPhone compris, aucune métadonnée : un canvas ne porte pas d'EXIF),
+   * et en vignette ≤ 480 px pour l'aperçu. Aucun filtre, aucune retouche.
+   */
+  async function prepareImage(file: File): Promise<{ upload: Blob; preview: string }> {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, config.upload.maxDimension / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("canvas");
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    return await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode"))), "image/jpeg", JPEG_QUALITY),
-    );
+    try {
+      const draw = (max: number) => {
+        const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("canvas");
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        return canvas;
+      };
+      const uploadCanvas = draw(config.upload.maxDimension);
+      const upload = await new Promise<Blob>((resolve, reject) =>
+        uploadCanvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode"))), "image/jpeg", JPEG_QUALITY),
+      );
+      uploadCanvas.width = uploadCanvas.height = 0; // libère la mémoire du canvas plein format
+      // data: et non blob: — la CSP du site n'autorise que data: en img-src.
+      const preview = draw(PREVIEW_MAX).toDataURL("image/jpeg", 0.8);
+      return { upload, preview };
+    } finally {
+      bitmap.close();
+    }
   }
 
-  function uploadWithProgress(blob: Blob, role: string, onProgress: (pct: number) => void): Promise<{ ok: boolean; photoId?: string; reason?: string }> {
+  function uploadWithProgress(blob: Blob, role: string, onProgress: (ratio: number) => void): Promise<{ ok: boolean; photoId?: string; reason?: string }> {
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/talent-application/upload");
       xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+        if (event.lengthComputable) onProgress(event.loaded / event.total);
       };
       xhr.onload = () => {
         try {
@@ -417,8 +488,23 @@ export function initTalentApplicationForm() {
     const input = slot.querySelector<HTMLInputElement>("[data-photo-input]")!;
     const idField = slot.querySelector<HTMLInputElement>("[data-photo-id-field]")!;
     const trigger = slot.querySelector<HTMLButtonElement>("[data-photo-trigger]")!;
-    const preview = slot.querySelector<HTMLElement>("[data-photo-preview]")!;
+    const removeBtn = slot.querySelector<HTMLButtonElement>("[data-photo-remove]");
+    const preview = slot.querySelector<HTMLImageElement>("[data-photo-preview]")!;
     const status = slot.querySelector<HTMLElement>("[data-photo-status]")!;
+    const nameEl = slot.querySelector<HTMLElement>("[data-photo-name]")!;
+    const bar = slot.querySelector<HTMLElement>("[data-photo-bar]")!;
+    const drop = slot.querySelector<HTMLElement>("[data-photo-drop]")!;
+    let generation = 0;
+
+    const setState = (state: "empty" | "preparing" | "uploading" | "done" | "error") => (slot.dataset.state = state);
+    const setProgress = (ratio: number) => bar.style.setProperty("--progress", ratio.toFixed(3));
+
+    const fail = (message: string, retryable: boolean) => {
+      setState("error");
+      status.textContent = message;
+      status.dataset.failed = retryable ? "true" : "false";
+      trigger.textContent = retryable ? i18n.photoRetry : i18n.photoChoose;
+    };
 
     trigger.addEventListener("click", () => {
       const lastFile = photoFiles.get(slot);
@@ -427,58 +513,92 @@ export function initTalentApplicationForm() {
     });
     input.addEventListener("change", () => {
       const file = input.files?.[0];
-      if (!file) return;
-      photoFiles.set(slot, file);
-      void runUpload(file);
+      input.value = ""; // le même fichier peut être choisi de nouveau après une suppression
+      if (file) void runUpload(file);
+    });
+
+    // Glisser-déposer (souris) : un seul fichier image par emplacement.
+    drop.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      slot.dataset.drag = "";
+    });
+    drop.addEventListener("dragleave", () => delete slot.dataset.drag);
+    drop.addEventListener("drop", (event) => {
+      event.preventDefault();
+      delete slot.dataset.drag;
+      const files = event.dataTransfer?.files;
+      if (!files || files.length !== 1) {
+        fail(i18n.photoDropInvalid, false);
+        return;
+      }
+      void runUpload(files[0]!);
+    });
+
+    removeBtn?.addEventListener("click", () => {
+      generation += 1; // un envoi encore en cours ne réécrira plus cet emplacement
+      photoFiles.delete(slot);
+      idField.value = "";
+      preview.hidden = true;
+      preview.removeAttribute("src");
+      nameEl.textContent = "";
+      status.textContent = "";
+      status.dataset.failed = "false";
+      trigger.textContent = i18n.photoChoose;
+      removeBtn.hidden = true;
+      setProgress(0);
+      setState("empty");
+      invalidate(4);
+      trigger.focus();
     });
 
     async function runUpload(file: File) {
+      const run = ++generation;
+      photoFiles.set(slot, file);
+      invalidate(4);
       if (role !== "extra") clearError(`photo.${role}`);
       status.dataset.failed = "false";
       idField.value = "";
+      nameEl.textContent = file.name;
       if (!config.upload.acceptedTypes.includes(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) {
-        status.textContent = i18n.photoInvalidType;
-        status.dataset.failed = "true";
+        fail(i18n.photoInvalidType, false);
         return;
       }
       if (file.size > config.upload.originalMaxBytes) {
-        status.textContent = i18n.photoTooLarge;
-        status.dataset.failed = "true";
+        fail(i18n.photoTooLarge, false);
         return;
       }
       pendingUploads += 1;
       try {
-        status.textContent = i18n.photoUploading;
-        let blob: Blob;
+        setState("preparing");
+        setProgress(0);
+        status.textContent = i18n.photoPreparing;
+        let prepared: { upload: Blob; preview: string };
         try {
-          // Réencodage systématique : format uniforme (y compris HEIC
-          // d'iPhone), taille maîtrisée, et aucune métadonnée conservée
-          // — un canvas ne porte pas d'EXIF.
-          blob = await reencodeToJpeg(file);
+          prepared = await prepareImage(file);
         } catch {
-          status.textContent = i18n.photoInvalidType;
-          status.dataset.failed = "true";
+          if (run === generation) fail(i18n.photoInvalidType, false);
           return;
         }
-        // data: et non blob: — la CSP du site n'autorise que data: en img-src.
-        const previewUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.readAsDataURL(blob);
+        if (run !== generation) return;
+        preview.src = prepared.preview;
+        preview.hidden = false;
+        setState("uploading");
+        status.textContent = `${i18n.photoUploading} 0 %`;
+        const result = await uploadWithProgress(prepared.upload, role, (ratio) => {
+          if (run !== generation) return;
+          setProgress(ratio);
+          status.textContent = `${i18n.photoUploading} ${Math.round(ratio * 100)} %`;
         });
-        preview.style.backgroundImage = `url(${previewUrl})`;
-        preview.style.backgroundSize = "cover";
-        preview.style.backgroundPosition = "center";
-
-        const result = await uploadWithProgress(blob, role, (pct) => (status.textContent = `${i18n.photoUploading} ${pct}%`));
+        if (run !== generation) return;
         if (result.ok && result.photoId) {
           idField.value = result.photoId;
+          setProgress(1);
+          setState("done");
           status.textContent = i18n.photoUploaded;
           trigger.textContent = i18n.photoReplace;
+          if (removeBtn) removeBtn.hidden = false;
         } else {
-          status.textContent = result.reason === "invalid_type" ? i18n.photoInvalidType : `${i18n.photoError} ${i18n.photoRetry}`;
-          status.dataset.failed = "true";
-          trigger.textContent = i18n.photoRetry;
+          fail(result.reason === "invalid_type" ? i18n.photoInvalidType : i18n.photoError, result.reason !== "invalid_type");
         }
       } finally {
         pendingUploads -= 1;
@@ -491,18 +611,20 @@ export function initTalentApplicationForm() {
   const extraContainer = q<HTMLElement>("[data-extra-photos-container]")!;
   const extraTemplate = q<HTMLTemplateElement>("[data-extra-photo-template]")!;
   const addExtraBtn = q<HTMLButtonElement>("[data-add-extra-photo]")!;
+  const maxExtra = config.upload.maxExtraPhotos ?? 3;
   addExtraBtn.addEventListener("click", () => {
-    if (extraContainer.children.length >= 3) return;
+    if (extraContainer.children.length >= maxExtra) return;
     const fragment = extraTemplate.content.cloneNode(true) as DocumentFragment;
     const entry = fragment.querySelector<HTMLElement>("[data-extra-entry]")!;
     initPhotoSlot(entry);
     entry.querySelector<HTMLButtonElement>("[data-remove-extra]")!.addEventListener("click", () => {
       photoFiles.delete(entry);
       entry.remove();
-      addExtraBtn.hidden = extraContainer.children.length >= 3;
+      addExtraBtn.hidden = extraContainer.children.length >= maxExtra;
+      addExtraBtn.focus();
     });
     extraContainer.append(fragment);
-    addExtraBtn.hidden = extraContainer.children.length >= 3;
+    addExtraBtn.hidden = extraContainer.children.length >= maxExtra;
     entry.querySelector<HTMLButtonElement>("[data-photo-trigger]")!.focus();
   });
 
@@ -512,36 +634,64 @@ export function initTalentApplicationForm() {
       .map((field) => field.value)
       .filter(Boolean);
 
-  function validateStep4(): string[] {
+  function validateStep4(fail: (name: string, message: string) => void) {
     if (pendingUploads > 0) {
-      statusEl.textContent = i18n.errors.photoPending;
-      return ["photoPending"];
+      fail("photoPending", i18n.errors.photoPending);
+      return;
     }
-    const invalid: string[] = [];
     for (const role of ["portrait", "profile", "full_length"]) {
-      if (!photoIdOf(role)) {
-        setError(`photo.${role}`, i18n.errors.photoRequired);
-        invalid.push(`photo.${role}`);
-      }
+      if (!photoIdOf(role)) fail(`photo.${role}`, i18n.errors.photoRequired);
     }
-    return invalid;
   }
 
-  // --- Étape 5 : disponibilités et confirmation ---------------------------------------
+  // --- Étape 5 : langues, mobilité et finalisation ---------------------------------
 
   const languagesSearch = q<HTMLInputElement>("[data-languages-search]")!;
   const languagesCount = q<HTMLElement>("[data-languages-count]")!;
+  const languagesChips = q<HTMLElement>("[data-languages-chips]")!;
+  const languagesEmpty = q<HTMLElement>("[data-languages-empty]")!;
+  const languageOptions = Array.from(form.querySelectorAll<HTMLElement>("[data-language-option]"));
   languagesSearch.addEventListener("input", () => {
     const term = languagesSearch.value.trim().toLocaleLowerCase(config.lang);
-    for (const option of form.querySelectorAll<HTMLElement>("[data-language-option]")) {
+    let visible = 0;
+    for (const option of languageOptions) {
       option.hidden = term !== "" && !option.dataset.search!.includes(term);
+      if (!option.hidden) visible += 1;
+    }
+    languagesEmpty.hidden = visible > 0;
+  });
+  // Entrée dans la recherche : coche la première langue proposée, sans envoyer le formulaire.
+  languagesSearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const first = languageOptions.find((option) => !option.hidden)?.querySelector<HTMLInputElement>("input");
+    if (first && !first.checked) {
+      first.checked = true;
+      first.dispatchEvent(new Event("change", { bubbles: true }));
     }
   });
-  const updateLanguagesCount = () => {
-    const count = checkedValues("languages").length;
-    languagesCount.textContent = count ? `${count} ${i18n.languagesSelected}` : "";
+  const updateLanguages = () => {
+    const checked = checkedInputs("languages");
+    languagesCount.textContent = checked.length ? `${checked.length} ${i18n.languagesSelected}` : "";
+    languagesChips.replaceChildren(
+      ...checked.map((input) => {
+        const name = choiceLabel(input);
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className =
+          "inline-flex min-h-9 items-center gap-2 border border-(--color-gold)/60 px-3 text-sm text-(--color-paper) transition-colors hover:border-(--color-gold) focus-visible:outline focus-visible:outline-1 focus-visible:outline-(--color-gold)";
+        chip.setAttribute("aria-label", i18n.languagesRemove.replace("{name}", name));
+        chip.append(name, Object.assign(document.createElement("span"), { textContent: "×", ariaHidden: "true", className: "text-(--color-gold)" }));
+        chip.addEventListener("click", () => {
+          input.checked = false;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          languagesSearch.focus();
+        });
+        return chip;
+      }),
+    );
   };
-  q<HTMLElement>("[data-languages-list]")!.addEventListener("change", updateLanguagesCount);
+  q<HTMLElement>("[data-languages-list]")!.addEventListener("change", updateLanguages);
 
   const motivation = q<HTMLTextAreaElement>("#motivation")!;
   const motivationCount = q<HTMLElement>("[data-motivation-count]")!;
@@ -552,21 +702,18 @@ export function initTalentApplicationForm() {
   motivation.addEventListener("input", updateMotivationCount);
   updateMotivationCount();
 
-  function validateStep5(): string[] {
-    const invalid: string[] = [];
-    const fail = (name: string, message: string) => {
-      setError(name, message);
-      invalid.push(name);
-    };
+  function validateStep5(fail: (name: string, message: string) => void) {
     if (checkedValues("languages").length === 0 && !value("languagesOther")) fail("languages", i18n.errors.languages);
     if (!value("mobility")) fail("mobility", i18n.errors.required);
     if (motivation.value.length > config.textLimits.motivation!) fail("motivation", i18n.errors.tooLong);
-    if (!(control("accuracyConfirmed") as HTMLInputElement).checked) fail("accuracyConfirmed", i18n.errors.required);
-    if (!(control("privacyNoticeAccepted") as HTMLInputElement).checked) fail("privacyNoticeAccepted", i18n.errors.required);
-    return invalid;
   }
 
-  // --- Récapitulatif ------------------------------------------------------------------
+  function validateReview(fail: (name: string, message: string) => void) {
+    if (!(control("accuracyConfirmed") as HTMLInputElement).checked) fail("accuracyConfirmed", i18n.errors.required);
+    if (!(control("privacyNoticeAccepted") as HTMLInputElement).checked) fail("privacyNoticeAccepted", i18n.errors.required);
+  }
+
+  // --- Écran de vérification ---------------------------------------------------------
 
   /** Libellé visible d'un champ, lu dans le DOM — aucune seconde copie des traductions. */
   function labelText(name: string): string {
@@ -585,52 +732,57 @@ export function initTalentApplicationForm() {
     return select instanceof HTMLSelectElement && select.value ? (select.selectedOptions[0]?.textContent ?? "") : "";
   }
 
-  function checkedLabels(name: string): string[] {
-    return Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`)).map(
-      (input) => input.closest("label")?.querySelector("span")?.textContent?.trim() ?? input.value,
-    );
-  }
-
   function buildReview() {
     const container = q<HTMLElement>("[data-review]")!;
     container.replaceChildren();
-    const sections: { step: number; rows: [string, string][] }[] = [
+    const birth = birthInput.value ? new Date(`${birthInput.value}T00:00:00Z`).toLocaleDateString(config.lang, { timeZone: "UTC", dateStyle: "long" }) : "";
+    const sections: { key: ReviewSectionKey; step: number; rows?: [string, string][]; photos?: boolean }[] = [
+      { key: "identity", step: 1, rows: [[labelText("firstName"), value("firstName")], [labelText("lastName"), value("lastName")], [labelText("birthDate"), birth]] },
       {
+        key: "contact",
         step: 1,
         rows: [
-          [labelText("firstName"), `${value("firstName")} ${value("lastName")}`.trim()],
-          [labelText("birthDate"), birthInput.value ? new Date(`${birthInput.value}T00:00:00Z`).toLocaleDateString(config.lang, { timeZone: "UTC" }) : ""],
-          [labelText("city"), [value("city"), countrySearch.value.trim()].filter(Boolean).join(", ")],
+          [labelText("city"), value("city")],
+          [labelText("countrySearch"), countrySearch.value.trim()],
           [labelText("email"), value("email")],
           [labelText("phone"), phoneValue(dialInput, q("#phoneNumber"))],
         ],
       },
       {
+        key: "professional",
         step: 2,
         rows: [
-          [labelText("category"), [selectedText("category"), value("categoryOther")].filter(Boolean).join(" — ")],
-          [labelText("experienceLevel"), selectedText("experienceLevel")],
-          [labelText("experienceDuration"), selectedText("experienceDuration")],
-          [labelText("portfolioLinks"), portfolioLinks().join(", ")],
+          [labelText("category"), [checkedLabels("category").join(""), category() === "other" ? value("categoryOther") : ""].filter(Boolean).join(" — ")],
+          [labelText("experienceLevel"), checkedLabels("experienceLevel").join("")],
+          [labelText("experienceDuration"), checkedLabels("experienceDuration").join("")],
+          [labelText("portfolioLinks"), portfolioLinks().join("\n")],
           [labelText("instagram"), value("instagram")],
+          [labelText("currentAgency"), value("currentAgency")],
+          [labelText("exclusivity"), value("exclusivity")],
         ],
       },
       {
+        key: "measurements",
         step: 3,
         rows: ["heightCm", "chestCm", "waistCm", "hipsCm", "inseamCm"]
           .filter((name) => !isMeasureHidden(control(name)))
           .map((name): [string, string] => [labelText(name), value(name)])
+          .concat(
+            isMeasureHidden(control("shoeSize"))
+              ? []
+              : [
+                  [labelText("shoeSize"), [value("shoeSize"), value("shoeSystem")].filter(Boolean).join(" ")],
+                  [labelText("clothingSize"), value("clothingSize")],
+                ],
+          )
           .concat([
-            [labelText("shoeSize"), isMeasureHidden(control("shoeSize")) ? "" : [value("shoeSize"), value("shoeSystem")].filter(Boolean).join(" ")],
             [labelText("eyeColor"), selectedText("eyeColor")],
             [labelText("hairColor"), selectedText("hairColor")],
           ]),
       },
+      { key: "photos", step: 4, photos: true },
       {
-        step: 4,
-        rows: [[i18n.stepTitles[3] ?? "", `${[photoIdOf("portrait"), photoIdOf("profile"), photoIdOf("full_length"), ...extraPhotoIds()].filter(Boolean).length} ${i18n.reviewPhotos}`]],
-      },
-      {
+        key: "languages",
         step: 5,
         rows: [
           [labelText("languages"), [...checkedLabels("languages"), value("languagesOther")].filter(Boolean).join(", ")],
@@ -638,64 +790,172 @@ export function initTalentApplicationForm() {
           [labelText("projects"), checkedLabels("desiredProjects").join(", ")],
         ],
       },
+      { key: "presentation", step: 5, rows: [[labelText("motivation"), motivation.value.trim()]] },
     ];
 
     for (const section of sections) {
-      const rows = section.rows.filter(([, text]) => text);
-      if (!rows.length) continue;
-      const block = document.createElement("div");
-      const header = document.createElement("div");
-      header.className = "flex items-baseline justify-between gap-4";
-      const heading = document.createElement("p");
-      heading.className = "label-tracked text-(--color-paper)/60";
-      heading.textContent = i18n.stepTitles[section.step - 1] ?? "";
+      const block = document.createElement("section");
+      block.className = "grid grid-cols-1 gap-4 border-b border-(--color-line) py-8 sm:grid-cols-[12rem_minmax(0,1fr)_auto] sm:gap-8";
+      const heading = document.createElement("h3");
+      heading.className = "label-tracked text-(--color-gold)";
+      heading.textContent = i18n.reviewSections[section.key];
+      const body = document.createElement("div");
+      if (section.photos) {
+        const grid = document.createElement("ul");
+        grid.className = "m-0 grid list-none grid-cols-3 gap-3 p-0 sm:grid-cols-6";
+        for (const slot of form.querySelectorAll<HTMLElement>(".photo-slot")) {
+          const id = slot.querySelector<HTMLInputElement>("[data-photo-id-field]")?.value;
+          const src = slot.querySelector<HTMLImageElement>("[data-photo-preview]")?.getAttribute("src");
+          if (!id || !src) continue;
+          const item = document.createElement("li");
+          const img = document.createElement("img");
+          img.src = src;
+          img.alt = i18n.photoRoles[(slot.dataset.photoRole as PhotoRoleKey) ?? "extra"];
+          img.className = "aspect-[3/4] w-full object-cover";
+          const caption = document.createElement("span");
+          caption.className = "mt-1 block truncate text-xs text-(--color-paper)/50";
+          caption.textContent = img.alt;
+          item.append(img, caption);
+          grid.append(item);
+        }
+        body.append(grid);
+      } else {
+        const list = document.createElement("dl");
+        list.className = "m-0 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2";
+        for (const [label, text] of section.rows ?? []) {
+          const row = document.createElement("div");
+          const dt = document.createElement("dt");
+          dt.className = "text-sm text-(--color-paper)/55";
+          dt.textContent = label;
+          const dd = document.createElement("dd");
+          dd.className = text ? "m-0 whitespace-pre-line break-words text-(--color-paper)" : "m-0 text-(--color-paper)/55";
+          dd.textContent = text || i18n.reviewEmpty;
+          row.append(dt, dd);
+          list.append(row);
+        }
+        body.append(list);
+      }
       const edit = document.createElement("button");
       edit.type = "button";
-      edit.className = "min-h-11 text-sm text-(--color-gold) underline underline-offset-4";
+      edit.className = "min-h-11 justify-self-start text-sm text-(--color-gold) underline underline-offset-4 sm:justify-self-end";
       edit.textContent = i18n.reviewEdit;
-      edit.addEventListener("click", () => showStep(section.step));
-      header.append(heading, edit);
-      const list = document.createElement("dl");
-      list.className = "mt-2 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2";
-      for (const [label, text] of rows) {
-        const dt = document.createElement("dt");
-        dt.className = "text-sm text-(--color-paper)/40";
-        dt.textContent = label;
-        const dd = document.createElement("dd");
-        dd.className = "text-(--color-paper) break-words";
-        dd.textContent = text;
-        list.append(dt, dd);
-      }
-      block.append(header, list);
+      edit.setAttribute("aria-label", `${i18n.reviewEdit} — ${i18n.reviewSections[section.key]}`);
+      edit.addEventListener("click", () => showStep(section.step, { fromReview: true }));
+      block.append(heading, body, edit);
       container.append(block);
     }
   }
 
   // --- Validation par étape -----------------------------------------------------------
 
-  const validators: Record<number, () => string[]> = { 1: validateStep1, 2: validateStep2, 3: validateStep3, 4: validateStep4, 5: validateStep5 };
+  const validators: Record<number, (fail: (name: string, message: string) => void) => void> = {
+    1: validateStep1,
+    2: validateStep2,
+    3: validateStep3,
+    4: validateStep4,
+    5: validateStep5,
+    6: validateReview,
+  };
+
+  /** Contrôle une étape ; en silence, ne touche ni aux messages ni au focus. */
+  function runValidator(step: number, silent = false): { name: string; message: string }[] {
+    const fieldset = steps.find((s) => Number(s.dataset.step) === step);
+    const invalid: { name: string; message: string }[] = [];
+    if (fieldset && !silent) clearErrorsIn(fieldset);
+    validators[step]?.((name, message) => {
+      invalid.push({ name, message });
+      if (!silent && name !== "photoPending") setError(name, message);
+    });
+    return invalid;
+  }
+
+  function showErrors(invalid: { name: string; message: string }[]) {
+    if (invalid.length === 1 && invalid[0]!.name === "photoPending") {
+      statusEl.textContent = i18n.errors.photoPending;
+      return;
+    }
+    summaryTitle.textContent = i18n.errorSummary.replace("{n}", String(invalid.length));
+    summaryList.replaceChildren(
+      ...invalid.map(({ name, message }) => {
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = `#${focusTargetFor(name)?.id ?? ""}`;
+        link.className = "text-red-200 underline underline-offset-4";
+        const label = name.startsWith("photo.") ? i18n.photoRoles[name.slice(6) as PhotoRoleKey] : labelText(name === "country" ? "countrySearch" : name);
+        link.textContent = `${label} — ${message}`;
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          const target = focusTargetFor(name);
+          target?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+          target?.focus({ preventScroll: true });
+        });
+        item.append(link);
+        return item;
+      }),
+    );
+    summaryEl.hidden = false;
+    statusEl.textContent = i18n.errors.validation;
+    // Premier champ invalide : focus et défilement jusqu'à lui ; le résumé est annoncé (role="alert").
+    const first = focusTargetFor(invalid[0]!.name);
+    first?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+    first?.focus({ preventScroll: true });
+  }
 
   function validateCurrentStep(): boolean {
-    const fieldset = steps.find((s) => Number(s.dataset.step) === currentStep);
-    if (fieldset) clearErrorsIn(fieldset);
-    const invalid = validators[currentStep]?.() ?? [];
-    if (invalid.length === 0) return true;
-    focusTargetFor(invalid[0]!)?.focus();
-    if (invalid[0] !== "photoPending") statusEl.textContent = i18n.errors.validation;
+    hideSummary();
+    statusEl.textContent = "";
+    const invalid = runValidator(currentStep);
+    if (invalid.length === 0) {
+      if (currentStep <= TOTAL_STEPS) validated.add(currentStep);
+      return true;
+    }
+    validated.delete(currentStep);
+    showErrors(invalid);
+    renderStepper();
     return false;
+  }
+
+  /** Avant la vérification : toutes les étapes, dans l'ordre ; la première en défaut est rouverte avec ses erreurs. */
+  function goToReview() {
+    for (let n = 1; n <= TOTAL_STEPS; n++) {
+      if (runValidator(n, true).length === 0) {
+        validated.add(n);
+        continue;
+      }
+      validated.delete(n);
+      showStep(n, { focusTitle: false });
+      showErrors(runValidator(n));
+      return;
+    }
+    showStep(REVIEW_STEP);
+  }
+
+  /** Une étape modifiée redevient « à compléter » jusqu'à son prochain contrôle. */
+  function invalidate(step: number) {
+    if (step >= 1 && step <= TOTAL_STEPS && validated.delete(step)) renderStepper();
   }
 
   // Une correction efface son message d'erreur au fil de la saisie.
   form.addEventListener("input", (event) => {
     dirty = true;
     const target = event.target as FieldControl;
+    if (target.type === "search") return; // filtrer les langues ne modifie pas le dossier
+    invalidate(stepOf(target));
     const name = target.name || (target.id === "phoneNumber" || target.id === "phoneDialCode" ? "phone" : target.id === "countrySearch" ? "country" : "");
     if (name) clearError(name);
   });
   form.addEventListener("change", (event) => {
     dirty = true;
     const target = event.target as HTMLInputElement;
+    if (target.type !== "search") invalidate(stepOf(target));
     if (target.name) clearError(target.name);
+  });
+  // État valide visible : un champ rempli, conforme à son type, et sans erreur.
+  form.addEventListener("focusout", (event) => {
+    const target = event.target as FieldControl;
+    if (!target.classList?.contains("form-input") || target.type === "search") return;
+    const ok = target.value.trim() !== "" && target.checkValidity() && target.getAttribute("aria-invalid") !== "true";
+    target.toggleAttribute("data-valid", ok);
   });
 
   // --- Payload et envoi ---------------------------------------------------------------
@@ -708,7 +968,6 @@ export function initTalentApplicationForm() {
   const textOrUndefined = (name: string) => value(name) || undefined;
 
   function buildPayload() {
-    const minor = isMinor();
     const model = isModelCategory();
     return {
       honeypot: value("company"),
@@ -721,11 +980,8 @@ export function initTalentApplicationForm() {
       country: countryCode.value,
       email: value("email"),
       phone: phoneValue(dialInput, q("#phoneNumber")),
-      legalGuardianName: minor ? value("legalGuardianName") : undefined,
-      legalGuardianEmail: minor ? value("legalGuardianEmail") : undefined,
-      legalGuardianPhone: minor ? value("legalGuardianPhone") : undefined,
-      category: categorySelect.value,
-      categoryOther: categorySelect.value === "other" ? value("categoryOther") : undefined,
+      category: category(),
+      categoryOther: category() === "other" ? value("categoryOther") : undefined,
       experienceLevel: value("experienceLevel"),
       experienceDuration: value("experienceDuration"),
       portfolioLinks: portfolioLinks(),
@@ -769,8 +1025,8 @@ export function initTalentApplicationForm() {
       return limits ? rangeMessage(limits[0], limits[1]) : i18n.errors.validation;
     }
     if (reason === "format" || reason === "implausible" || reason === "too_many") {
-      if (field === "email" || field === "legalGuardianEmail") return i18n.errors.email;
-      if (field === "phone" || field === "legalGuardianPhone") return i18n.errors.phone;
+      if (field === "email") return i18n.errors.email;
+      if (field === "phone") return i18n.errors.phone;
       if (field === "birthDate") return i18n.errors.date;
       if (field === "portfolioLinks") return i18n.errors.url;
       if (field === "instagram") return i18n.errors.instagram;
@@ -790,6 +1046,7 @@ export function initTalentApplicationForm() {
     continueBtn.disabled = true;
     continueBtn.setAttribute("aria-busy", "true");
     continueBtn.textContent = i18n.navSubmitting;
+    backBtn.disabled = true;
     statusEl.textContent = "";
     let data:
       | { ok: boolean; reference?: string; reason?: string; confirmationEmail?: string; errors?: { field: string; reason: string }[] }
@@ -811,6 +1068,7 @@ export function initTalentApplicationForm() {
     } finally {
       sending = false;
       continueBtn.removeAttribute("aria-busy");
+      backBtn.disabled = false;
     }
 
     // Le succès n'est affiché que sur la confirmation explicite du serveur,
@@ -821,7 +1079,10 @@ export function initTalentApplicationForm() {
       for (const fieldset of steps) fieldset.hidden = true;
       progressEl.textContent = "";
       titleEl.textContent = "";
-      barEl.style.width = "100%";
+      requiredNote.hidden = true;
+      hideSummary();
+      for (let n = 1; n <= TOTAL_STEPS; n++) validated.add(n);
+      renderStepper();
       const panel = q<HTMLElement>("[data-success-panel]")!;
       panel.hidden = false;
       q<HTMLElement>("[data-success-message]")!.textContent = config.confirmationMessage || i18n.successDefault;
@@ -829,8 +1090,8 @@ export function initTalentApplicationForm() {
       // Le navigateur ne dit « e-mail envoyé » que si le fournisseur l'a accepté.
       q<HTMLElement>("[data-success-email]")!.textContent =
         data.confirmationEmail === "sent" ? i18n.successEmailSent : i18n.successEmailPending;
-      panel.focus();
-      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      panel.focus({ preventScroll: true });
+      form.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
       return;
     }
 
@@ -838,27 +1099,20 @@ export function initTalentApplicationForm() {
     continueBtn.textContent = i18n.navRetry;
 
     if (data?.reason === "validation" && data.errors?.length) {
-      for (const error of data.errors) setError(error.field, serverMessage(error.field, error.reason));
-      // Retour à l'étape qui porte la première erreur, focus sur le champ.
+      // Retour à l'étape qui porte la première erreur, avec ses messages et le focus.
       const first = data.errors.find((error) => focusTargetFor(error.field)) ?? data.errors[0]!;
-      const target = focusTargetFor(first.field);
-      const step = stepOf(target);
-      if (step && step !== currentStep) {
-        showStep(step, false);
-        for (const error of data.errors) setError(error.field, serverMessage(error.field, error.reason));
-      }
-      target?.focus();
-      statusEl.textContent = i18n.errors.validation;
+      const step = stepOf(focusTargetFor(first.field));
+      if (step) validated.delete(step);
+      if (step && step !== currentStep) showStep(step, { focusTitle: false, fromReview: true });
+      const onStep = data.errors.filter((error) => !step || stepOf(focusTargetFor(error.field)) === step);
+      for (const error of data.errors) setError(error.field, serverMessage(error.field, error.reason));
+      showErrors(onStep.map((error) => ({ name: error.field, message: serverMessage(error.field, error.reason) })));
       return;
     }
-    if (data?.reason === "photo_missing_or_expired") {
-      showStep(4, false);
-      statusEl.textContent = i18n.errors.photoExpired;
-      return;
-    }
-    if (data?.reason === "photo_already_used") {
-      showStep(4, false);
-      statusEl.textContent = i18n.errors.photoReused;
+    if (data?.reason === "photo_missing_or_expired" || data?.reason === "photo_already_used") {
+      validated.delete(4);
+      showStep(4, { focusTitle: false, fromReview: true });
+      statusEl.textContent = data.reason === "photo_missing_or_expired" ? i18n.errors.photoExpired : i18n.errors.photoReused;
       return;
     }
     const messages: Record<string, string> = {
@@ -874,12 +1128,36 @@ export function initTalentApplicationForm() {
   backBtn.addEventListener("click", () => {
     if (currentStep > 1) showStep(currentStep - 1);
   });
+  toReviewBtn.addEventListener("click", () => {
+    if (validateCurrentStep()) goToReview();
+  });
   continueBtn.addEventListener("click", () => {
+    if (currentStep === REVIEW_STEP) {
+      if (validateCurrentStep()) void submitApplication();
+      return;
+    }
     if (!validateCurrentStep()) return;
     if (currentStep < TOTAL_STEPS) showStep(currentStep + 1);
-    else void submitApplication();
+    else goToReview();
   });
+  for (const button of stepperButtons) {
+    button.addEventListener("click", () => {
+      const target = Number(button.dataset.stepperGo);
+      if (target === currentStep) return;
+      // En avant : l'étape quittée doit d'abord passer ses contrôles.
+      if (target > currentStep && currentStep <= TOTAL_STEPS && !validateCurrentStep()) return;
+      if (target === REVIEW_STEP) goToReview();
+      else if (target < currentStep || reachable(target)) showStep(target);
+    });
+  }
   form.addEventListener("submit", (event) => event.preventDefault());
+
+  // L'appel « Commencer ma candidature » de l'écran d'accueil amène au titre de l'étape 1.
+  document.querySelector<HTMLAnchorElement>("[data-application-start]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    form.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    titleEl.focus({ preventScroll: true });
+  });
 
   // Changer de langue ou quitter la page recharge le formulaire : sans
   // stockage local (exclu volontairement), seule une confirmation évite de
@@ -891,5 +1169,6 @@ export function initTalentApplicationForm() {
 
   updateMinorUi();
   updateCategoryUi();
-  showStep(1, false);
+  updateLanguages();
+  showStep(1, { focusTitle: false, scroll: false });
 }

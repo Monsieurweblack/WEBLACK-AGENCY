@@ -1,0 +1,184 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import TalentApplicationForm from "../forms/TalentApplicationForm.astro";
+import TalentApplicationPdfLinks from "../forms/TalentApplicationPdfLinks.astro";
+import weblackMark from "../../assets/logo/weblack-mark-gold-180.png";
+import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
+import type { TalentApplicationSettingsData } from "../../lib/content";
+import { TALENT_APPLICATION_IMAGE } from "../../lib/hero-images";
+
+interface Props {
+  lang: Lang;
+  settings: TalentApplicationSettingsData;
+}
+
+/**
+ * /talent/candidature — l'entrée WEBLACK TALENTS, puis le dossier.
+ *
+ * Premier écran : une photographie réelle (ZÉ DÉFILÉ by WAXFASHION, ou celle
+ * choisie dans Sanity — jamais la photo d'un·e candidat·e), le monogramme,
+ * la promesse, qui peut candidater et ce qu'il faut préparer. Rien n'y est
+ * promis : ni délai de réponse, ni sélection, ni gratuité (non confirmée).
+ * Le formulaire suit, dans la même page : l'appel principal y conduit sans
+ * rechargement, et rien n'est masqué en attendant un script.
+ */
+const { lang, settings } = Astro.props;
+const t = useTranslations(lang);
+
+const image = settings.welcomeImage
+  ? { src: settings.welcomeImage.url, width: settings.welcomeImage.width, height: settings.welcomeImage.height, alt: settings.welcomeImage.alt, focus: "50% 40%" }
+  : { ...TALENT_APPLICATION_IMAGE, alt: "" };
+const title = settings.welcomeTitle ?? t("talentApplication.welcome.title");
+const subtitle = settings.welcomeSubtitle ?? t("talentApplication.welcome.subtitle");
+const selection = settings.intro ?? t("talentApplication.welcome.selection");
+const facts = ["age", "account", "privacy"] as const;
+---
+
+<section class="talent-welcome relative overflow-hidden bg-(--color-ink)" aria-labelledby="talent-welcome-title">
+  <div class="lg:grid lg:min-h-[100svh] lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+    <div class="welcome-photo relative h-[44svh] min-h-[18rem] overflow-hidden lg:sticky lg:top-0 lg:order-2 lg:h-[100svh] lg:self-start" style={`--focus: ${image.focus}`}>
+      <RemoteImage
+        src={image.src}
+        alt={image.alt}
+        width={image.width}
+        height={image.height}
+        loading="eager"
+        fetchpriority="high"
+        class="h-full w-full"
+        sizes={TALENT_APPLICATION_IMAGE.sizes}
+      />
+      <div class="welcome-photo-fade pointer-events-none absolute inset-0" aria-hidden="true"></div>
+    </div>
+
+    <div class="relative z-10 -mt-24 px-6 pb-20 md:px-10 lg:mt-0 lg:flex lg:flex-col lg:justify-center lg:py-40 lg:pl-[max(2.5rem,calc((100vw-var(--container-content))/2+2.5rem))] lg:pr-16">
+      <a href={localizedPath(lang, "/talent")} class="label-tracked hidden text-(--color-paper)/60 transition-colors hover:text-(--color-gold) lg:inline-block">
+        &larr; {t("talentApplication.back")}
+      </a>
+      <img src={weblackMark.src} alt="" width="56" height="56" class="lg:mt-12" decoding="async" />
+      <p class="label-tracked label-tracked-dot mt-8 text-(--color-gold)">{t("talentApplication.welcome.eyebrow")}</p>
+      <h1 id="talent-welcome-title" class="font-display mt-5 max-w-xl text-balance text-[2.6rem] leading-[1.02] text-(--color-paper) sm:text-6xl">
+        {title}
+      </h1>
+      <p class="mt-6 max-w-lg text-lg text-(--color-paper)/80">{subtitle}</p>
+      <p class="mt-5 max-w-lg text-(--color-paper)/60">{selection}</p>
+
+      <div class="mt-10 flex flex-wrap items-center gap-x-8 gap-y-5">
+        {
+          settings.applicationsOpen && (
+            <a
+              href="#candidature"
+              data-press
+              data-application-start
+              class="cta-arrow inline-flex min-h-12 items-center gap-3 bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color] duration-300 hover:bg-(--color-gold-bright)"
+            >
+              {t("talentApplication.welcome.start")}
+              <span aria-hidden="true" class="welcome-arrow">&darr;</span>
+            </a>
+          )
+        }
+        <a href={localizedPath(lang, "/talent/plateforme")} class="text-sm text-(--color-paper)/70 underline underline-offset-4 transition-colors hover:text-(--color-gold)">
+          {t("talentApplication.welcome.platformLink")}
+        </a>
+        <a href={localizedPath(lang, "/politique-de-confidentialite")} class="text-sm text-(--color-paper)/70 underline underline-offset-4 transition-colors hover:text-(--color-gold)">
+          {t("talentApplication.welcome.privacyLink")}
+        </a>
+      </div>
+
+      <div class="mt-14 grid grid-cols-1 gap-10 border-t border-(--color-line) pt-10 sm:grid-cols-2">
+        <div>
+          <h2 class="label-tracked text-(--color-paper)/50">{t("talentApplication.welcome.audience")}</h2>
+          <ul class="mt-4 space-y-3 text-sm text-(--color-paper)/80">
+            {facts.map((fact) => (
+              <li class="welcome-fact">{t(`talentApplication.welcome.fact.${fact}`)}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 class="label-tracked text-(--color-paper)/50">{t("talentApplication.welcome.prepare")}</h2>
+          <ul class="mt-4 space-y-3 text-sm text-(--color-paper)/80">
+            <li class="welcome-fact">{t("talentApplication.welcome.prepare.photos")}</li>
+            <li class="welcome-fact">{t("talentApplication.welcome.prepare.links")}</li>
+            <li class="welcome-fact text-(--color-gold)">{t("talentApplication.beginnersWelcome")}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="candidature" class="scroll-mt-[var(--header-h,6rem)] border-t border-(--color-line) bg-(--color-ink) px-6 pb-24 pt-16 md:px-10 md:pb-32 md:pt-24">
+  <div class="mx-auto max-w-(--container-content)">
+    {
+      settings.applicationsOpen ? (
+        <TalentApplicationForm lang={lang} settings={settings} />
+      ) : (
+        <div class="max-w-2xl">
+          <h2 class="font-display text-3xl text-(--color-paper)">{t("talentApplication.closed.title")}</h2>
+          {settings.closedMessage && <p class="mt-6 text-(--color-paper)/70">{settings.closedMessage}</p>}
+        </div>
+      )
+    }
+
+    <div class="mt-24 grid grid-cols-1 gap-16 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-16">
+      <div class="hidden lg:block" aria-hidden="true"></div>
+      <div class="max-w-3xl space-y-16">
+        <TalentApplicationPdfLinks lang={lang} />
+        {settings.faqItems.length > 0 && (
+          <div class="border-t border-(--color-line) pt-12">
+            <h2 class="font-display text-2xl text-(--color-paper)">FAQ</h2>
+            <dl class="mt-6 space-y-6">
+              {settings.faqItems.map((item) => (
+                <div>
+                  <dt class="text-(--color-paper)">{item.question}</dt>
+                  <dd class="mt-2 text-(--color-paper)/70">{item.answer}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .welcome-photo :global(img) {
+    object-position: var(--focus, 50% 50%);
+  }
+
+  /* La photographie se fond dans le noir : vers le bas sur téléphone, vers le texte sur grand écran. */
+  .welcome-photo-fade {
+    background: linear-gradient(to top, var(--color-ink) 4%, color-mix(in srgb, var(--color-ink) 35%, transparent) 45%, transparent 75%);
+  }
+
+  @media (min-width: 1024px) {
+    .welcome-photo-fade {
+      background: linear-gradient(to right, var(--color-ink), transparent 22%);
+    }
+  }
+
+  .welcome-fact {
+    position: relative;
+    padding-inline-start: 1.25rem;
+  }
+
+  .welcome-fact::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0.6em;
+    width: 0.5rem;
+    height: 1px;
+    background: var(--color-gold);
+  }
+
+  .welcome-arrow {
+    display: inline-block;
+    transition: transform var(--motion-fast, 240ms) var(--ease-signature);
+  }
+
+  .cta-arrow:hover .welcome-arrow,
+  .cta-arrow:focus-visible .welcome-arrow {
+    transform: translateY(3px);
+  }
+</style>

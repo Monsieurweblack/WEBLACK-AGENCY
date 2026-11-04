@@ -1269,6 +1269,10 @@ export interface TalentApplicationSettingsData {
   minorsAllowed: boolean;
   navigationLabel: string;
   internalNotificationEmail?: string;
+  /** Écran d'accueil de /talent/candidature — vides : textes i18n et photographie par défaut. */
+  welcomeTitle?: string;
+  welcomeSubtitle?: string;
+  welcomeImage?: EditorialImageData;
   intro?: string;
   closedMessage?: string;
   minorsMessage?: string;
@@ -1286,6 +1290,7 @@ function fetchTalentApplicationSettingsDoc(): Promise<any> {
     talentApplicationSettingsDocPromise = sanityClient.fetch(
       `*[_id == "talentApplicationSettings"][0]{
         applicationsOpen, minorsAllowed, navigationLabelFr, navigationLabelEn, internalNotificationEmail,
+        welcomeTitleFr, welcomeTitleEn, welcomeSubtitleFr, welcomeSubtitleEn, welcomeImage,
         introFr, introEn, closedMessageFr, closedMessageEn, minorsMessageFr, minorsMessageEn,
         confirmationMessageFr, confirmationMessageEn,
         faqItems[]{ questionFr, questionEn, answerFr, answerEn },
@@ -1311,6 +1316,14 @@ export async function getTalentApplicationSettings(lang: Lang): Promise<TalentAp
     minorsAllowed: doc?.minorsAllowed === true,
     navigationLabel: localized(lang, doc?.navigationLabelFr, doc?.navigationLabelEn) || (lang === "en" ? "Apply now" : "Proposer ma candidature"),
     internalNotificationEmail: doc?.internalNotificationEmail || undefined,
+    // Strictement dans la langue de la page : un titre anglais manquant
+    // retombe sur le texte i18n anglais, jamais sur le français de Sanity.
+    welcomeTitle: (lang === "en" ? doc?.welcomeTitleEn : doc?.welcomeTitleFr) || undefined,
+    welcomeSubtitle: (lang === "en" ? doc?.welcomeSubtitleEn : doc?.welcomeSubtitleFr) || undefined,
+    welcomeImage: (() => {
+      const image = mapEditorialImage(doc?.welcomeImage);
+      return image ? { ...image, alt: (lang === "en" ? doc?.welcomeImage?.altEn : doc?.welcomeImage?.altFr) || "" } : undefined;
+    })(),
     intro: localized(lang, doc?.introFr, doc?.introEn) || undefined,
     closedMessage: localized(lang, doc?.closedMessageFr, doc?.closedMessageEn) || undefined,
     minorsMessage: localized(lang, doc?.minorsMessageFr, doc?.minorsMessageEn) || undefined,
