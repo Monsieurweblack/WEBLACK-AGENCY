@@ -44,28 +44,12 @@
   line-gap-override: 0%;
 }
 
-/* Manrope 400 contre Arial : 39 134 caractères, rapport 102,4 %. */
-@font-face {
-  font-family: "Manrope Fallback Arial";
-  src: local("Arial");
-  font-weight: 100 500;
-  size-adjust: 102.4%;
-  ascent-override: 104.49%;
-  descent-override: 29.3%;
-  line-gap-override: 0%;
-}
-
-/* Graisses 600+ (libellés capitales espacées, boutons) : la vraie coupe grasse,
-   pas une graisse synthétique — 6 420 caractères, rapport 92,5 %. */
-@font-face {
-  font-family: "Manrope Fallback Arial";
-  src: local("Arial Bold"), local("Arial-BoldMT");
-  font-weight: 600 900;
-  size-adjust: 92.5%;
-  ascent-override: 115.68%;
-  descent-override: 32.43%;
-  line-gap-override: 0%;
-}
+/*
+ * Manrope n'a pas de repli calibré : essayé (Arial 102,4 % / Arial Bold
+ * 92,5 %), il décalait le paragraphe de l'encart candidature à l'arrivée de
+ * la police (CLS 0,016 contre 0,001, Lighthouse en alternance, 4 + 4 runs)
+ * et ajoutait ~150 ms de TBT. La pile d'origine reste la meilleure mesurée.
+ */
 
 @theme {
   /* Palette — noir / blanc / or subtil. Dark mode is the default/signature
@@ -99,7 +83,7 @@
 
   /* Type */
   --font-display: "Fraunces Variable", "Fraunces", "Fraunces Fallback Georgia", "Fraunces Fallback Times", ui-serif, Georgia, serif;
-  --font-sans: "Manrope Variable", "Manrope", "Manrope Fallback Arial", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
 
   /* Motion */
   --ease-signature: cubic-bezier(0.16, 1, 0.3, 1);
