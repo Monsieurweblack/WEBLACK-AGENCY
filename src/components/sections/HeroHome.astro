@@ -94,15 +94,15 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   >
     <div class="absolute inset-0 -z-10 rounded-full bg-(--color-gold)/10 blur-[70px]"></div>
     {/*
-      [data-mark-tilt] porte l'ouverture (motion.css, « mark » : opacity,
-      translate, scale — des propriétés composées par le GPU) et la
-      perspective du curseur (scripts/motion/monogram.ts : transform) ; le
-      monogramme masqué ne s'anime jamais lui-même, son rendu est peint une
-      fois. Pas de filtre sur l'élément masqué : un drop-shadow y était
-      entièrement découpé par le masque (0 pixel de différence, mesuré) et
-      recalculé à chaque image de la lame de lumière.
+      [data-mark-tilt] porte la perspective du curseur et la réaction au
+      toucher (scripts/motion/monogram.ts : transform, composé par le GPU) ;
+      le monogramme masqué ne s'anime jamais lui-même, son rendu est peint
+      une fois. Présent dès le premier rendu : ni ouverture ni lame de
+      lumière, dont le coût pesait sur le chargement (mesuré). Pas de filtre
+      sur l'élément masqué : un drop-shadow y était entièrement découpé par
+      le masque (0 pixel de différence, mesuré).
     */}
-    <div data-mark-tilt data-intro="mark" class="mark-tilt">
+    <div data-mark-tilt class="mark-tilt">
       <div
         data-hero-mark
         style={`aspect-ratio: ${weblackSymbol.width} / ${weblackSymbol.height}; -webkit-mask-image: url(${symbolMask.src}); mask-image: url(${symbolMask.src});`}
@@ -287,9 +287,9 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
 
   /*
    * Le monogramme vivant. Le reflet ::after (position --lx/--ly, intensité
-   * --lo, pilotés par monogram.ts) et le balayage ::before sont des
-   * pseudo-éléments du monogramme : son masque les découpe à la forme exacte
-   * du W, ils ne débordent jamais sur le fond.
+   * --lo, pilotés par monogram.ts) est un pseudo-élément du monogramme : son
+   * masque le découpe à la forme exacte du W, il ne déborde jamais sur le
+   * fond. Il ne s'allume qu'à l'interaction (curseur, toucher).
    */
   .mark-tilt {
     transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
@@ -318,63 +318,6 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
     background: radial-gradient(circle at var(--lx, 35%) var(--ly, 28%), rgb(255 240 214 / 55%), transparent 42%);
     mix-blend-mode: soft-light;
     opacity: var(--lo, 0);
-  }
-
-  .hero-symbol::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(105deg, transparent 38%, rgb(255 238 205 / 60%) 50%, transparent 62%);
-    transform: translateX(-130%);
-    opacity: 0;
-  }
-
-  /*
-   * Ouverture du monogramme : le W monte et se pose (motion.css,
-   * « intro-mark »), puis une seule lame de lumière dorée le traverse, et
-   * tout s'arrête — aucun mouvement permanent. Un toucher relance la lame
-   * sur écran tactile (.is-sweeping, monogram.ts). Le halo derrière le W est
-   * fixe : un flou de 70 px qu'on anime se recompose à chaque image.
-   */
-  @media (prefers-reduced-motion: no-preference) {
-    .hero-symbol::before {
-      animation: mark-sweep 1600ms var(--ease-signature) 1100ms both;
-    }
-
-    .hero-symbol.is-sweeping::before {
-      animation: mark-sweep-again 1400ms var(--ease-signature) both;
-    }
-  }
-
-  @keyframes mark-sweep {
-    0% {
-      transform: translateX(-130%);
-      opacity: 0;
-    }
-    15%,
-    85% {
-      opacity: 1;
-    }
-    100% {
-      transform: translateX(130%);
-      opacity: 0;
-    }
-  }
-
-  /* Même geste, autre nom : réassigner un nom identique ne relance pas l'animation. */
-  @keyframes mark-sweep-again {
-    0% {
-      transform: translateX(-130%);
-      opacity: 0;
-    }
-    15%,
-    85% {
-      opacity: 1;
-    }
-    100% {
-      transform: translateX(130%);
-      opacity: 0;
-    }
   }
 
   /*

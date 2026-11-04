@@ -4,7 +4,8 @@
  * Souris (survol réel, pointeur fin) : une perspective limitée (±7° en
  * lacet, ±5° en tangage) qui suit le curseur, et un reflet doré qui glisse
  * sur la face du W. Le curseur sort : tout revient au repos, sans ressort.
- * Toucher : aucun survol à attendre — un appui relance la lame de lumière.
+ * Toucher : aucun survol à attendre — un appui fait pencher le W vers le
+ * doigt et allume son reflet, puis il revient au repos.
  *
  * Rien ne tourne quand rien ne bouge : la boucle d'animation ne vit que le
  * temps de rejoindre la cible, s'arrête hors écran, et tout est détaché à
@@ -57,11 +58,11 @@ export function initMonogram(section: HTMLElement): void {
     if (!raf && inView) raf = requestAnimationFrame(render);
   };
 
-  const onMove = (event: PointerEvent) => {
-    if (event.pointerType !== "mouse") return;
+  /** Oriente le W vers un point de l'écran (curseur ou doigt). */
+  const aim = (clientX: number, clientY: number) => {
     const box = mark.getBoundingClientRect();
-    const x = Math.max(-1, Math.min(1, (event.clientX - (box.left + box.width / 2)) / (box.width / 2 + 200)));
-    const y = Math.max(-1, Math.min(1, (event.clientY - (box.top + box.height / 2)) / (box.height / 2 + 200)));
+    const x = Math.max(-1, Math.min(1, (clientX - (box.left + box.width / 2)) / (box.width / 2 + 200)));
+    const y = Math.max(-1, Math.min(1, (clientY - (box.top + box.height / 2)) / (box.height / 2 + 200)));
     target.yaw = x * MAX_YAW;
     target.pitch = -y * MAX_PITCH;
     target.lx = 50 + x * 40;
@@ -69,15 +70,22 @@ export function initMonogram(section: HTMLElement): void {
     target.lo = 1;
     wake();
   };
+
+  const onMove = (event: PointerEvent) => {
+    if (event.pointerType !== "mouse") return;
+    aim(event.clientX, event.clientY);
+  };
   const onLeave = () => {
     Object.assign(target, { yaw: 0, pitch: 0, lx: 35, ly: 28, lo: 0 });
     wake();
   };
+  // Toucher : le W penche vers le doigt et s'éclaire, puis revient au repos.
+  let release = 0;
   const onTap = (event: PointerEvent) => {
     if (event.pointerType === "mouse") return;
-    mark.classList.remove("is-sweeping");
-    void mark.offsetWidth; // relance l'animation CSS
-    mark.classList.add("is-sweeping");
+    aim(event.clientX, event.clientY);
+    clearTimeout(release);
+    release = window.setTimeout(onLeave, 280);
   };
 
   const io = new IntersectionObserver(([entry]) => {
@@ -100,6 +108,7 @@ export function initMonogram(section: HTMLElement): void {
     (event) => {
       if (event.persisted) return; // bfcache : la page revient telle quelle
       cancelAnimationFrame(raf);
+      clearTimeout(release);
       io.disconnect();
       section.removeEventListener("pointermove", onMove);
       section.removeEventListener("pointerleave", onLeave);

@@ -1,8 +1,9 @@
 /*
  * Système de mouvement WEBLACK — « le métier ».
  *
- * Peu de mouvements, choisis : installer (l'ouverture de l'accueil et son
- * monogramme), orienter (transition de page), révéler (chaque bloc une fois,
+ * Peu de mouvements, choisis : installer (l'ouverture de l'accueil ; le
+ * monogramme, lui, ne bouge qu'en réponse au curseur ou au toucher —
+ * monogram.ts), orienter (transition de page), révéler (chaque bloc une fois,
  * à son arrivée près de l'écran — scroll-choreography.ts). Rien ne tourne en
  * permanence, rien ne se rejoue à chaque défilement : les ressources vont
  * aux moments qui comptent (mesuré : chaque effet continu ou démultiplié
@@ -73,11 +74,6 @@
 
   [data-intro="title"] {
     animation-name: intro-title;
-  }
-
-  [data-intro="mark"] {
-    animation-name: intro-mark;
-    animation-duration: 1800ms;
   }
 }
 
@@ -186,26 +182,3 @@ button[aria-busy="true"]::before {
   }
 }
 
-/*
- * Le W monte et se pose : il part un peu plus bas et un peu plus petit, se
- * lève en apparaissant, puis la lame de lumière le traverse (HeroHome). Rien
- * que des propriétés composées par le GPU — opacity, translate, scale — sur
- * l'enveloppe du monogramme : ni clip-path ni 3D sur l'élément masqué, qui
- * n'est ainsi peint qu'une fois. translate et scale sont des propriétés
- * distinctes de transform, laissé à la perspective du curseur.
- */
-@keyframes intro-mark {
-  0% {
-    opacity: 0;
-    translate: 0 7%;
-    scale: 0.94;
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    translate: 0 0;
-    scale: 1;
-  }
-}
