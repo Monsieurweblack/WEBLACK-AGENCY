@@ -70,7 +70,7 @@ const lcpPreload = lcpPreloads.length > 0;
 <html lang={LOCALES[lang].htmlLang}>
   <head>
     <meta charset="UTF-8" />
-    <!--
+    {/*
       Doit rester le tout premier élément après charset — avant tout script,
       même inline. Un navigateur qui n'a pas encore rencontré cette balise
       utilise sa largeur de viewport par défaut (historiquement 980px,
@@ -82,9 +82,9 @@ const lcpPreload = lcpPreloads.length > 0;
       une fois la balise enfin appliquée. C'est exactement le flash
       desktop→mobile observé en production ; elle vivait après les deux
       scripts inline ci-dessous, ce qui suffisait à le provoquer.
-    -->
+    */}
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!--
+    {/*
       L'image LCP de presque toutes les pages vient de cdn.sanity.io. Sans
       preconnect, le navigateur ne résout le DNS et ne négocie le TLS qu'au
       moment où il rencontre la balise <img>, loin dans le document : la
@@ -94,10 +94,10 @@ const lcpPreload = lcpPreloads.length > 0;
       Une seule origine est préconnectée volontairement : chaque preconnect
       immobilise une connexion, et en multiplier sur des hôtes secondaires
       ralentirait celui qui compte.
-    -->
+    */}
     <link rel="preconnect" href="https://cdn.sanity.io" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.sanity.io" />
-    <!-- Avant les fontes : l'image LCP part en premier sur la connexion. -->
+    {/* Avant les fontes : l'image LCP part en premier sur la connexion. */}
     {
       lcpPreloads.map((preload) => (
         <link
@@ -112,7 +112,7 @@ const lcpPreload = lcpPreloads.length > 0;
       ))
     }
     {lcpPreload && <script is:inline>document.documentElement.classList.add("defer-media");</script>}
-    <!--
+    {/*
       Les deux seules fontes réellement téléchargées sur une page FR/EN —
       les autres sous-ensembles (cyrillique, grec, vietnamien) portent un
       unicode-range et ne sont jamais demandés. Elles sont découvertes
@@ -126,7 +126,7 @@ const lcpPreload = lcpPreloads.length > 0;
       l'image et l'arrivaient avant elle. Le texte s'affiche d'abord dans les
       polices de repli calibrées (global.css), aux mêmes métriques : la
       bascule ne décale rien (mesuré, bascule forcée sur 6 routes × 6 largeurs).
-    -->
+    */}
     {
       !lcpPreload && (
         <>
@@ -144,7 +144,7 @@ const lcpPreload = lcpPreloads.length > 0;
         } catch (e) {}
       })();
     </script>
-    <!--
+    {/*
       Basic Consent Mode: gtag.js itself is never requested — no script, no
       cookie, no request to googletagmanager.com — until the visitor grants
       analytics consent. weblackLoadGA4() is the single place that does the
@@ -153,7 +153,7 @@ const lcpPreload = lcpPreloads.length > 0;
       prior "accepted" choice (read synchronously here, same
       "weblack-consent" key consent.ts writes to) loads GA4 immediately on
       return visits; no choice yet, or a prior refusal, leaves it unloaded.
-    -->
+    */}
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
@@ -190,7 +190,7 @@ const lcpPreload = lcpPreloads.length > 0;
         }
       } catch (e) {}
     </script>
-    <!--
+    {/*
       Continuité couverture → étude de cas (voir motion.css, « work-media »).
       Le nom de transition est posé au dernier moment, sur UN seul élément :
       dans l'ancienne page, la couverture visible du lien cliqué
@@ -199,7 +199,7 @@ const lcpPreload = lcpPreloads.length > 0;
       nom écrit en dur dans les gabarits se retrouverait en double dès que
       deux cartes du même projet cohabitent, et le navigateur annulerait la
       transition. Sans support : rien ne se passe, navigation ordinaire.
-    -->
+    */}
     <script is:inline>
       (function () {
         var NAME = "work-media";

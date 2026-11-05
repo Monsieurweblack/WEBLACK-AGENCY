@@ -18,7 +18,15 @@
  * dont les erreurs sont reprises champ par champ.
  */
 
-import { SIGNATURE_EASING } from "../motion/tokens";
+/*
+ * Courbe signature lue sur --ease-signature (global.css, même valeur que
+ * motion/tokens.ts) plutôt qu'importée : un second importeur de tokens.ts
+ * en faisait un fragment de script séparé, un aller-retour de plus dans la
+ * chaîne de chargement de l'accueil (mesuré : FCP Lighthouse simulé +20 %).
+ */
+let signatureEasing = "";
+const SIGNATURE_EASING = () =>
+  (signatureEasing ||= getComputedStyle(document.documentElement).getPropertyValue("--ease-signature").trim() || "cubic-bezier(0.16, 1, 0.3, 1)");
 
 interface Config {
   lang: "fr" | "en";
@@ -299,7 +307,7 @@ export function initTalentApplicationForm() {
           { opacity: 0.35, transform: `translateX(${step > previous ? 18 : -18}px)` },
           { opacity: 1, transform: "none" },
         ],
-        { duration: 420, easing: SIGNATURE_EASING },
+        { duration: 420, easing: SIGNATURE_EASING() },
       );
     }
     if (scroll || focusTitle)

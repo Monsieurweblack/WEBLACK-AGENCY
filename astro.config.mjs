@@ -124,6 +124,18 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      /*
+       * Scripts de l'accueil servis en fichiers (mis en cache, non répétés
+       * dans chaque HTML) plutôt qu'inlinés : le HTML de l'accueil doit tenir
+       * en deux allers-retours TCP (≈ 43 Ko compressés). Au-delà, un
+       * troisième aller-retour retardait le premier rendu sur réseau lent
+       * (Lighthouse Slow 4G simulé, mesuré le 2026-11-05). Tout le reste :
+       * comportement par défaut (undefined → seuil de 4 Ko).
+       */
+      assetsInlineLimit: (file) =>
+        /(HeroHome|DivisionsChapters)\.astro_astro_type_script/.test(file) ? false : undefined,
+    },
   },
   redirects: {
     '/institut': '/about',
