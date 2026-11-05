@@ -150,6 +150,16 @@ export function initTalentApplicationForm() {
   // même identifiant, le serveur reconnaît un dossier déjà enregistré.
   const submissionId = crypto.randomUUID();
 
+  /**
+   * Juste après la prochaine image peinte. Défilement et focus forcent un
+   * calcul de mise en page complet ; faits dans le gestionnaire du clic, ce
+   * calcul s'ajoutait à celui de l'image suivante (mesuré : « Continuer »
+   * avec erreurs 176 ms médian contre 76 ms en production, CPU ×4). Le
+   * contenu (erreurs, étape suivante) s'affiche dans l'image même du clic ;
+   * le défilement et le focus suivent une image plus tard.
+   */
+  const afterPaint = (fn: () => void) => requestAnimationFrame(() => setTimeout(fn, 0));
+
   // --- Utilitaires de champ ---------------------------------------------------
 
   /**
@@ -292,8 +302,11 @@ export function initTalentApplicationForm() {
         { duration: 420, easing: SIGNATURE_EASING },
       );
     }
-    if (scroll) form.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
-    if (focusTitle) titleEl.focus({ preventScroll: true });
+    if (scroll || focusTitle)
+      afterPaint(() => {
+        if (scroll) form.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+        if (focusTitle) titleEl.focus({ preventScroll: true });
+      });
   }
 
   const stepOf = (element: Element | null): number => Number(element?.closest<HTMLElement>("fieldset[data-step]")?.dataset.step ?? 0);
@@ -897,8 +910,10 @@ export function initTalentApplicationForm() {
     statusEl.textContent = i18n.errors.validation;
     // Premier champ invalide : focus et défilement jusqu'à lui ; le résumé est annoncé (role="alert").
     const first = focusTargetFor(invalid[0]!.name);
-    first?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
-    first?.focus({ preventScroll: true });
+    afterPaint(() => {
+      first?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+      first?.focus({ preventScroll: true });
+    });
   }
 
   function validateCurrentStep(): boolean {
