@@ -108,10 +108,15 @@ export function initAdminInquiries() {
       listMeta.textContent = "Liste indisponible (base non configurée sur cet environnement ?).";
       return;
     }
-    const data = (await response.json()) as { inquiries: ListItem[]; counts: { status: string; count: number }[]; purged: number };
+    const data = (await response.json()) as { inquiries: ListItem[]; counts: { status: string; count: number }[]; purged: number; unnotified: number };
     counts = Object.fromEntries(data.counts.map((c) => [c.status, c.count]));
     renderFilters();
-    listMeta.textContent = data.purged ? `${data.purged} demande(s) supprimée(s) au terme de la durée de conservation (3 ans).` : "";
+    listMeta.textContent = [
+      data.unnotified ? `${data.unnotified} demande(s) sans notification e-mail envoyée — ouvrez-les pour relancer ; elles sont bien enregistrées ci-dessous.` : "",
+      data.purged ? `${data.purged} demande(s) supprimée(s) au terme de la durée de conservation (3 ans).` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     tbody.replaceChildren(
       ...data.inquiries.map((row) => {
         const tr = el("tr", "cursor-pointer hover:bg-(--color-ink-soft)");
@@ -126,6 +131,7 @@ export function initAdminInquiries() {
           el("td", "py-3 pr-4", [row.full_name, row.organisation].filter(Boolean).join(" · ")),
           el("td", "py-3 pr-4 text-(--color-paper)/60", [row.channel, row.entry_point].filter(Boolean).join(" · ")),
           el("td", "py-3 pr-4", STATUS_LABELS[row.status] ?? row.status),
+          el("td", `py-3 pr-4 ${row.notify_status === "sent" ? "text-(--color-paper)/40" : "text-red-300"}`, row.notify_status === "sent" ? "notifiée" : (NOTIFY_LABELS[row.notify_status] ?? row.notify_status)),
         );
         tr.addEventListener("click", () => void openDetail(row.id));
         return tr;

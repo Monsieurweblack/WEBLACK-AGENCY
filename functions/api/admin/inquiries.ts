@@ -35,5 +35,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const { results } = await query.all();
 
   const { results: counts } = await env.DB.prepare(`SELECT status, COUNT(*) AS count FROM business_inquiries GROUP BY status`).all();
-  return json({ ok: true, inquiries: results, counts, purged }, 200);
+  // Demandes dont l'équipe n'a pas (encore) été prévenue : signalées en tête de liste.
+  const unnotified = await env.DB.prepare(`SELECT COUNT(*) AS n FROM business_inquiries WHERE notify_status != 'sent'`).first<{ n: number }>();
+  return json({ ok: true, inquiries: results, counts, purged, unnotified: unnotified?.n ?? 0 }, 200);
 };

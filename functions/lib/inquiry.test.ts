@@ -259,3 +259,29 @@ test("conservation — une demande sans activité depuis plus de trois ans est s
 test("référence — dérivée de l'identifiant, format stable", () => {
   assert.equal(inquiryReference("3f9a21c0-1111-4111-8111-111111111111"), "WBL-3F9A21C0");
 });
+
+test("reprise — notifications en échec relancées à la demande suivante, jusqu'à 5 essais, jamais perdues", async () => {
+  network.resend = "server_error";
+  const env = makeEnv();
+  await post(env, valid());
+  assert.equal(rows(env)[0]!.notify_status, "failed");
+  network.resend = "ok";
+  network.sent = [];
+  await post(env, valid({ submissionId: "88888888-8888-4888-8888-888888888888" }));
+  const all = env.DB.rows<Record<string, unknown>>(`SELECT notify_status FROM business_inquiries`);
+  assert.deepEqual(all.map((r) => r.notify_status), ["sent", "sent"]);
+  assert.equal(network.sent.length, 2);
+
+  // Au-delà de 5 essais : plus de relance automatique, mais toujours signalée.
+  const env2 = makeEnv();
+  network.resend = "server_error";
+  await post(env2, valid());
+  env2.DB.db.prepare(`UPDATE business_inquiries SET notify_attempts = 5`).run();
+  network.resend = "ok";
+  network.sent = [];
+  await post(env2, valid({ submissionId: "99999999-9999-4999-8999-999999999999" }));
+  assert.equal(network.sent.length, 1);
+  const c = await cookie();
+  const listed = (await (await list({ request: req("https://weblack.test/api/admin/inquiries", { cookie: c }), env: env2 as never, params: {} })).json()) as { unnotified: number };
+  assert.equal(listed.unnotified, 1);
+});

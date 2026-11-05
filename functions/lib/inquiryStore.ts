@@ -169,6 +169,28 @@ export async function notifyInquiry(env: InquiryEnv, id: string, { force = false
   return "failed";
 }
 
+export const MAX_NOTIFY_ATTEMPTS = 5;
+
+/**
+ * Reprise automatique : les notifications restées en attente ou en échec
+ * (fournisseur indisponible, configuration ajoutée après coup) sont relancées
+ * à chaque nouvelle demande, quelques-unes à la fois, jusqu'à
+ * MAX_NOTIFY_ATTEMPTS essais. Au-delà, elles restent signalées dans
+ * l'administration (relance manuelle) — jamais oubliées en silence. La
+ * demande, elle, est enregistrée quoi qu'il arrive.
+ */
+export async function retryPendingNotifications(env: InquiryEnv, { limit = 3, exceptId }: { limit?: number; exceptId?: string } = {}): Promise<number> {
+  if (!env.NEWSLETTER_API_KEY || !env.RESEND_FROM) return 0;
+  const { results } = await env.DB.prepare(
+    `SELECT id FROM business_inquiries WHERE notify_status IN ('pending', 'failed', 'not_configured') AND notify_attempts < ? AND id != ? ORDER BY created_at LIMIT ?`,
+  )
+    .bind(MAX_NOTIFY_ATTEMPTS, exceptId ?? "", limit)
+    .all<{ id: string }>();
+  let sent = 0;
+  for (const row of results ?? []) if ((await notifyInquiry(env, row.id)) === "sent") sent++;
+  return sent;
+}
+
 /** Supprime les demandes sans activité depuis la durée de conservation annoncée. Renvoie le nombre supprimé. */
 export async function purgeExpiredInquiries(db: D1Database, now = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - INQUIRY_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();

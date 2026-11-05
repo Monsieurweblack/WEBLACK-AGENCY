@@ -15,7 +15,7 @@ import { json } from "../lib/json.ts";
 import { checkRateLimit } from "../lib/rateLimit.ts";
 import { writesAllowed } from "../lib/environment.ts";
 import { parseInquiry } from "../lib/inquiryValidation.ts";
-import { findBySubmission, insertInquiry, notifyInquiry, type InquiryEnv } from "../lib/inquiryStore.ts";
+import { findBySubmission, insertInquiry, notifyInquiry, retryPendingNotifications, type InquiryEnv } from "../lib/inquiryStore.ts";
 
 interface Env extends InquiryEnv {
   PHOTOS: KVNamespace;
@@ -70,7 +70,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (!stored.duplicate) {
     // Après la réponse si possible : le visiteur n'attend jamais le fournisseur d'e-mail.
-    const notify = notifyInquiry(env, stored.id).catch(() => "failed" as const);
+    // Puis reprise des notifications restées en souffrance (voir inquiryStore.ts).
+    const notify = notifyInquiry(env, stored.id)
+      .catch(() => "failed" as const)
+      .then(() => retryPendingNotifications(env, { exceptId: stored.id }))
+      .catch(() => 0);
     if (context.waitUntil) context.waitUntil(notify);
     else await notify;
   }
