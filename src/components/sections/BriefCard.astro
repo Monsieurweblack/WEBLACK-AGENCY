@@ -1,0 +1,37 @@
+---
+import type { Lang } from "../../i18n/utils";
+import { SHARED, briefPath } from "../../lib/offers";
+
+interface Props {
+  lang: Lang;
+  from: string;
+}
+
+const { lang, from } = Astro.props;
+const COPY = {
+  fr: {
+    eyebrow: "Projet commercial",
+    title: "Talents, Créatif ou Consulting : envoyez un brief.",
+    body: "Votre demande est enregistrée et reçoit une référence de suivi.",
+  },
+  en: {
+    eyebrow: "Business project",
+    title: "Talents, Creative or Consulting: send a brief.",
+    body: "Your request is recorded and receives a tracking reference.",
+  },
+} as const;
+const c = COPY[lang];
+---
+
+{/* Projet commercial : le brief enregistre la demande et donne une référence — le formulaire de contact, lui, ouvre seulement la messagerie. */}
+<a
+  href={briefPath(lang, { from })}
+  data-cta-division="unsure"
+  data-cta-location={from}
+  class="group mt-10 block border border-(--color-gold)/50 p-6 transition-colors hover:border-(--color-gold)"
+>
+  <p class="label-tracked text-(--color-gold)">{c.eyebrow}</p>
+  <p class="font-display mt-3 text-2xl text-(--color-paper)">{c.title}</p>
+  <p class="mt-2 text-sm text-(--color-paper)/60">{c.body}</p>
+  <span class="label-tracked mt-5 inline-block text-(--color-paper) transition-colors group-hover:text-(--color-gold)">{SHARED[lang].briefCta} &rarr;</span>
+</a>

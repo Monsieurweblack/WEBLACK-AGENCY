@@ -58,6 +58,17 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         messagerie de WEBLACK le temps nécessaire à son traitement.
       </p>
 
+      <h3>2.2 bis Brief — demandes commerciales</h3>
+      <p>
+        Le <a href={localizedPath(lang, "/brief")}>brief</a> permet de transmettre une demande de projet à WEBLACK. Il
+        recueille : nom et prénom, adresse e-mail, organisation (facultative), pays, division et prestation concernées,
+        description du projet, échéance et budget indicatifs (facultatifs), ainsi que le canal d'origine de la visite
+        (source de campagne ou site référent, jamais d'identifiant personnel). Ces données sont enregistrées dans la base
+        de données de WEBLACK chez Cloudflare ; l'équipe est prévenue par un e-mail envoyé via Resend. Finalités : étudier
+        la demande, vous répondre, préparer et suivre une éventuelle proposition commerciale. Aucune de ces informations
+        n'est transmise à Google Analytics.
+      </p>
+
       <h3>2.3 Lettre d'information</h3>
       <p>
         Si vous vous inscrivez, votre adresse e-mail est ajoutée à la liste de diffusion gérée par notre prestataire
@@ -133,6 +144,10 @@ const mail = `mailto:${CONTACT_EMAIL}`;
           distinct pour toute conservation dans un vivier de talents ou toute exploitation des photographies au-delà de
           l'examen ; obligation légale ou intérêt légitime pour la défense des droits.
         </li>
+        <li>
+          Brief (demandes commerciales) : mesures précontractuelles prises à votre demande ; intérêt légitime de WEBLACK à
+          suivre ses échanges commerciaux.
+        </li>
         <li>Sécurité du site et prévention des abus : intérêt légitime de WEBLACK à protéger ses services.</li>
       </ul>
 
@@ -192,7 +207,7 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         WEBLACK et dans la limite de leur mission, par :
       </p>
       <ul>
-        <li>Cloudflare : hébergement du site, fonctions serveur, base de données des candidatures, stockage des photographies ;</li>
+        <li>Cloudflare : hébergement du site, fonctions serveur, base de données des candidatures et des demandes commerciales, stockage des photographies ;</li>
         <li>Resend : envoi des e-mails de confirmation et de notification, gestion de la liste de la lettre d'information ;</li>
         <li>Google : archivage des candidatures dans le Google Drive de l'agence ; Google Analytics (uniquement après consentement) ; lecteur YouTube ;</li>
         <li>Sanity : gestion des contenus éditoriaux et diffusion des images du site. Aucune donnée de candidature n'est stockée dans Sanity.</li>
@@ -225,6 +240,10 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         <li>Compteurs anti-abus : une heure au plus. Session d'administration : 12 heures au plus.</li>
         <li>Lettre d'information : jusqu'à la désinscription.</li>
         <li>Messages reçus via le formulaire de contact : le temps nécessaire au traitement de la demande.</li>
+        <li>
+          Demandes reçues via le brief : trois ans au plus après le dernier échange, suppression automatique au-delà ;
+          l'équipe peut supprimer une demande plus tôt, notamment à votre demande.
+        </li>
       </ul>
 
       <h2>8. Sécurité</h2>

@@ -56,6 +56,16 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         needed to handle it.
       </p>
 
+      <h3>2.2 bis Brief — business requests</h3>
+      <p>
+        The <a href={localizedPath(lang, "/brief")}>brief</a> lets you send a project request to WEBLACK. It collects:
+        full name, email address, organisation (optional), country, the division and service concerned, the project
+        description, an indicative timeline and budget (optional), and the visit's origin channel (campaign source or
+        referring site, never a personal identifier). This data is stored in WEBLACK's database at Cloudflare; the team
+        is alerted by an email sent via Resend. Purposes: reviewing the request, replying to you, preparing and following
+        up a possible commercial proposal. None of this information is sent to Google Analytics.
+      </p>
+
       <h3>2.3 Newsletter</h3>
       <p>
         If you subscribe, your email address is added to the mailing list managed by our email provider Resend, based on
@@ -130,6 +140,10 @@ const mail = `mailto:${CONTACT_EMAIL}`;
           for any retention in a talent pool or any use of the photographs beyond the review; legal obligation or
           legitimate interest for the defence of rights.
         </li>
+        <li>
+          Brief (business requests): pre-contractual steps taken at your request; WEBLACK's legitimate interest in
+          following up its business exchanges.
+        </li>
         <li>Website security and abuse prevention: WEBLACK's legitimate interest in protecting its services.</li>
       </ul>
 
@@ -185,7 +199,7 @@ const mail = `mailto:${CONTACT_EMAIL}`;
       <h2>5. Recipients and service providers</h2>
       <p>Data is accessible only to authorised WEBLACK staff. It is processed on WEBLACK's behalf, within the scope of their service, by:</p>
       <ul>
-        <li>Cloudflare: website hosting, server functions, application database, photograph storage;</li>
+        <li>Cloudflare: website hosting, server functions, application and business-request database, photograph storage;</li>
         <li>Resend: sending confirmation and notification emails, managing the newsletter list;</li>
         <li>Google: archiving applications in the agency's Google Drive; Google Analytics (only after consent); YouTube player;</li>
         <li>Sanity: editorial content management and delivery of website images. No application data is stored in Sanity.</li>
@@ -211,6 +225,10 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         <li>Abuse-prevention counters: one hour at most. Administration session: 12 hours at most.</li>
         <li>Newsletter: until you unsubscribe.</li>
         <li>Messages received through the contact form: as long as needed to handle the request.</li>
+        <li>
+          Requests received through the brief: up to three years after the last exchange, then deleted automatically;
+          the team may delete a request earlier, including at your request.
+        </li>
       </ul>
 
       <h2>8. Security</h2>

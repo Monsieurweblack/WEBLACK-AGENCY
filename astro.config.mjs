@@ -8,7 +8,7 @@ import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 // https://astro.build/config
-const NOINDEX_PATHS = ['/404/', '/en/404/', '/politique-de-confidentialite/', '/en/politique-de-confidentialite/', '/admin/candidatures/'];
+const NOINDEX_PATHS = ['/404/', '/en/404/', '/politique-de-confidentialite/', '/en/politique-de-confidentialite/', '/admin/candidatures/', '/admin/demandes/'];
 
 // astro.config.mjs runs outside Vite, so `import.meta.env` (populated by
 // Vite for the rest of the app) isn't available here — same constraint

@@ -1,0 +1,220 @@
+---
+import RemoteImage from "../media/RemoteImage.astro";
+import CardWork from "../cards/CardWork.astro";
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import { getEntriesByLang, sortByDateDesc } from "../../lib/content";
+import { OFFERS, SHARED, PROOF_SLUGS, briefPath } from "../../lib/offers";
+import { SERVICES_BY_DIVISION } from "../../../functions/lib/inquiryOptions.ts";
+
+interface Props {
+  lang: Lang;
+  division: "creative" | "consulting";
+}
+
+const { lang, division } = Astro.props;
+const t = useTranslations(lang);
+const k = (key: string) => t(key as UiKey);
+const offer = OFFERS[lang][division];
+const shared = SHARED[lang];
+
+/**
+ * Page d'offre commerciale d'une division — une seule structure pour
+ * Créatif et Consulting, lue de haut en bas comme une décision d'achat :
+ * ce que fait la division, ce qu'elle propose, pour qui, ce que cela
+ * apporte, la preuve sur le terrain, comment avancer, et un seul geste
+ * final (le brief, division présélectionnée).
+ *
+ * Les prestations restent EXACTEMENT celles déjà publiées
+ * (creative.capability.* / consulting.offer.*) ; chacune ouvre le brief
+ * avec sa prestation présélectionnée.
+ */
+const prefix = division === "creative" ? "creative.capability" : "consulting.offer";
+const services = SERVICES_BY_DIVISION[division].filter((s) => s !== "other");
+const hero =
+  division === "creative"
+    ? { src: "/photos/pole-creative-direction-hero.jpg", width: 1619, height: 2400 }
+    : { src: "/photos/pole-studio-hero.jpg", width: 1732, height: 2400 };
+
+const work = sortByDateDesc(await getEntriesByLang("work", lang));
+const proof = PROOF_SLUGS[division]
+  .map((fragment) => work.find((entry) => entry.data.slug.includes(fragment)))
+  .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+const brief = briefPath(lang, { division, from: division });
+const workHref = localizedPath(lang, "/selected-work");
+const contactHref = localizedPath(lang, "/contact");
+const otherDivision = division === "creative" ? "consulting" : "creative";
+---
+
+<article class="bg-(--color-ink)">
+  <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
+    <div class="mx-auto max-w-(--container-content)" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{offer.name}</p>
+      <h1 class="font-display mt-4 max-w-3xl text-4xl text-(--color-paper) sm:text-5xl">
+        {k(`${division}.hero.title`)}
+      </h1>
+      <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{k(`${division}.hero.lead`)}</p>
+      <div class="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+        <a
+          data-press
+          href={brief}
+          data-cta-division={division}
+          data-cta-location="hero"
+          class="label-tracked inline-flex min-h-12 items-center gap-2 bg-(--color-gold) px-7 py-3.5 text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+        >
+          {shared.briefCta} <span aria-hidden="true">&rarr;</span>
+        </a>
+        <a href="#realisations" class="label-tracked text-(--color-paper)/70 transition-colors hover:text-(--color-gold)">
+          {shared.workCta} <span aria-hidden="true">&darr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto aspect-[21/9] max-w-(--container-content) overflow-hidden bg-(--color-ink-soft) px-6 md:px-10">
+    <RemoteImage src={hero.src} alt="" width={hero.width} height={hero.height} loading="eager" fetchpriority="high" class="h-full w-full" />
+  </div>
+
+  {/* Proposition de valeur */}
+  <section class="px-6 pt-24 md:px-10 md:pt-32">
+    <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-8 md:grid-cols-[1fr_1.3fr] md:gap-16" data-reveal>
+      <h2 class="font-display text-3xl text-(--color-paper) sm:text-4xl">{offer.valueTitle}</h2>
+      <p class="max-w-2xl text-lg text-(--color-paper)/75">{offer.value}</p>
+    </div>
+  </section>
+
+  {/* Prestations : chacune ouvre le brief, prestation présélectionnée */}
+  <section class="py-20 md:py-28">
+    <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+      <p class="label-tracked label-tracked-dot text-(--color-gold)" data-reveal>{shared.servicesEyebrow}</p>
+      <div class="mt-10 grid grid-cols-1 border-t border-(--color-line) sm:grid-cols-2 lg:grid-cols-4">
+        {
+          services.map((service, i) => (
+            <a
+              href={briefPath(lang, { division, service, from: division })}
+              data-cta-division={division}
+              data-cta-location="service"
+              class="service-cell group flex flex-col border-b border-(--color-line) px-1 py-10 sm:border-r sm:px-6 sm:[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0"
+              data-reveal
+              data-reveal-delay={String((i % 4) * 0.06)}
+            >
+              <h3 class="font-display text-xl text-(--color-paper) transition-colors group-hover:text-(--color-gold)">{k(`${prefix}.${service}.name`)}</h3>
+              <p class="mt-2 text-sm text-(--color-paper)/60">{k(`${prefix}.${service}.desc`)}</p>
+              <span class="label-tracked mt-auto pt-6 text-(--color-paper)/40 transition-colors group-hover:text-(--color-gold)">
+                {shared.briefCta} <span aria-hidden="true">&rarr;</span>
+              </span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  {/* Pour qui · ce que vous obtenez */}
+  <section class="bg-(--color-paper) py-24 md:py-32">
+    <div class="on-light-panel mx-auto grid max-w-(--container-content) grid-cols-1 gap-16 px-6 md:px-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <div data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{offer.audiencesTitle}</p>
+        <ul class="mt-8 border-t border-(--color-ink)/10">
+          {offer.audiences.map((audience) => <li class="font-display border-b border-(--color-ink)/10 py-5 text-2xl text-(--color-ink)">{audience}</li>)}
+        </ul>
+      </div>
+      <div data-reveal data-reveal-delay="0.1">
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{offer.benefitsTitle}</p>
+        <div class="mt-8 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8">
+          {
+            offer.benefits.map((benefit) => (
+              <div class="border-t border-(--color-ink)/20 pt-6">
+                <h3 class="font-display text-xl text-(--color-ink)">{benefit.title}</h3>
+                <p class="mt-3 text-sm text-(--color-ink)/70">{benefit.body}</p>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* Preuve : les projets réels rattachés à cette division */}
+  {
+    proof.length > 0 && (
+      <section id="realisations" class="scroll-mt-24 py-24 md:py-32">
+        <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+          <div class="flex flex-wrap items-end justify-between gap-6" data-reveal>
+            <div>
+              <p class="label-tracked label-tracked-dot text-(--color-gold)">{shared.proofEyebrow}</p>
+              <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{shared.proofTitle}</h2>
+            </div>
+            <a href={workHref} class="label-tracked shrink-0 text-(--color-paper)/60 transition-colors hover:text-(--color-gold)">
+              {shared.workCta} &rarr;
+            </a>
+          </div>
+          <div class="mt-14 grid grid-cols-1 gap-8 sm:grid-cols-2">
+            {proof.map((item, i) => <CardWork lang={lang} work={item} index={i} />)}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {/* Comment avancer — la séquence réelle du brief, reflétée dans le suivi commercial */}
+  <section class="border-t border-(--color-line) py-24 md:py-32">
+    <div class="mx-auto max-w-(--container-content) px-6 md:px-10">
+      <div class="max-w-2xl" data-reveal>
+        <p class="label-tracked label-tracked-dot text-(--color-gold)">{shared.processEyebrow}</p>
+        <h2 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{shared.processTitle}</h2>
+      </div>
+      <ol class="mt-14 grid grid-cols-1 gap-10 border-t border-(--color-line) pt-10 md:grid-cols-3">
+        {
+          shared.process.map((step, i) => (
+            <li data-reveal data-reveal-delay={String(i * 0.08)}>
+              <span class="label-tracked text-(--color-paper)/50">0{i + 1}</span>
+              <h3 class="font-display mt-4 text-2xl text-(--color-paper)">{step.title}</h3>
+              <p class="mt-2 max-w-sm text-(--color-paper)/65">{step.body}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  {/* Appel final */}
+  <section class="pb-24 md:pb-32">
+    <div
+      class="mx-auto flex max-w-(--container-content) flex-col items-start gap-8 border-t border-(--color-line) px-6 pt-16 md:flex-row md:items-end md:justify-between md:px-10"
+      data-reveal
+    >
+      <div>
+        <h2 class="font-display max-w-2xl text-4xl text-(--color-paper) sm:text-5xl">{offer.ctaTitle}</h2>
+        <p class="mt-5 max-w-lg text-(--color-paper)/70">{offer.ctaBody}</p>
+        <p class="mt-6 text-sm text-(--color-paper)/50">
+          <a href={localizedPath(lang, `/${otherDivision}`)} class="underline underline-offset-4 transition-colors hover:text-(--color-gold)">
+            {OFFERS[lang][otherDivision].name}
+          </a>
+          <span aria-hidden="true"> · </span>
+          <a href={localizedPath(lang, "/talent")} class="underline underline-offset-4 transition-colors hover:text-(--color-gold)">
+            {OFFERS[lang].talent.name}
+          </a>
+          <span aria-hidden="true"> · </span>
+          <a href={contactHref} class="underline underline-offset-4 transition-colors hover:text-(--color-gold)">{t("nav.contact")}</a>
+        </p>
+      </div>
+      <a
+        data-press
+        href={brief}
+        data-cta-division={division}
+        data-cta-location="final"
+        class="inline-flex min-h-12 shrink-0 items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright)"
+      >
+        {offer.cta}
+      </a>
+    </div>
+  </section>
+</article>
+
+<script>
+  import { initScrollChoreography } from "../../scripts/gsap/scroll-choreography";
+  import { initServiceCtaTracking } from "../../scripts/analytics";
+  initScrollChoreography();
+  initServiceCtaTracking();
+</script>

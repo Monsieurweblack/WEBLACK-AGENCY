@@ -4,6 +4,7 @@ import CardTalent from "../cards/CardTalent.astro";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 import { getEntriesByLang, sortByDateDesc, type TalentEntry } from "../../lib/content";
 import { TALENT_HERO } from "../../lib/hero-images";
+import { OFFERS, SHARED, TALENT_SERVICES, TALENT_TERMS, TALENT_PRO_LINK, briefPath } from "../../lib/offers";
 
 interface Props {
   lang: Lang;
@@ -59,6 +60,18 @@ const contactHref = localizedPath(lang, "/contact");
 const capabilities = ["development", "representation", "direction", "connection"] as const;
 const journeySteps = [1, 2, 3, 4, 5] as const;
 const otherProfiles = ["brand", "media", "creative"] as const;
+
+/**
+ * Growth Sprint 1 — deux parcours DISTINCTS : la candidature individuelle
+ * d'un talent (formulaire existant, inchangé) et la demande de
+ * collaboration d'un professionnel (promoteur de défilé, marque, agence,
+ * organisateur), qui passe par le brief, division Talent présélectionnée.
+ * Jamais de financement promis, jamais de représentation garantie
+ * (TALENT_TERMS, affiché à côté de l'appel).
+ */
+const offer = OFFERS[lang].talent;
+const proServices = ["connection", "event_partnership", "direction"] as const;
+const collaborationHref = briefPath(lang, { division: "talent", from: "talent" });
 ---
 
 <article class="bg-(--color-ink)">
@@ -99,6 +112,12 @@ const otherProfiles = ["brand", "media", "creative"] as const;
           class="label-tracked text-(--color-paper)/70 transition-colors hover:text-(--color-gold)"
         >
           {t("talent.hero.applyLink")} &rarr;
+        </a>
+        <a
+          href="#collaborations"
+          class="label-tracked text-(--color-paper)/70 transition-colors hover:text-(--color-gold)"
+        >
+          {TALENT_PRO_LINK[lang]} &rarr;
         </a>
       </div>
       <p class="mt-8 text-xs text-(--color-paper)/50">
@@ -283,6 +302,73 @@ const otherProfiles = ["brand", "media", "creative"] as const;
     </div>
   </section>
 
+  {/* 6b — COLLABORATIONS PROFESSIONNELLES (Growth Sprint 1). Le parcours
+      des promoteurs, marques, agences et organisateurs — séparé de la
+      candidature individuelle, jamais confondu avec elle. */}
+  <section id="collaborations" class="scroll-mt-24 bg-(--color-paper) py-24 md:py-32">
+    <div class="on-light-panel mx-auto max-w-(--container-content) px-6 md:px-10">
+      <div class="grid grid-cols-1 gap-8 md:grid-cols-[1fr_1.2fr] md:gap-16" data-reveal>
+        <div>
+          <p class="label-tracked label-tracked-dot text-(--color-gold)">{offer.name} · {offer.audiencesTitle}</p>
+          <h2 class="font-display mt-4 text-4xl text-(--color-ink) sm:text-5xl">{offer.valueTitle}</h2>
+        </div>
+        <div>
+          <p class="text-lg text-(--color-ink)/75">{offer.value}</p>
+          <ul class="mt-8 flex flex-wrap gap-2">
+            {offer.audiences.map((audience) => <li class="border border-(--color-ink)/20 px-4 py-2 text-sm text-(--color-ink)">{audience}</li>)}
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-16 grid grid-cols-1 border-t border-(--color-ink)/15 md:grid-cols-3">
+        {
+          proServices.map((service, i) => (
+            <a
+              href={briefPath(lang, { division: "talent", service, from: "talent" })}
+              data-cta-division="talent"
+              data-cta-location="service"
+              class="group flex flex-col border-b border-(--color-ink)/15 py-10 md:border-r md:px-6 md:first:pl-0 md:last:border-r-0"
+              data-reveal
+              data-reveal-delay={String(i * 0.06)}
+            >
+              <h3 class="font-display text-2xl text-(--color-ink) transition-colors group-hover:text-(--color-gold)">{TALENT_SERVICES[lang][service]!.name}</h3>
+              <p class="mt-3 text-(--color-ink)/70">{TALENT_SERVICES[lang][service]!.desc}</p>
+              <span class="label-tracked mt-auto pt-6 text-(--color-ink)/50 transition-colors group-hover:text-(--color-gold)">{SHARED[lang].briefCta} &rarr;</span>
+            </a>
+          ))
+        }
+      </div>
+
+      <div class="mt-14 grid grid-cols-1 gap-10 md:grid-cols-3" data-reveal>
+        {
+          offer.benefits.map((benefit) => (
+            <div>
+              <h3 class="font-display text-xl text-(--color-ink)">{benefit.title}</h3>
+              <p class="mt-2 text-sm text-(--color-ink)/70">{benefit.body}</p>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="mt-16 flex flex-col items-start gap-8 border-t border-(--color-ink)/15 pt-12 md:flex-row md:items-end md:justify-between" data-reveal>
+        <div class="max-w-xl">
+          <h3 class="font-display text-3xl text-(--color-ink)">{offer.ctaTitle}</h3>
+          <p class="mt-3 text-(--color-ink)/70">{offer.ctaBody}</p>
+          <p class="mt-5 text-sm text-(--color-ink)/60">{TALENT_TERMS[lang]}</p>
+        </div>
+        <a
+          data-press
+          href={collaborationHref}
+          data-cta-division="talent"
+          data-cta-location="final"
+          class="label-tracked inline-flex min-h-12 shrink-0 items-center gap-2 bg-(--color-ink) px-7 py-3.5 text-(--color-paper) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-ink-soft)"
+        >
+          {offer.cta} &rarr;
+        </a>
+      </div>
+    </div>
+  </section>
+
   {/* 7 — CTA. Deux chemins, pas un seul bouton générique : un talent qui
       postule (le formulaire dédié déjà existant, TalentApplyForm — jamais
       un second), et une marque/média/créatif qui rejoint directement son
@@ -313,6 +399,14 @@ const otherProfiles = ["brand", "media", "creative"] as const;
         <div class="border-t border-(--color-line) pt-12 md:border-t-0 md:border-l md:pl-12 md:pt-0">
           <h3 class="font-display text-2xl text-(--color-paper)">{t("talent.finalCta.other.title")}</h3>
           <p class="mt-3 max-w-sm text-(--color-paper)/70">{t("talent.finalCta.other.body")}</p>
+          <a
+            href={collaborationHref}
+            data-cta-division="talent"
+            data-cta-location="footer_cta"
+            class="label-tracked mt-6 inline-flex items-center gap-2 border border-(--color-gold) px-7 py-3.5 text-(--color-gold) transition-colors duration-300 hover:bg-(--color-gold) hover:text-(--color-on-gold)"
+          >
+            {offer.cta} &rarr;
+          </a>
           <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
             {otherProfiles.map((profile) => (
               <a
@@ -332,5 +426,7 @@ const otherProfiles = ["brand", "media", "creative"] as const;
 
 <script>
   import { initTalentFilter } from "../../scripts/filters/talent-filter";
+  import { initServiceCtaTracking } from "../../scripts/analytics";
   initTalentFilter();
+  initServiceCtaTracking();
 </script>

@@ -11,6 +11,12 @@ const { lang, class: className } = Astro.props;
 const t = useTranslations(lang);
 
 const contactHref = localizedPath(lang, "/contact");
+// Growth Sprint 1 : une marque ou un partenaire a un projet commercial — il
+// rejoint le brief (demande enregistrée, référence de suivi) plutôt que le
+// formulaire mailto. Les quatre autres profils gardent /contact.
+const BRIEF_SEGMENTS = new Set(["brand", "partner"]);
+const hrefFor = (segment: string) =>
+  BRIEF_SEGMENTS.has(segment) ? localizedPath(lang, "/brief/?from=header") : `${contactHref}?profile=${segment}`;
 const uid = `${lang}-${Math.random().toString(36).slice(2, 8)}`;
 ---
 
@@ -75,7 +81,7 @@ const uid = `${lang}-${Math.random().toString(36).slice(2, 8)}`;
     {
       segments.map((segment) => (
         <a
-          href={`${contactHref}?profile=${segment}`}
+          href={hrefFor(segment)}
           role="menuitem"
           class="block px-4 py-2.5 text-sm text-(--color-paper) transition-colors duration-150 hover:bg-(--color-ink-soft) hover:text-(--color-gold)"
         >

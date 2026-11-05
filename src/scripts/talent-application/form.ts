@@ -17,6 +17,32 @@
  * la validation qui fait foi reste celle du serveur (functions/lib/validation.ts),
  * dont les erreurs sont reprises champ par champ.
  */
+/*
+ * Mesure GA4 de la candidature — mêmes règles que scripts/analytics.ts
+ * (consentement enregistré obligatoire, aucune donnée personnelle, une
+ * émission par page vue ou par référence), recopiées ici À DESSEIN : tout
+ * import, même dynamique, ajoute un fragment partagé à la chaîne de scripts
+ * critique de cette page — ce qui avait fait reculer le FCP en PR2.
+ * Garder les deux implémentations alignées.
+ */
+const trackedOnce = new Set<string>();
+function trackEvent(name: "talent_application_start" | "talent_application_success", params: { division: "talent" }, dedupeKey: string) {
+  const key = `${name}:${dedupeKey}`;
+  if (trackedOnce.has(key)) return;
+  trackedOnce.add(key);
+  try {
+    if (name.endsWith("_success")) {
+      if (sessionStorage.getItem(`weblack-ev:${key}`)) return;
+      sessionStorage.setItem(`weblack-ev:${key}`, "1");
+    }
+    const consent = JSON.parse(localStorage.getItem("weblack-consent") ?? "null") as { analytics?: unknown } | null;
+    const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+    if (consent?.analytics !== true || typeof gtag !== "function") return;
+    gtag("event", name, { division: params.division, language: document.documentElement.lang || undefined });
+  } catch {
+    /* stockage illisible : pas de consentement établi, rien n'est émis */
+  }
+}
 
 /*
  * Courbe signature lue sur --ease-signature (global.css, même valeur que
@@ -960,6 +986,8 @@ export function initTalentApplicationForm() {
 
   // Une correction efface son message d'erreur au fil de la saisie.
   form.addEventListener("input", (event) => {
+    // Premier geste réel dans le formulaire : une fois par page vue, sans donnée personnelle.
+    if (!dirty) trackEvent("talent_application_start", { division: "talent" }, "page");
     dirty = true;
     const target = event.target as FieldControl;
     if (target.type === "search") return; // filtrer les langues ne modifie pas le dossier
@@ -968,6 +996,7 @@ export function initTalentApplicationForm() {
     if (name) clearError(name);
   });
   form.addEventListener("change", (event) => {
+    if (!dirty) trackEvent("talent_application_start", { division: "talent" }, "page");
     dirty = true;
     const target = event.target as HTMLInputElement;
     if (target.type !== "search") invalidate(stepOf(target));
@@ -1110,6 +1139,8 @@ export function initTalentApplicationForm() {
       panel.hidden = false;
       q<HTMLElement>("[data-success-message]")!.textContent = config.confirmationMessage || i18n.successDefault;
       q<HTMLElement>("[data-success-reference]")!.textContent = data.reference;
+      // Seulement ici : réponse serveur positive, référence comprise ; une fois par dossier.
+      trackEvent("talent_application_success", { division: "talent" }, data.reference);
       // Le navigateur ne dit « e-mail envoyé » que si le fournisseur l'a accepté.
       q<HTMLElement>("[data-success-email]")!.textContent =
         data.confirmationEmail === "sent" ? i18n.successEmailSent : i18n.successEmailPending;

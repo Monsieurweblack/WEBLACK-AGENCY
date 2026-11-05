@@ -1,0 +1,330 @@
+---
+import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
+import { intlTagFor } from "../../i18n/locales";
+import { CONTACT_EMAIL } from "../../lib/contact";
+import { INQUIRY_COPY } from "../../lib/inquiry-copy";
+import { SHARED, TALENT_SERVICES } from "../../lib/offers";
+import { COUNTRIES } from "../../../functions/lib/talentOptions.ts";
+import { BUDGETS, DIVISIONS, INQUIRY_LIMITS, SERVICES_BY_DIVISION, TIMELINES } from "../../../functions/lib/inquiryOptions.ts";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const c = INQUIRY_COPY[lang];
+
+/**
+ * Brief WEBLACK — le parcours unifié de demande commerciale.
+ *
+ * Une page, trois temps (besoin, projet, vous), uniquement les champs utiles
+ * à la qualification. Toutes les listes viennent de
+ * functions/lib/inquiryOptions.ts, la même source que la validation serveur.
+ * La prestation dépend de la division : le script reconstruit la liste à
+ * partir de data-services (Safari iOS ignore `hidden` sur <option>).
+ *
+ * « Demande reçue » n'apparaît qu'après la réponse positive du serveur,
+ * référence comprise (scripts/forms/business-inquiry.ts).
+ */
+const serviceLabel = (division: string, service: string): string => {
+  if (service === "other") return SHARED[lang].otherService;
+  if (division === "talent") return TALENT_SERVICES[lang][service]?.name ?? service;
+  const prefix = division === "creative" ? "creative.capability" : "consulting.offer";
+  return t(`${prefix}.${service}.name` as UiKey);
+};
+const servicesMap = Object.fromEntries(
+  DIVISIONS.map((division) => [division, SERVICES_BY_DIVISION[division].map((value) => ({ value, label: serviceLabel(division, value) }))]),
+);
+
+const collator = new Intl.Collator(intlTagFor(lang));
+const regionNames = new Intl.DisplayNames([intlTagFor(lang)], { type: "region" });
+const countries = COUNTRIES.map((code) => ({ code, name: regionNames.of(code) ?? code })).sort((a, b) => collator.compare(a.name, b.name));
+
+const clientConfig = {
+  lang,
+  errors: c.errors,
+  errorSummary: c.errorSummary,
+  submit: c.submit,
+  submitting: c.submitting,
+  retry: c.retry,
+  descriptionMin: INQUIRY_LIMITS.descriptionMin,
+};
+
+const label = "label-tracked text-(--color-paper)/70";
+const help = "mt-2 text-sm text-(--color-paper)/50";
+const optionalTag = `<span class="normal-case tracking-normal text-(--color-paper)/55">· ${c.optional}</span>`;
+const requiredTag = `<span class="text-(--color-gold)" aria-hidden="true">*</span>`;
+---
+
+<section class="bg-(--color-ink) px-6 pb-24 pt-36 md:px-10 md:pb-32 md:pt-40">
+  <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+    <aside class="lg:sticky lg:top-32 lg:self-start" data-reveal>
+      <p class="label-tracked label-tracked-dot text-(--color-gold)">{c.eyebrow}</p>
+      <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{c.title}</h1>
+      <p class="mt-6 max-w-md text-lg text-(--color-paper)/70">{c.lead}</p>
+      <ol class="mt-10 hidden border-t border-(--color-line) sm:block">
+        {
+          c.asideSteps.map((step, i) => (
+            <li class="flex items-baseline gap-5 border-b border-(--color-line) py-4 text-(--color-paper)/75">
+              <span class="label-tracked text-(--color-gold)">0{i + 1}</span>
+              {step}
+            </li>
+          ))
+        }
+      </ol>
+      <div class="mt-10 space-y-4 text-sm text-(--color-paper)/60">
+        <p>
+          {c.talentApplyNote}{" "}
+          <a href={localizedPath(lang, "/talent/candidature")} class="text-(--color-paper) underline underline-offset-4 transition-colors hover:text-(--color-gold)">{c.talentApplyLink}</a>
+        </p>
+        <p>
+          {c.emailFallback}{" "}
+          <a href={`mailto:${CONTACT_EMAIL}`} class="text-(--color-paper) underline underline-offset-4 transition-colors hover:text-(--color-gold)">{CONTACT_EMAIL}</a>
+        </p>
+      </div>
+    </aside>
+
+    <div data-reveal data-reveal-delay="0.1">
+      <p hidden data-inquiry-offline class="notice mb-10" role="status">{c.offline}{" "}<a href={`mailto:${CONTACT_EMAIL}`} class="underline underline-offset-4">{CONTACT_EMAIL}</a></p>
+
+      <form id="inquiry-form" novalidate data-config={JSON.stringify(clientConfig)} data-services={JSON.stringify(servicesMap)} class="space-y-16">
+        <div hidden data-error-summary class="border border-red-400/50 p-5 text-sm text-(--color-paper)" role="alert" tabindex="-1">
+          <p class="font-semibold">{c.errorSummary}</p>
+          <ul class="mt-3 list-disc space-y-1 pl-5" data-error-list></ul>
+        </div>
+
+        <fieldset class="space-y-8">
+          <legend class="font-display text-2xl text-(--color-paper)"><span class="label-tracked mr-4 align-middle text-(--color-gold)">01</span>{c.section1}</legend>
+
+          <div role="radiogroup" aria-labelledby="division-label" aria-describedby="division-error" data-field="division">
+            <p id="division-label" class={label}>{c.division} <Fragment set:html={requiredTag} /></p>
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {
+                DIVISIONS.map((division) => (
+                  <label class="choice">
+                    <input type="radio" name="division" value={division} class="choice-input" required />
+                    <span class="choice-mark" aria-hidden="true" />
+                    <span>
+                      <span class="block text-(--color-paper)">{c.divisions[division]}</span>
+                      <span class="mt-1 block text-sm text-(--color-paper)/55">{c.divisionHints[division]}</span>
+                    </span>
+                  </label>
+                ))
+              }
+            </div>
+            <p id="division-error" class="field-error" data-error-for="division" hidden></p>
+          </div>
+
+          <div data-field="service">
+            <label for="service" class={label}>{c.service} <Fragment set:html={requiredTag} /></label>
+            <select id="service" name="service" required disabled class="form-input form-select" aria-describedby="service-error">
+              <option value="">{c.servicePlaceholder}</option>
+            </select>
+            <p id="service-error" class="field-error" data-error-for="service" hidden></p>
+          </div>
+        </fieldset>
+
+        <fieldset class="space-y-8">
+          <legend class="font-display text-2xl text-(--color-paper)"><span class="label-tracked mr-4 align-middle text-(--color-gold)">02</span>{c.section2}</legend>
+
+          <div data-field="description">
+            <label for="description" class={label}>{c.description} <Fragment set:html={requiredTag} /></label>
+            <textarea id="description" name="description" required rows="6" minlength={INQUIRY_LIMITS.descriptionMin} maxlength={INQUIRY_LIMITS.description} class="form-input resize-y" aria-describedby="description-help description-error"></textarea>
+            <div class="flex items-start justify-between gap-4">
+              <p id="description-help" class={help}>{c.descriptionHelp}</p>
+              <p class="mt-2 shrink-0 text-sm tabular-nums text-(--color-paper)/40" data-description-count aria-hidden="true">0 / {INQUIRY_LIMITS.description}</p>
+            </div>
+            <p id="description-error" class="field-error" data-error-for="description" hidden></p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div data-field="timeline">
+              <label for="timeline" class={label}>{c.timeline} <Fragment set:html={optionalTag} /></label>
+              <select id="timeline" name="timeline" class="form-input form-select">
+                <option value="">{c.selectPlaceholder}</option>
+                {TIMELINES.map((value) => <option value={value}>{c.timelines[value]}</option>)}
+              </select>
+            </div>
+            <div data-field="budget">
+              <label for="budget" class={label}>{c.budget} <Fragment set:html={optionalTag} /></label>
+              <select id="budget" name="budget" class="form-input form-select" aria-describedby="budget-help">
+                <option value="">{c.selectPlaceholder}</option>
+                {BUDGETS.map((value) => <option value={value}>{c.budgets[value]}</option>)}
+              </select>
+              <p id="budget-help" class={help}>{c.budgetHelp}</p>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="space-y-8">
+          <legend class="font-display text-2xl text-(--color-paper)"><span class="label-tracked mr-4 align-middle text-(--color-gold)">03</span>{c.section3}</legend>
+
+          <div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div data-field="fullName">
+              <label for="fullName" class={label}>{c.fullName} <Fragment set:html={requiredTag} /></label>
+              <input id="fullName" name="fullName" type="text" required maxlength={INQUIRY_LIMITS.name} autocomplete="name" class="form-input" aria-describedby="fullName-error" />
+              <p id="fullName-error" class="field-error" data-error-for="fullName" hidden></p>
+            </div>
+            <div data-field="email">
+              <label for="email" class={label}>{c.email} <Fragment set:html={requiredTag} /></label>
+              <input id="email" name="email" type="email" required maxlength={INQUIRY_LIMITS.email} autocomplete="email" inputmode="email" class="form-input" aria-describedby="email-help email-error" />
+              <p id="email-help" class={help}>{c.emailHelp}</p>
+              <p id="email-error" class="field-error" data-error-for="email" hidden></p>
+            </div>
+            <div data-field="organisation">
+              <label for="organisation" class={label}>{c.organisation} <Fragment set:html={optionalTag} /></label>
+              <input id="organisation" name="organisation" type="text" maxlength={INQUIRY_LIMITS.organisation} autocomplete="organization" class="form-input" aria-describedby="organisation-help" />
+              <p id="organisation-help" class={help}>{c.organisationHelp}</p>
+            </div>
+            <div data-field="country">
+              <label for="country" class={label}>{c.country} <Fragment set:html={requiredTag} /></label>
+              <select id="country" name="country" required autocomplete="country" class="form-input form-select" aria-describedby="country-error">
+                <option value="">{c.countryPlaceholder}</option>
+                {countries.map((country) => <option value={country.code}>{country.name}</option>)}
+              </select>
+              <p id="country-error" class="field-error" data-error-for="country" hidden></p>
+            </div>
+          </div>
+
+          {/* Leurre anti-robot : hors écran, jamais vu ni atteint au clavier. */}
+          <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+            <label for="website">Website</label>
+            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+        </fieldset>
+
+        <div class="space-y-6 border-t border-(--color-line) pt-10">
+          <p class="max-w-xl text-sm text-(--color-paper)/60">
+            {c.privacy}{" "}
+            <a href={localizedPath(lang, "/politique-de-confidentialite")} class="text-(--color-paper)/80 underline underline-offset-4 hover:text-(--color-gold)">{c.privacyLink}</a>
+          </p>
+          <div class="flex flex-wrap items-center gap-6">
+            <button
+              type="submit"
+              data-press
+              data-inquiry-submit
+              class="inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-4 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-(--color-gold-bright) disabled:cursor-wait disabled:opacity-60"
+            >
+              {c.submit}
+            </button>
+          </div>
+          <p data-inquiry-status role="status" aria-live="polite" class="min-h-[1.5em] max-w-xl text-sm text-red-300"></p>
+        </div>
+      </form>
+
+      <div hidden data-inquiry-success class="inquiry-success" tabindex="-1">
+        <svg class="h-16 w-16 text-(--color-gold)" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" />
+          <path d="M20 33l8 8 16-18" />
+        </svg>
+        <h2 class="font-display mt-8 text-4xl text-(--color-paper) sm:text-5xl">{c.successTitle}</h2>
+        <p class="mt-5 max-w-xl text-lg text-(--color-paper)/80">{c.successBody}</p>
+        <div class="mt-10 inline-block border border-(--color-gold)/50 px-6 py-5">
+          <p class="label-tracked text-(--color-paper)/60">{c.successReference}</p>
+          <p class="font-display mt-2 text-3xl tracking-wide text-(--color-gold)" data-inquiry-reference></p>
+        </div>
+        <p class="mt-6 max-w-xl text-sm text-(--color-paper)/65">{c.successKeep}</p>
+        <div class="mt-10 flex flex-wrap gap-x-8 gap-y-4">
+          <a href={localizedPath(lang, "/selected-work")} class="label-tracked text-(--color-paper) transition-colors hover:text-(--color-gold)">{c.successWork} &rarr;</a>
+          <a href={localizedPath(lang, "/")} class="label-tracked text-(--color-paper)/60 transition-colors hover:text-(--color-gold)">{c.successBack}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .notice {
+    max-width: 42rem;
+    border-left: 1px solid var(--color-gold);
+    padding-inline-start: 1.25rem;
+    color: color-mix(in srgb, var(--color-paper) 80%, transparent);
+  }
+
+  .form-select {
+    appearance: none;
+    cursor: pointer;
+    padding-inline-end: 2rem;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 12px) 55%,
+      calc(100% - 7px) 55%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+  }
+  .form-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  /* Options reconstruites par le script : hors portée du style local, d'où :global. */
+  .form-select :global(option) {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  .choice {
+    position: relative;
+    display: flex;
+    min-height: 3.25rem;
+    cursor: pointer;
+    align-items: flex-start;
+    gap: 0.85rem;
+    border: 1px solid var(--color-line);
+    padding: 1rem 1.1rem;
+    transition:
+      border-color 200ms var(--ease-signature),
+      background-color 200ms var(--ease-signature);
+  }
+  .choice:hover {
+    border-color: color-mix(in srgb, var(--color-paper) 35%, transparent);
+  }
+  .choice-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .choice-mark {
+    position: relative;
+    margin-top: 0.2rem;
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--color-paper) 45%, transparent);
+    border-radius: 9999px;
+  }
+  .choice-mark::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 9999px;
+    background: var(--color-gold);
+    transform: scale(0);
+    transition: transform 200ms var(--ease-signature);
+  }
+  .choice:has(.choice-input:checked) {
+    border-color: var(--color-gold);
+    background: color-mix(in srgb, var(--color-gold) 7%, transparent);
+  }
+  .choice:has(.choice-input:checked) .choice-mark {
+    border-color: var(--color-gold);
+  }
+  .choice:has(.choice-input:checked) .choice-mark::after {
+    transform: scale(1);
+  }
+  .choice:has(.choice-input:focus-visible) {
+    outline: 1px solid var(--color-gold);
+    outline-offset: 3px;
+  }
+  [data-field][data-invalid] .choice {
+    border-color: #f87171;
+  }
+
+  .inquiry-success:focus {
+    outline: none;
+  }
+</style>

@@ -1,0 +1,19 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import BusinessInquiry from "../components/pages/BusinessInquiry.astro";
+import { INQUIRY_COPY } from "../lib/inquiry-copy";
+
+const lang = "fr" as const;
+const copy = INQUIRY_COPY[lang];
+---
+
+<BaseLayout lang={lang} title={copy.seoTitle} description={copy.seoDescription}>
+  <BusinessInquiry lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initScrollChoreography } from "../scripts/gsap/scroll-choreography";
+  import { initBusinessInquiry } from "../scripts/forms/business-inquiry";
+  initScrollChoreography();
+  initBusinessInquiry();
+</script>
