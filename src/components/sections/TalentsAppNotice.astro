@@ -7,8 +7,9 @@
  * Rendu volontairement SANS animation d'apparition (pas de data-reveal) :
  * un contrôle automatique qui ne fait pas défiler la page voit tout.
  *
- *  - variant="hero"    : une ligne dans le premier écran (sous les boutons du hero) ;
- *  - variant="section" : un bloc explicatif juste après le hero.
+ * Un bloc explicatif juste après le hero (variant="section"). L'ancienne
+ * ligne du premier écran (variant="hero") a été retirée : ce bloc porte
+ * seul l'explication et le lien vers la politique de confidentialité.
  *
  * Chaque affirmation correspond au fonctionnement réel (voir /talent/plateforme/).
  */
@@ -16,7 +17,7 @@ import { localizedPath, type Lang } from "../../i18n/utils";
 
 interface Props {
   lang: Lang;
-  variant: "hero" | "section";
+  variant: "section";
 }
 
 const { lang, variant } = Astro.props;
@@ -27,18 +28,7 @@ const privacy = localizedPath(lang, "/politique-de-confidentialite");
 ---
 
 {
-  variant === "hero" ? (
-    <p class="mt-4 text-sm text-(--color-paper)/70" data-talents-app-notice="hero">
-      <a href={platform} class="font-semibold text-(--color-paper) underline underline-offset-4 hover:text-(--color-gold)">
-        WEBLACK TALENTS
-      </a>
-      {fr ? " — candidature en ligne pour les talents" : " — online applications for talent"}
-      <span aria-hidden="true"> · </span>
-      <a href={privacy} class="underline underline-offset-4 hover:text-(--color-gold)">
-        {fr ? "Confidentialité" : "Privacy"}
-      </a>
-    </p>
-  ) : (
+  variant === "section" && (
     <section
       class="border-y border-(--color-line) bg-(--color-ink-soft) px-6 py-14 md:px-10 md:py-16"
       aria-labelledby="talents-app-title"
@@ -62,12 +52,18 @@ const privacy = localizedPath(lang, "/politique-de-confidentialite");
               ? "Seule l'équipe WEBLACK habilitée examine les dossiers, dans un espace d'administration protégé. Une copie d'archive est rangée dans le Google Drive de l'agence ; les dossiers ne sont jamais publics."
               : "Only authorised WEBLACK staff review applications, in a protected administration area. An archive copy is filed in the agency's Google Drive; applications are never public."}
           </p>
-          <p class="flex flex-wrap gap-x-6 gap-y-2 pt-2">
+          <p class="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2">
             <a href={platform} class="label-tracked text-(--color-gold) hover:text-(--color-gold-bright)">
               {fr ? "Fonctionnement de la plateforme" : "How the platform works"} &rarr;
             </a>
-            <a href={apply} class="label-tracked text-(--color-paper) hover:text-(--color-gold)">
-              {fr ? "Déposer une candidature" : "Apply"} &rarr;
+            {/* Appel principal de la section : rectangle net, fond encre, filet doré.
+                Les deux autres liens restent des liens texte secondaires. */}
+            <a
+              href={apply}
+              class="group label-tracked inline-flex min-h-12 items-center gap-3 border border-(--color-gold)/70 bg-(--color-ink) px-7 py-3.5 text-(--color-paper) transition-[border-color,background-color] duration-300 ease-(--ease-signature) hover:border-(--color-gold) hover:bg-(--color-gold)/10 focus-visible:border-(--color-gold) focus-visible:outline-2 focus-visible:outline-offset-4 motion-safe:active:translate-y-px"
+            >
+              {fr ? "Déposer une candidature" : "Apply"}
+              <span aria-hidden="true" class="text-(--color-gold) transition-transform duration-300 ease-(--ease-signature) motion-safe:group-hover:translate-x-1 motion-safe:group-focus-visible:translate-x-1">&rarr;</span>
             </a>
             <a href={privacy} class="label-tracked text-(--color-paper) hover:text-(--color-gold)">
               {fr ? "Politique de confidentialité" : "Privacy policy"} &rarr;
