@@ -1,6 +1,6 @@
 ---
 import weblackMark from "../../assets/logo/weblack-mark-gold-64.png";
-import { responsiveImage } from "../../lib/responsive-image";
+import { responsiveImage, type ImageCrop } from "../../lib/responsive-image";
 
 /**
  * Wrapper for two image sources: hotlinked Unsplash URLs (astro:assets can't
@@ -42,6 +42,8 @@ interface Props {
    * que le cadre affiche — voir responsiveImage(). Ignoré pour fit="contain".
    */
   portrait?: string;
+  /** Recadrage dirigé sous une plage d'écrans (voir ImageCrop). Ignoré pour fit="contain". */
+  crop?: ImageCrop;
 }
 
 const {
@@ -57,6 +59,7 @@ const {
   fit = "cover",
   sizes = "100vw",
   portrait,
+  crop,
 } = Astro.props;
 
 /**
@@ -70,7 +73,7 @@ const {
  * already reports on its own — this component must degrade to "no image"
  * instead, independently of that check ever running.
  */
-const image = await responsiveImage(src, width, fit === "cover" ? portrait : undefined);
+const image = await responsiveImage(src, width, fit === "cover" ? portrait : undefined, fit === "cover" ? crop : undefined);
 const isValidUrl = image !== null;
 if (!isValidUrl && import.meta.env.DEV) {
   console.warn(`RemoteImage: ignoring invalid src (expected an http(s) URL or a root-relative path): ${JSON.stringify(src)}`);

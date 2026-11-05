@@ -57,14 +57,13 @@ const ctaWorkHref = hero?.ctaSecondaryUrl ? localizedPath(lang, hero.ctaSecondar
   d'opacité), aucun filtre de flou.
 */}
 {/*
-  Le masque du W est l'image la plus grande du premier écran sur certaines
-  pages (/en/, dont la phrase des piliers est plus courte) : il devient alors
-  l'élément LCP. Préchargé ici, en tête du corps, où l'analyseur
-  d'anticipation le découvre aussitôt. crossorigin : une image de masque CSS
-  est demandée en mode CORS — sans lui, le préchargement serait ignoré et
-  l'image téléchargée deux fois.
+  Masque du W : pas de préchargement. Mesuré le 2026-11-05 (Lighthouse
+  mobile simulé, A/B intercalé) : sur /en/, où le W est l'élément LCP, le
+  préchargement ne changeait pas le LCP (3927 contre 3920 ms) ; sur /, il
+  entrait en concurrence avec le premier rendu (FCP 1,55 → 2,01 s contre la
+  production). Le masque est demandé par la feuille de style, comme en
+  production.
 */}
-<link rel="preload" as="image" href={symbolMask.src} type="image/webp" fetchpriority="high" crossorigin="anonymous" />
 <section data-hero-section class="hero-stage relative flex min-h-[100svh] items-start overflow-hidden lg:items-end">
   {/*
     Placement inchangé depuis la production : top calé sur --header-h

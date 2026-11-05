@@ -22,6 +22,8 @@ function makeEnv(extra: Record<string, unknown> = {}) {
     SANITY_DATASET: "test",
     NEWSLETTER_API_KEY: "test-key",
     RESEND_FROM: "WEBLACK TALENTS <talents@weblack.test>",
+    // Ressources isolées (en mémoire) : l'équivalent d'une preview.
+    APP_ENV: "preview",
     ...extra,
   };
 }
@@ -411,4 +413,31 @@ test("upload — fichier vide, trop volumineux ou rôle inconnu refusés", async
   big.set(JPEG);
   assert.equal((await callUpload(new File([big], "photo.jpg", { type: "image/jpeg" }))).body.reason, "invalid_size");
   assert.equal((await callUpload(new File([JPEG], "photo.jpg", { type: "image/jpeg" }), "admin")).body.reason, "invalid_role");
+});
+
+test("environnement — liaisons de production : écriture refusée hors du domaine public, rien n'est stocké", async () => {
+  const env = makeEnv({ APP_ENV: "production" });
+  await seedPhotos(env.PHOTOS, ALL_IDS);
+  const kvBefore = env.PHOTOS.store.size;
+  const post = (url: string, body: BodyInit, headers: Record<string, string> = {}) =>
+    new Request(url, { method: "POST", body, headers: { "CF-Connecting-IP": "10.7.7.7", ...headers } });
+
+  for (const host of ["https://immersive-pr-2-experience.weblack.pages.dev", "https://39ecbe22.weblack.pages.dev", "https://weblack.pages.dev"]) {
+    const sub = await submit({ request: post(`${host}/api/talent-application/submit`, JSON.stringify(validPayload()), { "Content-Type": "application/json" }), env: env as never, params: {} });
+    assert.equal(sub.status, 503, host);
+    assert.equal(((await sub.json()) as { reason: string }).reason, "not_configured");
+    const fd = new FormData();
+    fd.set("role", "portrait");
+    fd.set("photo", new File([JPEG], "photo.jpg", { type: "image/jpeg" }));
+    const up = await upload({ request: post(`${host}/api/talent-application/upload`, fd), env: env as never, params: {} });
+    assert.equal(up.status, 503, host);
+    const state = (await (await probe({ request: new Request(`${host}/api/talent-application/submit`), env: env as never, params: {} })).json()) as { configured: boolean };
+    assert.equal(state.configured, false, "le formulaire se déclare indisponible");
+  }
+  assert.equal(applications(env).length, 0);
+  assert.equal(env.PHOTOS.store.size, kvBefore, "aucune écriture KV, pas même le compteur anti-abus");
+
+  const prod = await submit({ request: post("https://weblack.fr/api/talent-application/submit", JSON.stringify(validPayload()), { "Content-Type": "application/json" }), env: env as never, params: {} });
+  assert.equal(prod.status, 200, "le domaine public reste ouvert");
+  assert.equal(applications(env).length, 1);
 });

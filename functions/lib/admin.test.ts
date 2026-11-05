@@ -32,6 +32,7 @@ function makeEnv() {
     SANITY_DATASET: "test",
     NEWSLETTER_API_KEY: "test-key",
     RESEND_FROM: "talents@weblack.test",
+    APP_ENV: "preview", // ressources isolées en mémoire
   };
 }
 type Env = ReturnType<typeof makeEnv>;

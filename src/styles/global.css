@@ -477,39 +477,45 @@
    * ici seulement ; en grille, rien ne change. !important : ces règles
    * doivent l'emporter sur les utilitaires Tailwind de la page (couche
    * supérieure), et ne s'appliquent qu'en mode liste.
+   *
+   * L'état vit sur la collection elle-même ([data-view-collection="list"]) :
+   * basculer ne recalcule que ses descendants, pas le document entier.
+   * :root[data-collection-view] ne sert qu'au premier rendu (script en ligne
+   * de ViewToggle, qui s'exécute avant que la collection soit analysée) ;
+   * view-toggle.ts le reporte sur la collection dès l'initialisation.
    */
-  :root[data-collection-view="list"] [data-view-collection] {
+  :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) {
     grid-template-columns: minmax(0, 1fr) !important;
     row-gap: 0 !important;
   }
 
-  :root[data-collection-view="list"] [data-view-collection] > * {
+  :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * {
     grid-column: auto !important;
     border-top: 1px solid var(--color-line);
     padding-block: 1.5rem;
   }
 
-  :root[data-collection-view="list"] [data-view-collection] > * > a {
+  :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * > a {
     display: grid !important;
     grid-template-columns: 7.5rem minmax(0, 1fr) !important;
     align-items: center;
     gap: 1.25rem !important;
   }
 
-  :root[data-collection-view="list"] [data-view-collection] > * > a > :first-child {
+  :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * > a > :first-child {
     aspect-ratio: 4 / 3 !important;
   }
 
-  :root[data-collection-view="list"] [data-view-collection] > * > a > :last-child {
+  :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * > a > :last-child {
     margin-top: 0 !important;
   }
 
-  :root[data-collection-view="list"] [data-view-collection] > * > a > :last-child > :first-child {
+  :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * > a > :last-child > :first-child {
     margin-top: 0 !important;
   }
 
   @media (min-width: 640px) {
-    :root[data-collection-view="list"] [data-view-collection] > * > a {
+    :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * > a {
       grid-template-columns: 13rem minmax(0, 1fr) !important;
       gap: 2rem !important;
     }
@@ -517,7 +523,7 @@
 
   @media (max-width: 639px) {
     /* Sur téléphone, la rangée garde le titre et la date ; le chapô reste en grille. */
-    :root[data-collection-view="list"] [data-view-collection] > * > a > :last-child > :last-child {
+    :is(:root[data-collection-view="list"] [data-view-collection], [data-view-collection="list"]) > * > a > :last-child > :last-child {
       display: none !important;
     }
   }

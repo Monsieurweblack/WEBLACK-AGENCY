@@ -8,7 +8,7 @@ import NewsletterPopup from "../components/sections/NewsletterPopup.astro";
 import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
 import { LOCALES } from "../i18n/locales";
 import { getSiteSettings } from "../lib/content";
-import { responsiveImage } from "../lib/responsive-image";
+import { responsiveImage, type ImageCrop } from "../lib/responsive-image";
 // Importées en `?url` pour que Vite renvoie le chemin empreinté réellement
 // servi : écrire ces noms à la main préchargerait un fichier périmé au
 // premier changement de version de la police. Même fichier que l'@import
@@ -31,7 +31,7 @@ interface Props {
    * HTML (CSS inline, en-tête, menu) : 2 à 3 allers-retours de découverte
    * perdus sur un réseau lent, mesurés à 0,73 s sur /talent/.
    */
-  lcpImage?: { src: string; width: number; sizes?: string; portrait?: string };
+  lcpImage?: { src: string; width: number; sizes?: string; portrait?: string; crop?: ImageCrop };
 }
 
 const { lang, title, description, image, imageAlt, noindex, bodyClass, translations, lcpImage } = Astro.props;
@@ -42,7 +42,7 @@ const siteSettings = await getSiteSettings(lang);
 // lieu de télécharger deux formats. Avec un recadrage portrait, deux
 // préchargements à media exclusifs : un seul s'applique, celui que le
 // <picture> choisira.
-const lcp = lcpImage ? await responsiveImage(lcpImage.src, lcpImage.width, lcpImage.portrait) : null;
+const lcp = lcpImage ? await responsiveImage(lcpImage.src, lcpImage.width, lcpImage.portrait, lcpImage.crop) : null;
 const lcpSizes = lcpImage?.sizes ?? "100vw";
 const lcpPreloads =
   lcp?.kind === "local"
@@ -52,7 +52,13 @@ const lcpPreloads =
           type: source.type,
           srcset: source.srcset,
           sizes: source.sizes ?? lcpSizes,
-          media: source.media ?? (lcpImage?.portrait ? `not all and (max-aspect-ratio: ${lcpImage.portrait})` : undefined),
+          media:
+            source.media ??
+            (lcpImage?.portrait
+              ? `not all and (max-aspect-ratio: ${lcpImage.portrait})`
+              : lcpImage?.crop
+                ? `not all and ${lcpImage.crop.media}`
+                : undefined),
         }))
     : lcp?.kind === "remote" && lcp.srcset
       ? [{ type: undefined, srcset: lcp.srcset, sizes: lcpSizes, media: undefined }]

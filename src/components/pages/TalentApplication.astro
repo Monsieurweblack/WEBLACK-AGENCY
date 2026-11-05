@@ -46,6 +46,7 @@ const facts = ["age", "account", "privacy"] as const;
         fetchpriority="high"
         class="h-full w-full"
         sizes={TALENT_APPLICATION_IMAGE.sizes}
+        crop={settings.welcomeImage ? undefined : TALENT_APPLICATION_IMAGE.crop}
       />
       <div class="welcome-photo-fade pointer-events-none absolute inset-0" aria-hidden="true"></div>
     </div>

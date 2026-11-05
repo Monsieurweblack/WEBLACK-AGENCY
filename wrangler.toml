@@ -18,6 +18,8 @@ SANITY_DATASET = "production"
 # dans l'administration — la candidature, elle, reste enregistrée. La clé API
 # reste le secret NEWSLETTER_API_KEY, jamais ici.
 RESEND_FROM = "WEBLACK TALENTS <talents@weblack.fr>"
+# Environnement des liaisons ci-dessous (voir [env.preview] en fin de fichier).
+APP_ENV = "production"
 
 # Dossiers de candidature Talent — jamais dans le dataset Sanity public
 # (lisible anonymement, voir editorial-engine/EDITORIAL_ENGINE.md / audit
@@ -32,3 +34,31 @@ database_id = "7bc900c3-e38b-4ead-842e-97f629b30202"
 [[kv_namespaces]]
 binding = "PHOTOS"
 id = "e31fd4cefea0458cae8511ae59d1a737"
+
+# ---------------------------------------------------------------------------
+# Previews (toute branche autre que main) : ressources DISTINCTES.
+# Jusqu'au 2026-11-05, les previews héritaient des liaisons ci-dessus — une
+# candidature déposée sur une URL *.weblack.pages.dev de branche s'écrivait
+# dans la base de production. Les clés de cette section ne s'héritent pas
+# (Cloudflare Pages) : vars, D1 et KV sont donc tous redéclarés ici. La
+# production, elle, garde exactement les liaisons de premier niveau.
+# L'environnement preview n'a aucun secret Resend ni Google : e-mails et
+# archivage Drive y restent « not_configured », rien ne part.
+# APP_ENV sert de garde-fou côté serveur (functions/lib/environment.ts) :
+# une écriture n'est acceptée sur la base de production que depuis
+# weblack.fr / www.weblack.fr.
+[env.preview]
+[env.preview.vars]
+APP_ENV = "preview"
+SANITY_PROJECT_ID = "pzpm4xjp"
+SANITY_DATASET = "production"
+RESEND_FROM = "WEBLACK TALENTS <talents@weblack.fr>"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "weblack-talent-applications-preview"
+database_id = "4a89b60d-d374-4300-a6cf-f28ab4fb28d1"
+
+[[env.preview.kv_namespaces]]
+binding = "PHOTOS"
+id = "5afed0f7bc3445bf9f516a685d0cdaa3"

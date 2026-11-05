@@ -4,6 +4,7 @@ import { sniffImageType } from "../../lib/imageSniff.ts";
 import { stripExifIfJpeg } from "../../lib/exif.ts";
 import { storePhoto } from "../../lib/photos.ts";
 import { UPLOAD_LIMITS } from "../../lib/talentOptions.ts";
+import { writesAllowed, type EnvironmentEnv } from "../../lib/environment.ts";
 
 /**
  * Upload d'une photo pendant la saisie (étape 04) — avant la soumission
@@ -18,7 +19,7 @@ import { UPLOAD_LIMITS } from "../../lib/talentOptions.ts";
  * garantie, ils la revérifient.
  */
 
-interface Env {
+interface Env extends EnvironmentEnv {
   PHOTOS: KVNamespace;
 }
 
@@ -33,6 +34,7 @@ const ALLOWED: Record<string, string[]> = {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  if (!writesAllowed(env, request)) return json({ ok: false, reason: "not_configured" }, 503);
   const rate = await checkRateLimit(env.PHOTOS, request, "photo-upload", 40, 60 * 60);
   if (!rate.allowed) return json({ ok: false, reason: "rate_limited" }, 429);
 

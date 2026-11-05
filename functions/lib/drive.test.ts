@@ -26,6 +26,7 @@ function makeEnv(extra: Record<string, unknown> = {}) {
     SANITY_DATASET: "test",
     NEWSLETTER_API_KEY: "test-key",
     RESEND_FROM: "talents@weblack.test",
+    APP_ENV: "preview", // ressources isolées en mémoire
     ADMIN_SESSION_SECRET: SECRET,
     GOOGLE_OAUTH_CLIENT_ID: "test-client.apps.googleusercontent.com",
     GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret",

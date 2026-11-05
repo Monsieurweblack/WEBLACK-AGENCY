@@ -28,6 +28,19 @@ export const TALENT_APPLICATION_IMAGE = {
   src: TALENT_HERO.src,
   width: TALENT_HERO.width,
   height: TALENT_HERO.height,
-  sizes: "(min-width: 1024px) 178vh, 160vw",
+  /*
+   * Largeur affichée par object-cover : grand écran, colonne pleine hauteur
+   * (100svh × 16/9 = 178vh) ; tablette portrait, bandeau de 44svh limité par
+   * sa hauteur (44 × 16/9 ≈ 78vh) ; écran couché, limité par sa largeur.
+   */
+  sizes: "(min-width: 1024px) 178vh, (orientation: landscape) 100vw, 78vh",
+  /*
+   * Téléphone en portrait : le bandeau (100vw × 44svh, au moins 18rem) est
+   * plus étroit que la photo 16:9 — object-cover n'en montre qu'une bande
+   * centrale d'environ 5:4. On sert ce recadrage 5:4 (affiché à 44svh × 5/4
+   * = 55vh de large) au lieu de la photo entière : mêmes pixels visibles,
+   * même encodage, ~37 % de pixels en moins à 412 px (DPR 1,75).
+   */
+  crop: { media: "(max-width: 767px) and (max-aspect-ratio: 1/1)", aspect: 5 / 4, widths: [480, 800], sizes: "55vh" },
   focus: "45% 30%",
 } as const;

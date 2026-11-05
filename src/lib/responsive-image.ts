@@ -26,6 +26,21 @@ export interface ImageSource {
   sizes?: string;
 }
 
+/**
+ * Recadrage dirigé d'une photo locale paysage (art direction), pour un cadre
+ * dont on connaît la forme sur une plage d'écrans : sous `media`, le
+ * <picture> sert un recadrage centré au rapport `aspect`, aux largeurs
+ * `widths` (jamais au-delà de la hauteur de l'original), décrit par `sizes`.
+ * Même encodage, même densité : seules les marges que le cadre rogne de
+ * toute façon ne sont plus téléchargées.
+ */
+export interface ImageCrop {
+  media: string;
+  aspect: number;
+  widths: readonly number[];
+  sizes: string;
+}
+
 export type ResponsiveImage =
   | { kind: "local"; src: string; sources: ImageSource[] }
   | { kind: "remote"; src: string; srcset?: string }
@@ -60,7 +75,7 @@ function withWidth(url: string, w: number) {
  * carré h = w ÷ rapport). Le navigateur choisit le carré de la variante
  * qu'il choisissait déjà, jamais un plus petit.
  */
-export async function responsiveImage(src: string, width: number, portrait?: string): Promise<ResponsiveImage | null> {
+export async function responsiveImage(src: string, width: number, portrait?: string, crop?: ImageCrop): Promise<ResponsiveImage | null> {
   if (!isValidImageSrc(src)) return null;
 
   if (isRemoteImageSrc(src)) {
@@ -96,6 +111,26 @@ export async function responsiveImage(src: string, width: number, portrait?: str
           }),
         )
       : [];
+  const cropSources =
+    crop && ratio > crop.aspect
+      ? await Promise.all(
+          (["avif", "webp"] as const).map(async (format) => {
+            const maxWidth = Math.floor(photo.height * crop.aspect);
+            const widths = [...new Set([...crop.widths.filter((w) => w < maxWidth), maxWidth])];
+            const variants = await Promise.all(
+              widths.map((w) =>
+                getImage({ src: photo, width: w, height: Math.round(w / crop.aspect), fit: "cover", position: "center", format, quality: LOCAL_PHOTO_QUALITY[format] }),
+              ),
+            );
+            return {
+              type: `image/${format}`,
+              media: crop.media,
+              sizes: crop.sizes,
+              srcset: variants.map((v) => `${v.src} ${v.attributes.width}w`).join(", "),
+            };
+          }),
+        )
+      : [];
   const sources = await Promise.all(
     (["avif", "webp"] as const).map(async (format) => {
       const variants = await Promise.all(
@@ -104,5 +139,5 @@ export async function responsiveImage(src: string, width: number, portrait?: str
       return { type: `image/${format}`, srcset: variants.map((v) => `${v.src} ${v.attributes.width}w`).join(", ") };
     }),
   );
-  return { kind: "local", src, sources: [...portraitSources, ...sources] };
+  return { kind: "local", src, sources: [...cropSources, ...portraitSources, ...sources] };
 }

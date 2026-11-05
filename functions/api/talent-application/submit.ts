@@ -6,8 +6,9 @@ import { fetchTalentApplicationSettings } from "../../lib/sanity.ts";
 import { deliverOutbox, outboxInserts, referenceFor, type OutboxEnv } from "../../lib/talentOutbox.ts";
 import { driveSyncInsert, syncDrive, type DriveSyncEnv } from "../../lib/driveSync.ts";
 import type { ValidApplication } from "../../lib/applicationTypes.ts";
+import { writesAllowed, type EnvironmentEnv } from "../../lib/environment.ts";
 
-interface Env extends OutboxEnv, DriveSyncEnv {
+interface Env extends OutboxEnv, DriveSyncEnv, EnvironmentEnv {
   PHOTOS: KVNamespace;
   SANITY_PROJECT_ID?: string;
   SANITY_DATASET?: string;
@@ -22,11 +23,11 @@ type ConfirmationState = "sent" | "pending";
  * Service armé ? Sonde lue par le formulaire — jamais de secret dans la
  * réponse, même idiome que newsletter.ts.
  */
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const settings = await fetchTalentApplicationSettings(env);
   return json(
     {
-      configured: Boolean(env.DB && env.PHOTOS),
+      configured: Boolean(env.DB && env.PHOTOS) && writesAllowed(env, request),
       available: settings.available,
       open: settings.applicationsOpen,
       minorsAllowed: settings.minorsAllowed,
@@ -37,6 +38,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
+  if (!writesAllowed(env, request)) return json({ ok: false, reason: "not_configured" }, 503);
   const rate = await checkRateLimit(env.PHOTOS, request, "submit", 10, 60 * 60);
   if (!rate.allowed) return json({ ok: false, reason: "rate_limited" }, 429);
 
