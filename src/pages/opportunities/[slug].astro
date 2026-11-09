@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import OpportunityDetail from "../../components/pages/OpportunityDetail.astro";
 import { OPPORTUNITIES, type Opportunity } from "../../data/opportunities";
+import { OPPORTUNITY_HERO_SIZES } from "../../lib/opportunity-copy";
 
 /** Une page par annonce ; son statut (publiée, clôturée…) est appliqué à la requête — voir functions/opportunities/[[path]].ts. */
 export function getStaticPaths() {
@@ -17,8 +18,9 @@ const x = opportunity.text[lang];
   lang={lang}
   title={`${x.title} · Opportunities`}
   description={`${x.summary} ${x.location}, ${x.eventDate}.`}
-  image={opportunity.image?.src}
+  image={opportunity.ogImage}
   imageAlt={opportunity.image?.alt[lang]}
+  lcpImage={opportunity.image ? { src: opportunity.image.src, width: opportunity.image.width, sizes: OPPORTUNITY_HERO_SIZES } : undefined}
 >
   <OpportunityDetail lang={lang} opportunity={opportunity} />
 </BaseLayout>

@@ -75,3 +75,6 @@ export function formatDeadline(iso: string, lang: Lang): string {
   const text = d.toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
   return lang === "fr" ? text.replace(/^1 /, "1er ") : text;
 }
+
+/** Tailles du visuel principal d'une fiche : identiques pour le <picture> et le préchargement LCP. */
+export const OPPORTUNITY_HERO_SIZES = "(min-width: 1024px) 26rem, (min-width: 448px) 28rem, 100vw";

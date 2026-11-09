@@ -8,6 +8,7 @@
 import { localizedPath, type Lang } from "../../i18n/utils";
 import { OPPORTUNITIES } from "../../data/opportunities";
 import { OPPORTUNITY_COPY, formatDeadline } from "../../lib/opportunity-copy";
+import RemoteImage from "../media/RemoteImage.astro";
 
 interface Props {
   lang: Lang;
@@ -36,7 +37,12 @@ const items = [...OPPORTUNITIES].sort((a, b) => Date.parse(a.deadline) - Date.pa
           const href = localizedPath(lang, `/opportunities/${o.slug}`);
           return (
             <li data-opportunity={o.slug}>
-              <a href={href} class="group grid grid-cols-1 gap-6 py-10 md:grid-cols-[1fr_auto] md:items-end">
+              <a href={href} class="group grid grid-cols-1 gap-6 py-10 md:grid-cols-[12rem_1fr_auto] md:items-end md:gap-10">
+                {o.image && (
+                  <div class="aspect-[4/5] w-40 overflow-hidden bg-(--color-ink-soft) md:w-full">
+                    <RemoteImage src={o.image.src} alt={o.image.alt[lang]} width={o.image.width} height={o.image.height} sizes="(min-width: 768px) 12rem, 10rem" class="h-full w-full transition-transform duration-500 group-hover:scale-[1.02]" />
+                  </div>
+                )}
                 <div>
                   <p class="label-tracked text-(--color-paper)/55">
                     {x.category} · {x.location} · {x.eventDate}

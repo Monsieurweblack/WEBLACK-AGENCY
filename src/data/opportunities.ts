@@ -28,6 +28,22 @@ export interface OpportunityText {
   notice: string;
 }
 
+export interface OpportunityImage {
+  src: string;
+  width: number;
+  height: number;
+  alt: Record<Lang, string>;
+  caption?: Record<Lang, string>;
+}
+
+const podium = (year: number, n: number, width: number, height: number): OpportunityImage => ({
+  src: `/photos/zedefile-${year}-podium-${n}.jpg`,
+  width,
+  height,
+  alt: { fr: `Passage sur le podium de ZE DÉFILÉ ${year}, à Paris.`, en: `A runway look at ZE DÉFILÉ ${year}, in Paris.` },
+  caption: { fr: `ZE DÉFILÉ ${year}, Paris`, en: `ZE DÉFILÉ ${year}, Paris` },
+});
+
 export interface Opportunity {
   slug: string;
   /** Fin de dépôt, heure de Paris, incluse. Au-delà, l'annonce est affichée comme clôturée. */
@@ -36,8 +52,14 @@ export interface Opportunity {
   /** Diffusion : toujours la marque, jamais la raison sociale. */
   broadcastPartner: string;
   contact: { email: string; phones: { label: string; tel: string }[] };
-  /** Visuel principal fourni par WEBLACK (public/photos/…). Absent tant qu'il n'a pas été transmis. */
-  image?: { src: string; width: number; height: number; alt: Record<Lang, string> };
+  /** Visuel principal (public/photos/…, original conservé ; variantes AVIF/WebP générées au build). */
+  image?: OpportunityImage;
+  /** Image Open Graph 1200×630 dérivée du visuel principal (affiche entière, sans recadrage). */
+  ogImage?: string;
+  /** Crédit affiché sous les visuels de l'organisateur (réutilisation autorisée, confirmée par WEBLACK le 2026-11-09). */
+  imageCredit?: string;
+  /** Galeries : visuels officiels, puis photographies des éditions précédentes. */
+  galleries?: { id: string; title: Record<Lang, string>; items: OpportunityImage[] }[];
   text: Record<Lang, OpportunityText>;
 }
 
@@ -45,7 +67,49 @@ export const OPPORTUNITIES: Opportunity[] = [
   {
     slug: "zedefile-2027",
     deadline: "2026-12-01T23:59:59+01:00",
-    organizer: { name: "ZEDEFILE / Association WAXFASHION", url: "https://new.waxfashion.fr/" },
+    organizer: { name: "ZEDEFILE / Association WAXFASHION", url: "https://zedefile.com/" },
+    image: {
+      src: "/photos/zedefile-2027-affiche-violet.jpg",
+      width: 1080,
+      height: 1350,
+      alt: {
+        fr: "Affiche officielle de ZE DÉFILÉ, présentée par l'Association WAXFASHION : « RDV avril 2027 », un mannequin en robe violette sur le podium.",
+        en: "Official ZE DÉFILÉ poster presented by Association WAXFASHION: “RDV avril 2027”, a model in a purple gown on the runway.",
+      },
+    },
+    ogImage: "/photos/og-zedefile-2027.jpg",
+    imageCredit: "© WaxFashion — ZE DÉFILÉ",
+    galleries: [
+      {
+        id: "official",
+        title: { fr: "Visuels officiels 2027", en: "Official 2027 visuals" },
+        items: [
+          {
+            src: "/photos/zedefile-2027-affiche-turquoise.jpg",
+            width: 1080,
+            height: 1350,
+            alt: {
+              fr: "Affiche officielle ZE DÉFILÉ « RDV avril 2027 », version turquoise : un mannequin en robe à volants imprimée sur le podium.",
+              en: "Official ZE DÉFILÉ “RDV avril 2027” poster, turquoise version: a model in a printed ruffled gown on the runway.",
+            },
+          },
+          {
+            src: "/photos/zedefile-2027-affiche-rouge.jpg",
+            width: 1080,
+            height: 1350,
+            alt: {
+              fr: "Affiche officielle ZE DÉFILÉ « RDV avril 2027 », version rouge : une mannequin en tailleur noir et chapeau rouge.",
+              en: "Official ZE DÉFILÉ “RDV avril 2027” poster, red version: a model in a black suit and red hat.",
+            },
+          },
+        ],
+      },
+      {
+        id: "editions",
+        title: { fr: "Éditions précédentes", en: "Previous editions" },
+        items: [podium(2026, 1, 1600, 2400), podium(2026, 2, 1600, 2400), podium(2025, 1, 1600, 2400), podium(2025, 2, 1600, 2400), podium(2024, 1, 1600, 2000), podium(2024, 2, 1600, 2398)],
+      },
+    ],
     broadcastPartner: "WEBLACK",
     contact: {
       email: "weblackconsulting@gmail.com",
