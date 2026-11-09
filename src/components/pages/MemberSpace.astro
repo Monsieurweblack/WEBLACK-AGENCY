@@ -1,0 +1,102 @@
+---
+import { localizedPath, type Lang } from "../../i18n/utils";
+import { MEMBER_COPY } from "../../lib/member-copy";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const c = MEMBER_COPY[lang];
+
+/**
+ * Espace membre WEBLACK TALENT — rendu statique, état piloté par
+ * scripts/member-space.ts : formulaire de lien, connexion par le lien
+ * (#t=… lu puis effacé de l'URL), profil privé et mise à jour. Jamais
+ * indexé, jamais de donnée personnelle dans le HTML.
+ */
+const label = "label-tracked text-(--color-paper)/70";
+const help = "mt-2 text-sm text-(--color-paper)/50";
+const goldButton =
+  "inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-3.5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-colors hover:bg-(--color-gold-bright) disabled:opacity-60";
+---
+
+<section class="bg-(--color-ink) px-6 pb-24 pt-36 md:px-10 md:pb-32 md:pt-40" data-member-root data-lang={lang} data-copy={JSON.stringify({ status: c.status, level: c.level, levelHelp: c.levelHelp, fieldErrors: c.fieldErrors, receivedOn: c.receivedOn, reference: c.reference, sent: c.sent, sending: c.sending, send: c.send, invalidEmail: c.invalidEmail, rateLimited: c.rateLimited, unavailable: c.unavailable, linkInvalid: c.linkInvalid, saved: c.saved, saveError: c.saveError, erasureConfirm: c.erasureConfirm, erasureDone: c.erasureDone, error: c.error })}>
+  <div class="mx-auto max-w-3xl">
+    <p class="label-tracked label-tracked-dot text-(--color-gold)">{c.eyebrow}</p>
+    <h1 class="font-display mt-4 text-4xl text-(--color-paper) sm:text-5xl">{c.title}</h1>
+    <p class="mt-6 max-w-xl text-lg text-(--color-paper)/70">{c.lead}</p>
+
+    <p data-member-status role="status" aria-live="polite" class="mt-10 min-h-[1.5em] text-(--color-paper)/80"></p>
+
+    {/* Connexion */}
+    <form data-member-login class="mt-6 max-w-md space-y-6" novalidate>
+      <h2 class="font-display text-2xl text-(--color-paper)">{c.loginTitle}</h2>
+      <p class="text-sm text-(--color-paper)/60">{c.loginHelp}</p>
+      <div>
+        <label for="member-email" class={label}>{c.email}</label>
+        <input id="member-email" name="email" type="email" required autocomplete="email" inputmode="email" maxlength="254" class="form-input" />
+      </div>
+      <button type="submit" class={goldButton}>{c.send}</button>
+      <p data-member-devlink hidden class="break-all text-sm text-(--color-paper)/50"></p>
+    </form>
+
+    {/* Espace connecté */}
+    <div data-member-space hidden class="mt-6 space-y-14">
+      <div class="flex flex-wrap items-start justify-between gap-4 border-t border-(--color-line) pt-8">
+        <div>
+          <p class="label-tracked text-(--color-gold)" data-member-level></p>
+          <p class="mt-2 max-w-xl text-sm text-(--color-paper)/65" data-member-level-help></p>
+        </div>
+        <button type="button" data-member-logout class="label-tracked min-h-11 text-(--color-paper)/60 hover:text-(--color-gold)">{c.logout}</button>
+      </div>
+
+      <section aria-labelledby="member-apps-title">
+        <h2 id="member-apps-title" class="font-display text-2xl text-(--color-paper)">{c.applications}</h2>
+        <ul data-member-apps class="mt-6 divide-y divide-(--color-line) border-y border-(--color-line)"></ul>
+      </section>
+
+      <section aria-labelledby="member-profile-title">
+        <h2 id="member-profile-title" class="font-display text-2xl text-(--color-paper)">{c.profile}</h2>
+        <p class="mt-2 text-sm text-(--color-paper)/55">{c.profileHelp}</p>
+        <form data-member-profile class="mt-8 space-y-8" novalidate>
+          <div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+            <div><label for="member-phone" class={label}>{c.phone}</label><input id="member-phone" name="phone" type="tel" autocomplete="tel" class="form-input" /></div>
+            <div><label for="member-city" class={label}>{c.city}</label><input id="member-city" name="city" type="text" maxlength="100" autocomplete="address-level2" class="form-input" /></div>
+            <div><label for="member-instagram" class={label}>{c.instagram}</label><input id="member-instagram" name="instagram" type="text" maxlength="120" class="form-input" /></div>
+          </div>
+          <div><label for="member-portfolio" class={label}>{c.portfolio}</label><textarea id="member-portfolio" name="portfolio" rows="3" class="form-input resize-y"></textarea></div>
+          <div>
+            <label for="member-availability" class={label}>{c.availability}</label>
+            <input id="member-availability" name="availability" type="text" maxlength="280" class="form-input" aria-describedby="member-availability-help" />
+            <p id="member-availability-help" class={help}>{c.availabilityHelp}</p>
+          </div>
+          <fieldset>
+            <legend class={label}>{c.contactPref}</legend>
+            <div class="mt-4 flex flex-col gap-3">
+              {
+                Object.entries(c.contactPrefs).map(([value, text]) => (
+                  <label class="flex min-h-11 items-center gap-3 text-(--color-paper)/85">
+                    <input type="radio" name="contactPref" value={value} class="h-4 w-4 accent-(--color-gold)" />
+                    {text}
+                  </label>
+                ))
+              }
+            </div>
+          </fieldset>
+          <div class="flex flex-wrap items-center gap-6">
+            <button type="submit" class={goldButton}>{c.save}</button>
+            <p data-member-save-status role="status" aria-live="polite" class="text-sm text-(--color-paper)/70"></p>
+          </div>
+        </form>
+      </section>
+
+      <section aria-labelledby="member-erasure-title" class="border-t border-(--color-line) pt-8">
+        <h2 id="member-erasure-title" class="label-tracked text-(--color-paper)/60">{c.erasureTitle}</h2>
+        <p class="mt-3 max-w-xl text-sm text-(--color-paper)/60">{c.erasureHelp}</p>
+        <button type="button" data-member-erasure class="label-tracked mt-4 min-h-11 text-red-300 hover:text-red-200">{c.erasureButton}</button>
+        <p class="mt-6 text-sm"><a href={localizedPath(lang, "/politique-de-confidentialite")} class="text-(--color-paper)/60 underline underline-offset-4 hover:text-(--color-gold)">{c.privacy}</a></p>
+      </section>
+    </div>
+  </div>
+</section>

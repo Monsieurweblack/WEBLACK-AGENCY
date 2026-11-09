@@ -389,9 +389,12 @@ const collaborationHref = briefPath(lang, { division: "talent", from: "talent" }
           >
             {t("talent.finalCta.talent.cta")} &rarr;
           </a>
-          <p class="mt-5">
+          <p class="mt-5 flex flex-col gap-2">
             <a href={localizedPath(lang, "/talent/plateforme")} class="text-sm text-(--color-paper)/60 underline underline-offset-4 transition-colors hover:text-(--color-gold)">
               {t("talent.finalCta.talent.platform")}
+            </a>
+            <a href={localizedPath(lang, "/espace/")} class="text-sm text-(--color-paper)/60 underline underline-offset-4 transition-colors hover:text-(--color-gold)">
+              {lang === "en" ? "Already applied? Sign in to your space" : "Déjà candidat·e ? Accéder à mon espace"}
             </a>
           </p>
         </div>

@@ -10,7 +10,7 @@ export interface SearchEntry {
 
 const STATIC_PAGES: Partial<Record<Lang, { path: string; title: string; description: string }[]>> = {
   fr: [
-    { path: "/", title: "Accueil", description: "WEBLACK — Agence créative indépendante" },
+    { path: "/", title: "Accueil", description: "WEBLACK — Creative Industries Ecosystem" },
     { path: "/about", title: "À propos", description: "L'agence, sa méthode, son équipe" },
     { path: "/talent", title: "Talent", description: "Management, représentation et développement de talents" },
     { path: "/creative", title: "Créatif", description: "Direction créative, campagnes, production de contenu" },
@@ -23,7 +23,7 @@ const STATIC_PAGES: Partial<Record<Lang, { path: string; title: string; descript
     { path: "/contact", title: "Contact", description: "Nous écrire" },
   ],
   en: [
-    { path: "/", title: "Home", description: "WEBLACK — Independent creative agency" },
+    { path: "/", title: "Home", description: "WEBLACK — Creative Industries Ecosystem" },
     { path: "/about", title: "About", description: "The agency, its method, its team" },
     { path: "/talent", title: "Talent", description: "Talent management, representation and development" },
     { path: "/creative", title: "Creative", description: "Creative direction, campaigns, content production" },

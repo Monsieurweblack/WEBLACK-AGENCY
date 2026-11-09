@@ -1,0 +1,17 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import MemberSpace from "../../components/pages/MemberSpace.astro";
+import { MEMBER_COPY } from "../../lib/member-copy";
+
+const lang = "en" as const;
+const copy = MEMBER_COPY[lang];
+---
+
+<BaseLayout lang={lang} title={copy.seoTitle} description={copy.lead} noindex>
+  <MemberSpace lang={lang} />
+</BaseLayout>
+
+<script>
+  import { initMemberSpace } from "../../scripts/member-space";
+  initMemberSpace();
+</script>

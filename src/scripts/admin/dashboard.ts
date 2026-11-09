@@ -65,7 +65,7 @@ interface Metrics {
     followUpsDue: { id: string; reference: string; full_name: string; organisation: string | null; status: string; next_action: string | null; next_action_at: string }[];
     unnotified: number;
   };
-  operations: { applicationEmailsPendingOrFailed: number };
+  operations: { applicationEmailsPendingOrFailed: number; pendingErasureRequests?: number };
   notConnected: string[];
 }
 
@@ -145,6 +145,10 @@ export function initAdminDashboard() {
     if (m.talent.retentionReviewDue)
       alerts.push(
         `${m.talent.retentionReviewDue} candidature(s) non retenue(s) ou archivée(s) depuis plus de 3 mois : à supprimer selon la politique de confidentialité (suppression manuelle, après vérification).`,
+      );
+    if (m.operations.pendingErasureRequests)
+      alerts.push(
+        `${m.operations.pendingErasureRequests} demande(s) d'effacement formulée(s) depuis l'espace membre : à exécuter dans Contacts après vérification.`,
       );
     if (m.operations.applicationEmailsPendingOrFailed) alerts.push(`${m.operations.applicationEmailsPendingOrFailed} e-mail(s) de candidature en attente ou en échec.`);
     $("alerts").replaceChildren(...(alerts.length ? alerts.map((a) => el("li", "border-l border-(--color-gold) pl-4 text-(--color-paper)/85", a)) : [el("li", "text-(--color-paper)/50", "Rien d'urgent.")]));

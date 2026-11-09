@@ -131,7 +131,7 @@ const translations = {
     "home.contact.cta": "Contacter WEBLACK",
 
     "about.hero.eyebrow": "À propos",
-    "about.hero.title": "Une agence créative indépendante.",
+    "about.hero.title": "Un écosystème des industries créatives.",
     "about.intro":
       "Fondée en 2010, WEBLACK est une structure indépendante qui évolue à l’intersection du talent, de la création et de la stratégie.",
     "about.body1":
@@ -795,7 +795,7 @@ const translations = {
     "contact.form.error": "Merci de renseigner tous les champs obligatoires avant d’envoyer.",
     "contact.form.mailto": "Ou écrivez-nous directement à",
     "contact.form.back": "Changer de profil",
-    "contact.info.address.label": "WEBLACK — Agence créative indépendante. Une vision africaine et afro-descendante, au rayonnement international.",
+    "contact.info.address.label": "WEBLACK — Creative Industries Ecosystem. Une vision africaine et afro-descendante, au rayonnement international.",
     "contact.info.email.label": "E-mail",
 
     "footer.tagline": "Talent. Créativité. Culture.",
@@ -965,7 +965,7 @@ const translations = {
     "home.contact.cta": "Contact WEBLACK",
 
     "about.hero.eyebrow": "About",
-    "about.hero.title": "An independent creative agency.",
+    "about.hero.title": "A creative industries ecosystem.",
     "about.intro":
       "Founded in 2010, WEBLACK is an independent structure operating at the intersection of talent, creativity and strategy.",
     "about.body1":
@@ -1623,7 +1623,7 @@ const translations = {
     "contact.form.error": "Please fill in all required fields before sending.",
     "contact.form.mailto": "Or write to us directly at",
     "contact.form.back": "Change profile",
-    "contact.info.address.label": "WEBLACK — Independent creative agency. An African and Afro-descendant vision, with international reach.",
+    "contact.info.address.label": "WEBLACK — Creative Industries Ecosystem. An African and Afro-descendant vision, with international reach.",
     "contact.info.email.label": "Email",
 
     "footer.tagline": "Talent. Creativity. Culture.",

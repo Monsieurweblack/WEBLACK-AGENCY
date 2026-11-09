@@ -149,3 +149,38 @@ Un événement vérifié et terminé garde sa page à la même adresse, marquée
 « Archive », hors de l'annonce de l'Agenda, et listé dans la section
 « Archives » de `/agenda/`. Un événement annulé ou repassé en revue n'a pas
 d'archive. Voir `getArchivedAgendaEvents` (`src/lib/content.ts`).
+
+## Espace membre WEBLACK TALENT (`/espace/`, `/en/espace/`)
+
+- **Connexion sans mot de passe** : la personne saisit l'adresse de sa
+  candidature ; si elle est connue, un lien valable 15 minutes, à usage
+  unique, lui est envoyé (Resend). La réponse est identique pour une adresse
+  inconnue (aucune énumération). Seule l'empreinte SHA-256 du jeton est
+  stockée ; le jeton voyage dans le fragment d'URL (`#t=`), jamais dans les
+  journaux serveur.
+- **Protections** : même origine exigée pour toute écriture ; 5 demandes de
+  lien par heure et par IP, 3 par heure et par adresse ; 20 vérifications
+  par heure et par IP ; garde-fou d'environnement (aucune écriture de
+  preview vers la base de production).
+- **Session** : table `member_sessions` (7 jours, révoquée à la
+  déconnexion), cookie `HttpOnly; Secure; SameSite=Lax` portant un
+  identifiant aléatoire signé. Clé de signature dérivée du secret
+  d'administration existant (aucun nouveau secret).
+- **Niveaux** (déduits, jamais stockés) : candidat·e ; talent activé
+  (Sélectionnée ou Vivier — ce n'est pas un contrat) ; talent représenté
+  (Représentée, contrat signé).
+- **Ce que la personne voit** : ses candidatures (référence, date, étape
+  simplifiée), ses coordonnées. Jamais les notes internes, l'historique
+  interne, les photos ni les mensurations.
+- **Ce qu'elle peut modifier** : téléphone, ville, Instagram, liens
+  portfolio, disponibilités, préférence de contact. Chaque modification est
+  inscrite à l'historique du dossier (noms des champs, sans valeurs) et au
+  journal d'audit.
+- **Effacement** : la personne le demande depuis son espace ; la demande
+  remonte au tableau de bord ; l'équipe l'exécute dans Contacts. Liens et
+  sessions sont effacés avec le reste.
+- **Tests** : `functions/lib/member.test.ts` (8 scénarios de sécurité) et un
+  parcours navigateur complet FR/EN en local (lien de développement renvoyé
+  **uniquement** sur `localhost`).
+- **Limite connue** : sur la preview, aucun e-mail ne part (pas de clé
+  Resend) — la connexion n'y est donc pas testable de bout en bout.

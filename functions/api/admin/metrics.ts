@@ -56,6 +56,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     .bind(today)
     .all();
   const emailIssues = await one(`SELECT COUNT(*) AS n FROM email_outbox WHERE status IN ('failed','pending')`);
+  // Demandes d'effacement formulées depuis l'espace membre et pas encore exécutées (le dossier existe encore).
+  const erasureRequests = await one(
+    `SELECT COUNT(DISTINCT a.email) AS n FROM application_events e JOIN applications a ON a.id = e.application_id WHERE e.kind = 'erasure_request'`,
+  );
 
   const won = leadsByStatus.find((r) => r.key === "WON")?.n ?? 0;
   const lost = leadsByStatus.find((r) => r.key === "LOST")?.n ?? 0;
@@ -79,7 +83,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         followUpsDue: followUps ?? [],
         unnotified,
       },
-      operations: { applicationEmailsPendingOrFailed: emailIssues },
+      operations: { applicationEmailsPendingOrFailed: emailIssues, pendingErasureRequests: erasureRequests },
       notConnected: ["Mesure d'audience GA4 (visiteurs, sources) : aucun identifiant d'API configuré — consulter GA4 directement."],
     },
     200,

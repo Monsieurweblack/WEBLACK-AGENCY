@@ -47,8 +47,8 @@ export type ParseResult = { ok: true; value: ValidApplication } | { ok: false; e
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const E164_RE = /^\+[1-9]\d{6,14}$/;
-const INSTAGRAM_RE = /^(@?[A-Za-z0-9._]{1,30}|https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?)$/;
+export const E164_RE = /^\+[1-9]\d{6,14}$/;
+export const INSTAGRAM_RE = /^(@?[A-Za-z0-9._]{1,30}|https:\/\/(www\.)?instagram\.com\/[A-Za-z0-9._]{1,30}\/?)$/;
 const PHOTO_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** Accepte la virgule décimale (saisie FR) comme le point (saisie EN). */

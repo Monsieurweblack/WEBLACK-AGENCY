@@ -92,11 +92,14 @@ export async function eraseContact(env: ErasureEnv, email: string): Promise<Cont
     out.inquiriesDeleted++;
   }
   const key = await contactKey(e);
-  // Espace membre (migrations/0007) : jetons de connexion liés à cette empreinte.
+  // Espace membre (migrations/0007) : liens de connexion et sessions de la personne.
   try {
-    await env.DB.prepare(`DELETE FROM member_login_tokens WHERE email_key = ?`).bind(key).run();
+    await env.DB.batch([
+      env.DB.prepare(`DELETE FROM member_login_tokens WHERE email = ?`).bind(e),
+      env.DB.prepare(`DELETE FROM member_sessions WHERE email = ?`).bind(e),
+    ]);
   } catch {
-    // Table absente (base non migrée) : rien à effacer.
+    // Tables absentes (base non migrée) : rien à effacer.
   }
   await audit(env.DB, "contact.erase", "contact", key, `applications=${out.applicationsDeleted},inquiries=${out.inquiriesDeleted}`);
   return out;
