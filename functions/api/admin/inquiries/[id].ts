@@ -5,6 +5,7 @@
 import { json } from "../../../lib/json.ts";
 import { requireAdmin, UUID_RE } from "../../../lib/adminSession.ts";
 import { INQUIRY_LIMITS, isInquiryStatus } from "../../../lib/inquiryOptions.ts";
+import { audit, auditStatement } from "../../../lib/audit.ts";
 import { notifyInquiry, type InquiryEnv, type InquiryRow } from "../../../lib/inquiryStore.ts";
 
 interface Env extends InquiryEnv {
@@ -36,6 +37,45 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
 interface PatchBody {
   status?: unknown;
   note?: unknown;
+  nextAction?: unknown;
+  nextActionAt?: unknown;
+  estimatedValue?: unknown;
+  sector?: unknown;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Champs de pilotage commercial : null efface, absent ne change rien. Renvoie la raison d'un refus. */
+function pipelineFields(body: PatchBody): { sets: string[]; values: unknown[]; error?: string } {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, max) : "");
+  if (body.nextAction !== undefined) {
+    if (body.nextAction !== null && typeof body.nextAction !== "string") return { sets, values, error: "invalid_next_action" };
+    sets.push("next_action = ?");
+    values.push(body.nextAction === null ? null : text(body.nextAction, INQUIRY_LIMITS.nextAction) || null);
+  }
+  if (body.nextActionAt !== undefined) {
+    if (body.nextActionAt !== null && (typeof body.nextActionAt !== "string" || !DATE_RE.test(body.nextActionAt) || Number.isNaN(Date.parse(body.nextActionAt)))) {
+      return { sets, values, error: "invalid_next_action_at" };
+    }
+    sets.push("next_action_at = ?");
+    values.push(body.nextActionAt);
+  }
+  if (body.estimatedValue !== undefined) {
+    const v = body.estimatedValue;
+    if (v !== null && (typeof v !== "number" || !Number.isInteger(v) || v < 0 || v > INQUIRY_LIMITS.estimatedValueMax)) {
+      return { sets, values, error: "invalid_estimated_value" };
+    }
+    sets.push("estimated_value = ?");
+    values.push(v);
+  }
+  if (body.sector !== undefined) {
+    if (body.sector !== null && typeof body.sector !== "string") return { sets, values, error: "invalid_sector" };
+    sets.push("sector = ?");
+    values.push(body.sector === null ? null : text(body.sector, INQUIRY_LIMITS.sector) || null);
+  }
+  return { sets, values };
 }
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -79,13 +119,19 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       env.DB.prepare(`INSERT INTO business_inquiry_events (id, inquiry_id, created_at, kind, note) VALUES (?, ?, ?, 'note', ?)`).bind(crypto.randomUUID(), id, now, note),
     );
   }
-  if (statements.length === 0) return json({ ok: false, reason: "no_changes" }, 400);
+  const pipeline = pipelineFields(body);
+  if (pipeline.error) return json({ ok: false, reason: pipeline.error }, 400);
+  if (statements.length === 0 && pipeline.sets.length === 0) return json({ ok: false, reason: "no_changes" }, 400);
 
-  statements.unshift(
-    statusChanged
-      ? env.DB.prepare(`UPDATE business_inquiries SET status = ?, updated_at = ? WHERE id = ?`).bind(body.status, now, id)
-      : env.DB.prepare(`UPDATE business_inquiries SET updated_at = ? WHERE id = ?`).bind(now, id),
-  );
+  const sets = [...pipeline.sets, "updated_at = ?"];
+  const values = [...pipeline.values, now];
+  if (statusChanged) {
+    sets.unshift("status = ?");
+    values.unshift(body.status);
+    statements.push(auditStatement(env.DB, "inquiry.status", "inquiry", id, `${current.status} → ${body.status}`));
+  }
+  if (pipeline.sets.length) statements.push(auditStatement(env.DB, "inquiry.pipeline", "inquiry", id, pipeline.sets.map((s) => s.split(" ")[0]).join(",")));
+  statements.unshift(env.DB.prepare(`UPDATE business_inquiries SET ${sets.join(", ")} WHERE id = ?`).bind(...values, id));
   await env.DB.batch(statements);
   return json({ ok: true }, 200);
 };
@@ -110,5 +156,6 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     env.DB.prepare(`DELETE FROM business_inquiries WHERE id = ?`).bind(id),
   ]);
   if (!deleted || deleted.meta.changes === 0) return json({ ok: false, reason: "not_found" }, 404);
+  await audit(env.DB, "inquiry.delete", "inquiry", id);
   return json({ ok: true }, 200);
 };

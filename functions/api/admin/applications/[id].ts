@@ -2,6 +2,7 @@ import { json } from "../../../lib/json.ts";
 import { requireAdmin, UUID_RE } from "../../../lib/adminSession.ts";
 import { deletePhoto } from "../../../lib/photos.ts";
 import { APPLICATION_STATUSES, type ApplicationRecord } from "../../../lib/applicationTypes.ts";
+import { audit, auditStatement } from "../../../lib/audit.ts";
 import { DriveClient, DriveError, driveConfigured, folderUrl, type DriveEnv } from "../../../lib/googleDrive.ts";
 
 interface Env extends DriveEnv {
@@ -68,7 +69,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
       }
     : null;
 
-  return json({ ok: true, application, photos: photoUrls, emails: emails ?? [], drive: driveInfo }, 200);
+  // Historique du dossier (statuts et notes), du plus récent au plus ancien.
+  const { results: events } = await env.DB.prepare(
+    `SELECT created_at, kind, from_status, to_status, note FROM application_events WHERE application_id = ? ORDER BY created_at DESC`,
+  )
+    .bind(id)
+    .all();
+
+  return json({ ok: true, application, photos: photoUrls, emails: emails ?? [], drive: driveInfo, events: events ?? [] }, 200);
 };
 
 interface PatchBody {
@@ -109,14 +117,40 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
   if (updates.length === 0) return json({ ok: false, reason: "no_changes" }, 400);
 
+  // État courant lu APRÈS la validation : une requête invalide reste un 400, quel que soit le dossier visé.
+  const current = await env.DB.prepare(`SELECT status, notes FROM applications WHERE id = ?`).bind(id).first<{ status: string; notes: string | null }>();
+  if (!current) return json({ ok: false, reason: "not_found" }, 404);
+
+  const now = new Date().toISOString();
   updates.push("updated_at = ?");
-  values.push(new Date().toISOString());
+  values.push(now);
 
-  const result = await env.DB.prepare(`UPDATE applications SET ${updates.join(", ")} WHERE id = ?`)
-    .bind(...values, id)
-    .run();
-
-  if (result.meta.changes === 0) return json({ ok: false, reason: "not_found" }, 404);
+  // Mise à jour et historique dans la même transaction : un changement de
+  // statut n'existe jamais sans sa trace, et inversement.
+  const statements: D1PreparedStatement[] = [env.DB.prepare(`UPDATE applications SET ${updates.join(", ")} WHERE id = ?`).bind(...values, id)];
+  if (typeof body.status === "string" && body.status !== current.status) {
+    statements.push(
+      env.DB.prepare(`INSERT INTO application_events (id, application_id, created_at, kind, from_status, to_status) VALUES (?, ?, ?, 'status', ?, ?)`).bind(
+        crypto.randomUUID(),
+        id,
+        now,
+        current.status,
+        body.status,
+      ),
+      auditStatement(env.DB, "application.status", "application", id, `${current.status} → ${body.status}`),
+    );
+  }
+  if (typeof body.notes === "string" && body.notes.trim() !== (current.notes ?? "").trim() && body.notes.trim() !== "") {
+    statements.push(
+      env.DB.prepare(`INSERT INTO application_events (id, application_id, created_at, kind, note) VALUES (?, ?, ?, 'note', ?)`).bind(
+        crypto.randomUUID(),
+        id,
+        now,
+        body.notes.trim().slice(0, 4000),
+      ),
+    );
+  }
+  await env.DB.batch(statements);
   return json({ ok: true }, 200);
 };
 
@@ -147,7 +181,8 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
 
   // D1 d'abord, en une transaction : si elle échoue, rien n'est perdu. Les
   // fichiers ne sont effacés qu'une fois le dossier réellement supprimé.
-  const [, , , , deleted] = await env.DB.batch([
+  const [, , , , , deleted] = await env.DB.batch([
+    env.DB.prepare(`DELETE FROM application_events WHERE application_id = ?`).bind(id),
     env.DB.prepare(`DELETE FROM drive_files WHERE application_id = ?`).bind(id),
     env.DB.prepare(`DELETE FROM drive_sync WHERE application_id = ?`).bind(id),
     env.DB.prepare(`DELETE FROM email_outbox WHERE application_id = ?`).bind(id),
@@ -157,5 +192,6 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
   if (!deleted || deleted.meta.changes === 0) return json({ ok: false, reason: "not_found" }, 404);
 
   for (const photo of photos ?? []) await deletePhoto(env.PHOTOS, photo.id);
+  await audit(env.DB, "application.delete", "application", id);
   return json({ ok: true }, 200);
 };

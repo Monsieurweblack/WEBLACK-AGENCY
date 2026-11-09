@@ -17,7 +17,7 @@ interface Env {
   ADMIN_SESSION_SECRET?: string;
 }
 
-const LIST_COLUMNS = `id, reference, created_at, updated_at, status, division, service, full_name, organisation, country, budget, timeline, channel, entry_point, notify_status`;
+const LIST_COLUMNS = `id, reference, created_at, updated_at, status, division, service, full_name, organisation, country, budget, timeline, channel, entry_point, notify_status, next_action, next_action_at, estimated_value, sector`;
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const denied = await requireAdmin(request, env.ADMIN_SESSION_SECRET, env.PHOTOS);

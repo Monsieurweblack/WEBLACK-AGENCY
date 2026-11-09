@@ -24,7 +24,13 @@ import "../../styles/global.css";
   </head>
   <body class="min-h-screen bg-(--color-ink) text-(--color-paper)">
     <div id="admin-root" class="mx-auto max-w-5xl px-6 py-16 md:px-10">
-      <h1 class="font-display text-3xl">Candidatures Talent</h1>
+      <div class="flex flex-wrap items-baseline justify-between gap-4">
+        <h1 class="font-display text-3xl">Candidatures Talent</h1>
+        <nav class="flex gap-6" aria-label="Administration">
+          <a href="/admin/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Tableau de bord</a>
+          <a href="/admin/demandes/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Demandes commerciales</a>
+        </nav>
+      </div>
 
       <!-- Connexion -->
       <form id="login-form" class="mt-10 max-w-sm space-y-4">
@@ -59,6 +65,23 @@ import "../../styles/global.css";
           <button id="drive-selftest" class="label-tracked min-h-10 text-(--color-paper)/60 hover:text-(--color-gold)">Test d'archivage Drive</button>
           <button id="drive-retry" hidden class="label-tracked min-h-10 text-(--color-gold) hover:text-(--color-gold-bright)">Relancer l'archivage en attente</button>
         </div>
+
+        <!-- Recherche multicritère (texte, catégorie, pays) — combinée au filtre de statut -->
+        <form id="search-form" class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_14rem_7rem_auto] sm:items-end">
+          <div>
+            <label for="search-q" class="label-tracked text-(--color-paper)/60">Nom, ville ou e-mail</label>
+            <input id="search-q" type="search" maxlength="80" class="form-input" />
+          </div>
+          <div>
+            <label for="search-category" class="label-tracked text-(--color-paper)/60">Catégorie</label>
+            <select id="search-category" class="form-input"><option value="">Toutes</option></select>
+          </div>
+          <div>
+            <label for="search-country" class="label-tracked text-(--color-paper)/60">Pays (ISO)</label>
+            <input id="search-country" type="text" maxlength="2" placeholder="SN" class="form-input uppercase" />
+          </div>
+          <button type="submit" class="min-h-12 border border-(--color-gold) px-5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-gold) hover:bg-(--color-gold) hover:text-(--color-on-gold)">Rechercher</button>
+        </form>
 
         <div id="list-view">
           <ul id="applications-list" class="mt-6 divide-y divide-(--color-line)"></ul>

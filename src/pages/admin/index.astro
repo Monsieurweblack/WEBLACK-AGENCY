@@ -1,0 +1,108 @@
+---
+import "../../styles/global.css";
+
+/**
+ * Tableau de bord de direction — WEBLACK Relationship Engine v1.
+ * Outil interne : même session que /admin/candidatures et /admin/demandes,
+ * jamais indexé. Rien n'est rendu au build : tous les chiffres sont lus en
+ * direct dans la base D1 (/api/admin/metrics), datés, et jamais estimés à la
+ * place d'une mesure. La mesure d'audience (GA4) n'y figure pas tant
+ * qu'aucun accès d'API n'est configuré — c'est affiché comme tel.
+ */
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Tableau de bord — Administration WEBLACK</title>
+  </head>
+  <body class="min-h-screen bg-(--color-ink) text-(--color-paper)">
+    <div class="mx-auto max-w-6xl px-6 py-16 md:px-10">
+      <div class="flex flex-wrap items-baseline justify-between gap-4">
+        <h1 class="font-display text-3xl">Tableau de bord</h1>
+        <nav class="flex flex-wrap gap-6" aria-label="Administration">
+          <a href="/admin/candidatures/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Candidatures Talent</a>
+          <a href="/admin/demandes/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Demandes commerciales</a>
+        </nav>
+      </div>
+
+      <form id="login-form" class="mt-10 max-w-sm space-y-4">
+        <div>
+          <label for="password" class="label-tracked text-(--color-paper)/70">Mot de passe</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" class="form-input" />
+        </div>
+        <button type="submit" class="inline-flex min-h-12 items-center justify-center bg-(--color-gold) px-8 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) hover:bg-(--color-gold-bright)">
+          Se connecter
+        </button>
+        <p id="login-status" role="status" aria-live="polite" class="min-h-[1.25em] text-sm text-red-400"></p>
+      </form>
+
+      <div id="dashboard" hidden class="mt-10 space-y-14">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-(--color-line) pb-4">
+          <p id="generated-at" class="text-sm text-(--color-paper)/50" role="status" aria-live="polite"></p>
+          <div class="flex gap-6">
+            <button id="refresh" class="label-tracked text-(--color-gold) hover:text-(--color-gold-bright)">Actualiser</button>
+            <button id="logout-button" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Déconnexion</button>
+          </div>
+        </div>
+
+        <section aria-labelledby="alerts-title">
+          <h2 id="alerts-title" class="label-tracked text-(--color-gold)">À traiter</h2>
+          <ul id="alerts" class="mt-4 space-y-2 text-sm"></ul>
+        </section>
+
+        <section aria-labelledby="business-title">
+          <h2 id="business-title" class="label-tracked text-(--color-gold)">Pipeline commercial</h2>
+          <div id="business-kpis" class="mt-4 grid grid-cols-2 gap-px bg-(--color-line) sm:grid-cols-4"></div>
+          <div class="mt-6 grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div><h3 class="label-tracked text-(--color-paper)/50">Par statut</h3><ul id="business-status" class="mt-3 space-y-1 text-sm"></ul></div>
+            <div><h3 class="label-tracked text-(--color-paper)/50">Par division</h3><ul id="business-division" class="mt-3 space-y-1 text-sm"></ul></div>
+            <div><h3 class="label-tracked text-(--color-paper)/50">Par canal d'origine</h3><ul id="business-channel" class="mt-3 space-y-1 text-sm"></ul></div>
+          </div>
+          <div class="mt-8">
+            <h3 class="label-tracked text-(--color-paper)/50">Relances dues</h3>
+            <ul id="followups" class="mt-3 divide-y divide-(--color-line) text-sm"></ul>
+          </div>
+        </section>
+
+        <section aria-labelledby="talent-title">
+          <h2 id="talent-title" class="label-tracked text-(--color-gold)">Talent</h2>
+          <div id="talent-kpis" class="mt-4 grid grid-cols-2 gap-px bg-(--color-line) sm:grid-cols-4"></div>
+          <div class="mt-6 grid grid-cols-1 gap-8 md:grid-cols-2">
+            <div><h3 class="label-tracked text-(--color-paper)/50">Par étape</h3><ul id="talent-status" class="mt-3 space-y-1 text-sm"></ul></div>
+            <div><h3 class="label-tracked text-(--color-paper)/50">Par catégorie</h3><ul id="talent-category" class="mt-3 space-y-1 text-sm"></ul></div>
+          </div>
+        </section>
+
+        <section aria-labelledby="contacts-title">
+          <h2 id="contacts-title" class="label-tracked text-(--color-gold)">Contacts</h2>
+          <p class="mt-2 max-w-2xl text-sm text-(--color-paper)/55">
+            Une personne = une adresse e-mail, reconnue à travers les candidatures et les demandes commerciales. Segments déduits des faits enregistrés. L'export rassemble tout ce que la base détient sur la personne (droit d'accès) ; chaque export est journalisé.
+          </p>
+          <form id="contacts-search" class="mt-4 flex flex-wrap items-end gap-4">
+            <div class="min-w-64 flex-1">
+              <label for="contacts-q" class="label-tracked text-(--color-paper)/60">Nom, e-mail ou organisation</label>
+              <input id="contacts-q" type="search" maxlength="80" class="form-input" />
+            </div>
+            <button type="submit" class="min-h-12 border border-(--color-gold) px-5 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-gold) hover:bg-(--color-gold) hover:text-(--color-on-gold)">Rechercher</button>
+          </form>
+          <p id="contacts-meta" class="mt-3 text-sm text-(--color-paper)/50" role="status" aria-live="polite"></p>
+          <ul id="contacts-list" class="mt-3 divide-y divide-(--color-line)"></ul>
+        </section>
+
+        <section aria-labelledby="sources-title">
+          <h2 id="sources-title" class="label-tracked text-(--color-paper)/50">Sources non reliées</h2>
+          <ul id="not-connected" class="mt-3 space-y-1 text-sm text-(--color-paper)/55"></ul>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      import { initAdminDashboard } from "../../scripts/admin/dashboard";
+      initAdminDashboard();
+    </script>
+  </body>
+</html>

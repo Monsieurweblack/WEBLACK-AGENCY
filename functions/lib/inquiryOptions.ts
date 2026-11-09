@@ -38,7 +38,24 @@ export const SERVICES_BY_DIVISION = {
 export const TIMELINES = ["under_1_month", "1_3_months", "3_6_months", "over_6_months", "flexible"] as const;
 export const BUDGETS = ["under_5k", "5k_15k", "15k_50k", "over_50k", "to_define"] as const;
 
-export const INQUIRY_STATUSES = ["NEW", "TO_QUALIFY", "CONTACTED", "PROPOSAL_SENT", "NEGOTIATION", "WON", "LOST"] as const;
+/**
+ * Pipeline commercial. Valeurs historiques conservées ; QUALIFIED, REPLIED,
+ * MEETING et FOLLOW_UP ajoutés (Relationship Engine v1). FOLLOW_UP = à
+ * relancer plus tard (ni gagné ni perdu).
+ */
+export const INQUIRY_STATUSES = [
+  "NEW",
+  "TO_QUALIFY",
+  "QUALIFIED",
+  "CONTACTED",
+  "REPLIED",
+  "MEETING",
+  "PROPOSAL_SENT",
+  "NEGOTIATION",
+  "WON",
+  "LOST",
+  "FOLLOW_UP",
+] as const;
 export type InquiryStatus = (typeof INQUIRY_STATUSES)[number];
 
 export const INQUIRY_LIMITS = {
@@ -48,6 +65,9 @@ export const INQUIRY_LIMITS = {
   descriptionMin: 30,
   description: 4000,
   note: 2000,
+  nextAction: 280,
+  sector: 80,
+  estimatedValueMax: 100_000_000,
   channel: 80,
   entryPoint: 40,
 } as const;

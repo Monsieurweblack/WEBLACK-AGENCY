@@ -21,7 +21,10 @@ import "../../styles/global.css";
     <div class="mx-auto max-w-6xl px-6 py-16 md:px-10">
       <div class="flex flex-wrap items-baseline justify-between gap-4">
         <h1 class="font-display text-3xl">Demandes commerciales</h1>
-        <a href="/admin/candidatures/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Candidatures Talent &rarr;</a>
+        <nav class="flex gap-6" aria-label="Administration">
+          <a href="/admin/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Tableau de bord</a>
+          <a href="/admin/candidatures/" class="label-tracked text-(--color-paper)/50 hover:text-(--color-gold)">Candidatures Talent</a>
+        </nav>
       </div>
 
       <form id="login-form" class="mt-10 max-w-sm space-y-4">

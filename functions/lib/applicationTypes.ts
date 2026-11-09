@@ -1,10 +1,36 @@
-export type ApplicationStatus = "RECEIVED" | "REVIEWING" | "TO_CONTACT" | "SHORTLISTED" | "REJECTED" | "ARCHIVED";
+/**
+ * Cycle de vie d'une candidature Talent (Relationship Engine v1).
+ * Les six premières valeurs historiques sont conservées telles quelles
+ * (dossiers déjà enregistrés) ; les nouvelles s'y insèrent dans l'ordre du
+ * parcours. Trois notions restent distinctes et ne se confondent jamais :
+ *  - SELECTED    : retenue pour un projet ou une étape — pas un contrat ;
+ *  - TALENT_POOL : conservée dans le vivier — suppose l'information et la
+ *                  base légale prévues par la politique de confidentialité ;
+ *  - REPRESENTED : représentation contractuelle effective (contrat signé).
+ */
+export type ApplicationStatus =
+  | "RECEIVED"
+  | "REVIEWING"
+  | "INFO_REQUESTED"
+  | "TO_CONTACT"
+  | "SHORTLISTED"
+  | "INTERVIEW"
+  | "SELECTED"
+  | "TALENT_POOL"
+  | "REPRESENTED"
+  | "REJECTED"
+  | "ARCHIVED";
 
 export const APPLICATION_STATUSES: ApplicationStatus[] = [
   "RECEIVED",
   "REVIEWING",
+  "INFO_REQUESTED",
   "TO_CONTACT",
   "SHORTLISTED",
+  "INTERVIEW",
+  "SELECTED",
+  "TALENT_POOL",
+  "REPRESENTED",
   "REJECTED",
   "ARCHIVED",
 ];

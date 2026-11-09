@@ -7,15 +7,35 @@
  */
 import { ui } from "../../i18n/ui";
 import { formatApplicationField } from "../../lib/talent-application-display";
+import { TALENT_CATEGORIES } from "../../../functions/lib/talentOptions.ts";
 
+/**
+ * Cycle de vie (Relationship Engine v1) — même liste et même ordre que
+ * functions/lib/applicationTypes.ts. « Sélectionnée », « Vivier » et
+ * « Représentée » sont trois états distincts : seule la représentation
+ * correspond à un contrat signé.
+ */
 const STATUSES = [
-  { value: "RECEIVED", label: "Reçue" },
-  { value: "REVIEWING", label: "À examiner" },
+  { value: "RECEIVED", label: "Nouvelle candidature" },
+  { value: "REVIEWING", label: "En cours d'examen" },
+  { value: "INFO_REQUESTED", label: "Informations demandées" },
   { value: "TO_CONTACT", label: "À contacter" },
   { value: "SHORTLISTED", label: "Présélectionnée" },
+  { value: "INTERVIEW", label: "Entretien" },
+  { value: "SELECTED", label: "Sélectionnée" },
+  { value: "TALENT_POOL", label: "Vivier de talents" },
+  { value: "REPRESENTED", label: "Représentée (contrat signé)" },
   { value: "REJECTED", label: "Non retenue" },
   { value: "ARCHIVED", label: "Archivée" },
 ];
+
+interface HistoryEvent {
+  created_at: string;
+  kind: string;
+  from_status: string | null;
+  to_status: string | null;
+  note: string | null;
+}
 
 interface ApplicationListItem {
   id: string;
@@ -75,7 +95,22 @@ export function initAdminCandidatures() {
 
   let activeStatus = "";
 
+  let searchReady = false;
+  function initSearch() {
+    if (searchReady) return;
+    searchReady = true;
+    const categorySelect = document.getElementById("search-category") as HTMLSelectElement | null;
+    if (categorySelect) {
+      for (const value of TALENT_CATEGORIES) categorySelect.add(new Option(formatApplicationField("talent_category", value, translate), value));
+    }
+    document.getElementById("search-form")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void loadList();
+    });
+  }
+
   function showDashboard() {
+    initSearch();
     loginForm!.hidden = true;
     dashboard!.hidden = false;
     renderFilters();
@@ -297,7 +332,17 @@ export function initAdminCandidatures() {
 
   async function loadList() {
     applicationsList!.innerHTML = "";
-    const url = activeStatus ? `/api/admin/applications?status=${activeStatus}` : "/api/admin/applications";
+    // Recherche multicritère : statut (filtres), texte, catégorie, pays — appliquée côté serveur.
+    const params = new URLSearchParams();
+    if (activeStatus) params.set("status", activeStatus);
+    const q = (document.getElementById("search-q") as HTMLInputElement | null)?.value.trim();
+    const category = (document.getElementById("search-category") as HTMLSelectElement | null)?.value;
+    const country = (document.getElementById("search-country") as HTMLInputElement | null)?.value.trim().toUpperCase();
+    if (q) params.set("q", q);
+    if (category) params.set("category", category);
+    if (country && /^[A-Z]{2}$/.test(country)) params.set("country", country);
+    const query = params.toString();
+    const url = `/api/admin/applications${query ? `?${query}` : ""}`;
     const response = await fetch(url);
     if (response.status === 401) {
       showLogin();
@@ -333,12 +378,19 @@ export function initAdminCandidatures() {
       showLogin();
       return;
     }
-    const data = (await response.json()) as { ok: boolean; application?: ApplicationDetail; photos?: PhotoRef[]; emails?: EmailRow[]; drive?: DriveInfo | null };
+    const data = (await response.json()) as {
+      ok: boolean;
+      application?: ApplicationDetail;
+      photos?: PhotoRef[];
+      emails?: EmailRow[];
+      drive?: DriveInfo | null;
+      events?: HistoryEvent[];
+    };
     if (!data.ok || !data.application) return;
 
     listView!.hidden = true;
     detailView!.hidden = false;
-    renderDetail(id, data.application, data.photos ?? [], data.emails ?? [], data.drive ?? null);
+    renderDetail(id, data.application, data.photos ?? [], data.emails ?? [], data.drive ?? null, data.events ?? []);
   }
 
   interface EmailRow {
@@ -427,7 +479,20 @@ export function initAdminCandidatures() {
 
   const translate = (key: string) => (ui.fr as Record<string, string>)[key];
 
-  function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[], emails: EmailRow[], drive: DriveInfo | null) {
+  function historyHtml(events: HistoryEvent[]): string {
+    const items = events.length
+      ? events
+          .map((e) => {
+            const when = new Date(e.created_at).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+            const text = e.kind === "status" ? `Statut : ${statusLabel(e.from_status ?? "")} → ${statusLabel(e.to_status ?? "")}` : `Note : ${e.note ?? ""}`;
+            return `<li class="flex gap-4"><span class="shrink-0 text-(--color-paper)/50">${escapeHtml(when)}</span><span class="whitespace-pre-wrap text-(--color-paper)/85">${escapeHtml(text)}</span></li>`;
+          })
+          .join("")
+      : `<li class="text-(--color-paper)/50">Aucune étape enregistrée depuis la mise en place de l'historique.</li>`;
+    return `<div class="mt-8"><h3 class="label-tracked text-(--color-gold)">Historique</h3><ul class="mt-3 space-y-2 text-sm">${items}</ul></div>`;
+  }
+
+  function renderDetail(id: string, application: ApplicationDetail, photos: PhotoRef[], emails: EmailRow[], drive: DriveInfo | null, events: HistoryEvent[]) {
     const sections = FIELD_GROUPS.map((group) => {
       const rows = group.fields
         .map(([key, label]) => [label, formatApplicationField(key, application[key], translate)] as const)
@@ -461,11 +526,13 @@ export function initAdminCandidatures() {
       ${photosHtml}
       ${emailsHtml(emails)}
       ${driveHtml(drive)}
+      ${historyHtml(events)}
       <div class="mt-8 border-t border-(--color-line) pt-6">
         <label class="label-tracked text-(--color-paper)/70">Statut</label>
         <select id="detail-status" class="form-input mt-2 max-w-xs">
           ${STATUSES.map((s) => `<option value="${s.value}" ${s.value === application.status ? "selected" : ""}>${s.label}</option>`).join("")}
         </select>
+        <p class="mt-2 max-w-xl text-xs text-(--color-paper)/50">« Vivier » suppose l'information du candidat prévue par la politique de confidentialité ; « Représentée » ne s'emploie qu'après signature d'un contrat de représentation.</p>
         <label class="label-tracked mt-4 block text-(--color-paper)/70">Notes internes</label>
         <textarea id="detail-notes" rows="4" class="form-input resize-none">${escapeHtml(String(application.notes ?? ""))}</textarea>
         <div class="mt-4 flex flex-wrap items-center gap-4">
@@ -486,8 +553,11 @@ export function initAdminCandidatures() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, notes }),
       });
+      if (response.status === 401) return showLogin();
       const data = (await response.json()) as { ok: boolean };
       saveStatus.textContent = data.ok ? "Enregistré." : "Échec de l'enregistrement.";
+      // Recharge le dossier : l'historique affiche immédiatement l'étape enregistrée.
+      if (data.ok) await openDetail(id);
     });
 
     document.getElementById("drive-retry-one")?.addEventListener("click", async () => {
