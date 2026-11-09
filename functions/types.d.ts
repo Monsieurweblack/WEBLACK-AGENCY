@@ -50,6 +50,20 @@ interface PagesFunctionContext<Env> {
   params: Record<string, string | string[]>;
   /** Prolonge l'exécution après l'envoi de la réponse (absent dans les tests). */
   waitUntil?: (promise: Promise<unknown>) => void;
+  /** Sert la ressource statique demandée (absent dans les tests). */
+  next?: () => Promise<Response>;
 }
 
 type PagesFunction<Env = Record<string, unknown>> = (context: PagesFunctionContext<Env>) => Promise<Response>;
+
+/** HTMLRewriter (runtime Workers) — seulement ce qu'utilise functions/lib/opportunities.ts. */
+interface HTMLRewriterElement {
+  getAttribute(name: string): string | null;
+  setAttribute(name: string, value: string): void;
+  removeAttribute(name: string): void;
+  remove(): void;
+}
+declare class HTMLRewriter {
+  on(selector: string, handlers: { element?(element: HTMLRewriterElement): void }): HTMLRewriter;
+  transform(response: Response): Response;
+}

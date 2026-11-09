@@ -1,0 +1,24 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import OpportunityDetail from "../../components/pages/OpportunityDetail.astro";
+import { OPPORTUNITIES, type Opportunity } from "../../data/opportunities";
+
+/** Une page par annonce ; son statut (publiée, clôturée…) est appliqué à la requête — voir functions/opportunities/[[path]].ts. */
+export function getStaticPaths() {
+  return OPPORTUNITIES.map((opportunity) => ({ params: { slug: opportunity.slug }, props: { opportunity } }));
+}
+
+const lang = "fr" as const;
+const { opportunity } = Astro.props as { opportunity: Opportunity };
+const x = opportunity.text[lang];
+---
+
+<BaseLayout
+  lang={lang}
+  title={`${x.title} · Opportunities`}
+  description={`${x.summary} ${x.location}, ${x.eventDate}.`}
+  image={opportunity.image?.src}
+  imageAlt={opportunity.image?.alt[lang]}
+>
+  <OpportunityDetail lang={lang} opportunity={opportunity} />
+</BaseLayout>

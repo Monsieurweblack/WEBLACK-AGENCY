@@ -1,0 +1,12 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import OpportunityList from "../../components/pages/OpportunityList.astro";
+import { OPPORTUNITY_COPY } from "../../lib/opportunity-copy";
+
+const lang = "fr" as const;
+const c = OPPORTUNITY_COPY[lang];
+---
+
+<BaseLayout lang={lang} title={c.catalogSeoTitle} description={c.catalogLead}>
+  <OpportunityList lang={lang} />
+</BaseLayout>

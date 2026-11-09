@@ -20,6 +20,7 @@ const STATIC_PAGES: Partial<Record<Lang, { path: string; title: string; descript
     { path: "/responsibility", title: "Engagements", description: "La responsabilité de WEBLACK" },
     { path: "/partners", title: "Partenaires", description: "Les collaborations WEBLACK" },
     { path: "/live", title: "Live", description: "Les directs WEBLACK" },
+    { path: "/opportunities", title: "Opportunities", description: "Appels à candidatures transmis par WEBLACK" },
     { path: "/contact", title: "Contact", description: "Nous écrire" },
   ],
   en: [
@@ -33,6 +34,7 @@ const STATIC_PAGES: Partial<Record<Lang, { path: string; title: string; descript
     { path: "/responsibility", title: "Responsibility", description: "WEBLACK's responsibility" },
     { path: "/partners", title: "Partners", description: "WEBLACK's collaborations" },
     { path: "/live", title: "Live", description: "WEBLACK's live broadcasts" },
+    { path: "/opportunities", title: "Opportunities", description: "Calls for applications shared by WEBLACK" },
     { path: "/contact", title: "Contact", description: "Get in touch" },
   ],
 };

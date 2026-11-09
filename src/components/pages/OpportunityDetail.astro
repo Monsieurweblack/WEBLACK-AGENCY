@@ -1,0 +1,159 @@
+---
+/**
+ * Fiche publique d'une opportunité (FR/EN).
+ *
+ * Le HTML est statique ; l'état vivant (ouvert / clôturé, organisateur
+ * confirmé ou non) est appliqué à la requête par
+ * functions/opportunities/[[path]].ts, qui bascule l'attribut `hidden` des
+ * blocs marqués data-when. Rendu par défaut : ouvert, confirmation en cours
+ * — jamais « confirmé » sans décision enregistrée au tableau de bord.
+ */
+import { localizedPath, type Lang } from "../../i18n/utils";
+import type { Opportunity } from "../../data/opportunities";
+import { OPPORTUNITY_COPY, formatDeadline } from "../../lib/opportunity-copy";
+import RemoteImage from "../media/RemoteImage.astro";
+
+interface Props {
+  lang: Lang;
+  opportunity: Opportunity;
+}
+
+const { lang, opportunity: o } = Astro.props;
+const c = OPPORTUNITY_COPY[lang];
+const x = o.text[lang];
+const deadline = formatDeadline(o.deadline, lang);
+const closedAtBuild = Date.now() > Date.parse(o.deadline);
+const mailto = `mailto:${o.contact.email}?subject=${encodeURIComponent(`${x.title} — ${c.mailSubject}`)}&body=${encodeURIComponent(c.mailBody)}`;
+const facts = [
+  { label: c.category, value: x.category },
+  { label: c.location, value: x.location },
+  { label: c.event, value: x.eventDate },
+  { label: c.organizer, value: o.organizer.name },
+  { label: c.broadcast, value: o.broadcastPartner },
+];
+---
+
+<article class="bg-(--color-ink)" data-opportunity={o.slug}>
+  <header class="px-6 pb-14 pt-36 md:px-10 md:pt-44">
+    <div class="mx-auto max-w-(--container-content)">
+      <a href={localizedPath(lang, "/opportunities")} class="label-tracked text-(--color-paper)/55 transition-colors hover:text-(--color-gold)">&larr; {c.back}</a>
+      <p class="label-tracked label-tracked-dot mt-10 text-(--color-gold)">{c.catalogEyebrow} · {x.category}</p>
+      <h1 class="font-display mt-5 max-w-4xl text-4xl leading-[1.05] text-balance text-(--color-paper) sm:text-6xl">{x.title}</h1>
+      <p class="mt-6 max-w-2xl text-lg text-(--color-paper)/75">{x.summary}</p>
+
+      <div class="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 border-y border-(--color-line) py-6">
+        <div>
+          <p class="label-tracked text-(--color-paper)/55">{c.deadline}</p>
+          <p class="font-display mt-1 text-3xl text-(--color-gold) sm:text-4xl">{deadline}</p>
+        </div>
+        <p class="label-tracked border border-(--color-gold) px-3 py-2 text-(--color-gold)" data-when="open" hidden={closedAtBuild}>{c.open}</p>
+        <p class="label-tracked border border-(--color-paper)/40 px-3 py-2 text-(--color-paper)/70" data-when="closed" hidden={!closedAtBuild}>{c.closed}</p>
+        <a
+          href="#contact-opportunity"
+          class="inline-flex min-h-12 w-full items-center justify-center bg-(--color-gold) px-6 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-colors hover:bg-(--color-gold-bright) sm:w-auto lg:hidden"
+          data-when="open"
+          hidden={closedAtBuild}>{c.jump} &darr;</a
+        >
+      </div>
+    </div>
+  </header>
+
+  {
+    o.image && (
+      <figure class="px-6 md:px-10">
+        <div class="mx-auto max-w-(--container-content)">
+          <RemoteImage src={o.image.src} alt={o.image.alt[lang]} width={o.image.width} height={o.image.height} class="h-auto w-full" />
+        </div>
+      </figure>
+    )
+  }
+
+  <div class="px-6 pb-24 pt-14 md:px-10 md:pb-32">
+    <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-14 lg:grid-cols-[1.35fr_1fr] lg:gap-20">
+      <div class="space-y-14">
+        <section aria-labelledby="opp-about">
+          <h2 id="opp-about" class="label-tracked text-(--color-gold)">{c.about}</h2>
+          <div class="mt-5 max-w-[65ch] space-y-4 text-lg text-(--color-paper)/85">
+            {x.intro.map((p) => <p>{p}</p>)}
+          </div>
+        </section>
+
+        <section aria-labelledby="opp-criteria">
+          <h2 id="opp-criteria" class="label-tracked text-(--color-gold)">{c.criteria}</h2>
+          <ul class="mt-5 divide-y divide-(--color-line) border-y border-(--color-line)">
+            {x.criteria.map((item) => <li class="py-4 text-(--color-paper)/85">{item}</li>)}
+          </ul>
+        </section>
+
+        <section aria-labelledby="opp-documents">
+          <h2 id="opp-documents" class="label-tracked text-(--color-gold)">{c.documents}</h2>
+          <ol class="mt-5 divide-y divide-(--color-line) border-y border-(--color-line)">
+            {
+              x.documents.map((item, i) => (
+                <li class="flex gap-5 py-4 text-(--color-paper)/85">
+                  <span class="font-display w-6 shrink-0 text-(--color-gold) tabular-nums">{i + 1}</span>
+                  <span>{item}</span>
+                </li>
+              ))
+            }
+          </ol>
+        </section>
+
+        <p class="max-w-[65ch] text-sm text-(--color-paper)/60">{x.notice}</p>
+      </div>
+
+      <aside class="space-y-10 lg:sticky lg:top-28 lg:self-start">
+        <div class="scroll-mt-28 border border-(--color-gold) p-6 sm:p-8" id="contact-opportunity">
+          <h2 class="font-display text-2xl text-(--color-paper)">{c.contactTitle}</h2>
+          <p class="mt-3 font-semibold text-(--color-gold)">{x.specialOffer}</p>
+          <div data-when="open" hidden={closedAtBuild}>
+            <p class="mt-3 text-(--color-paper)/75">{c.contactLead}</p>
+            <a
+              href={mailto}
+              class="mt-6 inline-flex min-h-12 w-full items-center justify-center bg-(--color-gold) px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.08em] text-(--color-on-gold) transition-colors hover:bg-(--color-gold-bright)"
+              data-opportunity-contact={o.slug}
+            >
+              {c.contactCta}
+            </a>
+            <p class="mt-4 break-all text-sm text-(--color-paper)/70">{o.contact.email}</p>
+            <ul class="mt-3 space-y-1 text-sm">
+              {
+                o.contact.phones.map((p) => (
+                  <li>
+                    <a href={`tel:${p.tel}`} class="text-(--color-paper)/80 underline-offset-4 hover:text-(--color-gold) hover:underline">
+                      <span class="sr-only">{c.call} </span>
+                      {p.label}
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
+          <p class="mt-3 text-(--color-paper)/75" data-when="closed" hidden={!closedAtBuild}>{c.closedLead}</p>
+        </div>
+
+        <dl class="divide-y divide-(--color-line) border-y border-(--color-line) text-sm">
+          {
+            facts.map((f) => (
+              <div class="grid grid-cols-[9rem_1fr] gap-4 py-3">
+                <dt class="label-tracked text-(--color-paper)/50">{f.label}</dt>
+                <dd class="text-(--color-paper)/90">{f.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+        <div class="space-y-3 text-sm">
+          {
+            o.organizer.url && (
+              <a href={o.organizer.url} rel="noopener" target="_blank" class="label-tracked inline-flex text-(--color-paper)/70 hover:text-(--color-gold)">
+                {c.organizerSite} &nearr;
+              </a>
+            )
+          }
+          <p class="text-(--color-paper)/55" data-when="pending">{c.pendingNote}</p>
+          <p class="text-(--color-paper)/55" data-when="verified" hidden>{c.verifiedNote}</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</article>

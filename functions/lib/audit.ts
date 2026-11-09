@@ -4,7 +4,7 @@
  * court (ex. « REVIEWING → SHORTLISTED »). Un échec d'écriture du journal ne
  * doit jamais bloquer l'action elle-même : il est ignoré.
  */
-export type AuditTarget = "application" | "inquiry" | "contact";
+export type AuditTarget = "application" | "inquiry" | "contact" | "opportunity";
 
 export function auditStatement(db: D1Database, action: string, targetType: AuditTarget, targetId: string, detail?: string): D1PreparedStatement {
   return db
