@@ -5,7 +5,8 @@
 import { json } from "../../../lib/json.ts";
 import { requireAdmin, UUID_RE } from "../../../lib/adminSession.ts";
 import { INQUIRY_LIMITS, isInquiryStatus } from "../../../lib/inquiryOptions.ts";
-import { audit, auditStatement } from "../../../lib/audit.ts";
+import { auditStatement } from "../../../lib/audit.ts";
+import { deleteInquiryRecord } from "../../../lib/erasure.ts";
 import { notifyInquiry, type InquiryEnv, type InquiryRow } from "../../../lib/inquiryStore.ts";
 
 interface Env extends InquiryEnv {
@@ -151,11 +152,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
   if (denied) return denied;
   const id = inquiryId(params);
   if (!id) return json({ ok: false, reason: "invalid_id" }, 400);
-  const [, deleted] = await env.DB.batch([
-    env.DB.prepare(`DELETE FROM business_inquiry_events WHERE inquiry_id = ?`).bind(id),
-    env.DB.prepare(`DELETE FROM business_inquiries WHERE id = ?`).bind(id),
-  ]);
-  if (!deleted || deleted.meta.changes === 0) return json({ ok: false, reason: "not_found" }, 404);
-  await audit(env.DB, "inquiry.delete", "inquiry", id);
+  const result = await deleteInquiryRecord(env.DB, id);
+  if (!result.ok) return json({ ok: false, reason: result.reason }, result.status);
   return json({ ok: true }, 200);
 };

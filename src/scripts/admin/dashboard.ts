@@ -183,6 +183,44 @@ export function initAdminDashboard() {
     $("not-connected").replaceChildren(...m.notConnected.map((n) => el("li", "", n)));
   }
 
+  const EVENT_LABEL: Record<string, string> = {
+    service_cta_click: "Clic vers un brief (pages d'offre)",
+    business_inquiry_start: "Brief commencé",
+    business_inquiry_success: "Brief reçu (confirmé par le serveur)",
+    talent_application_start: "Candidature commencée",
+    talent_application_success: "Candidature reçue (confirmée par le serveur)",
+  };
+
+  /** Audience GA4 : source distincte du CRM, affichée seulement si l'accès est réellement configuré. */
+  async function loadAudience() {
+    const meta = $("audience-meta");
+    const response = await fetch("/api/admin/analytics");
+    if (response.status === 401) return showLogin();
+    const data = (await response.json()) as {
+      configured?: boolean;
+      reason?: string;
+      fetchedAt?: string;
+      report?: { period: { startDate: string; endDate: string; days: number }; totals: { activeUsers: number; sessions: number; pageViews: number }; channels: { channel: string; sessions: number }[]; conversions: { event: string; count: number }[] };
+    };
+    if (!data.configured) {
+      meta.textContent = "Non relié : l'accès en lecture à la propriété GA4 n'est pas encore configuré (compte de service). Aucun chiffre n'est affiché à la place.";
+      return;
+    }
+    if (!data.report) {
+      meta.textContent = `GA4 configuré, mais la lecture a échoué (${data.reason ?? "erreur"}). Vérifier l'accès « Lecteur » du compte de service.`;
+      return;
+    }
+    const r = data.report;
+    meta.textContent = `Source : Google Analytics 4, ${r.period.days} jours (${r.period.startDate} → ${r.period.endDate}), lu le ${new Date(data.fetchedAt!).toLocaleString("fr-FR")}. Mesure soumise au consentement : elle ne compte que les visiteurs ayant accepté la mesure d'audience.`;
+    $("audience-kpis").replaceChildren(
+      kpi("Utilisateurs actifs", r.totals.activeUsers.toLocaleString("fr-FR")),
+      kpi("Sessions", r.totals.sessions.toLocaleString("fr-FR")),
+      kpi("Pages vues", r.totals.pageViews.toLocaleString("fr-FR")),
+    );
+    counts($("audience-channels"), r.channels.map((c) => ({ key: c.channel, n: c.sessions })), {});
+    counts($("audience-conversions"), r.conversions.map((c) => ({ key: c.event, n: c.count })), EVENT_LABEL);
+  }
+
   async function loadContacts() {
     const q = ($("contacts-q") as HTMLInputElement).value.trim();
     const response = await fetch(`/api/admin/contacts${q ? `?q=${encodeURIComponent(q)}` : ""}`);
@@ -227,7 +265,33 @@ export function initAdminDashboard() {
           URL.revokeObjectURL(a.href);
           exportBtn.textContent = "Exporté";
         });
-        li.append(left, exportBtn);
+        // Droit à l'effacement : l'adresse doit être retapée — jamais un simple clic.
+        const eraseBtn = el("button", "label-tracked min-h-10 text-red-300 hover:text-red-200", "Effacer (RGPD)");
+        eraseBtn.type = "button";
+        eraseBtn.addEventListener("click", async () => {
+          const typed = window.prompt(
+            `Effacement définitif de toutes les données de cette personne (candidatures, photos, demandes). L'archive Drive part à la corbeille.\n\nPour confirmer, retapez l'adresse : ${c.email}`,
+          );
+          if (typed === null) return;
+          const r = await fetch("/api/admin/contacts/erase", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: c.email, confirm: typed }) });
+          if (r.status === 401) return showLogin();
+          const data = (await r.json()) as { ok?: boolean; reason?: string; applicationsDeleted?: number; inquiriesDeleted?: number; failed?: { reason: string } };
+          if (r.ok) {
+            // Liste rechargée d'abord, puis le compte rendu — sinon le rechargement l'efface aussitôt.
+            await loadContacts();
+            $("contacts-meta").textContent = `Effacé : ${data.applicationsDeleted} candidature(s), ${data.inquiriesDeleted} demande(s). Opération journalisée.`;
+            void loadMetrics();
+          } else if (data.reason === "confirmation_mismatch") {
+            $("contacts-meta").textContent = `Adresse non confirmée pour ${c.email} — rien n'a été effacé.`;
+          } else if (data.reason === "partial") {
+            $("contacts-meta").textContent = `Effacement interrompu (${data.failed?.reason ?? "erreur"}) : ${data.applicationsDeleted ?? 0} dossier(s) effacé(s), le reste est intact — relancer.`;
+          } else {
+            $("contacts-meta").textContent = "Échec de l'effacement — rien n'a été effacé.";
+          }
+        });
+        const actions = el("div", "flex flex-col items-end gap-1");
+        actions.append(exportBtn, eraseBtn);
+        li.append(left, actions);
         return li;
       }),
     );
@@ -243,6 +307,7 @@ export function initAdminDashboard() {
       if (data.ok) {
         await loadMetrics();
         await loadContacts();
+        void loadAudience();
       } else loginStatus.textContent = data.reason === "rate_limited" ? "Trop de tentatives. Réessayez plus tard." : data.reason === "unconfigured" ? "Administration non configurée sur cet environnement." : "Mot de passe incorrect.";
     } catch {
       loginStatus.textContent = "Connexion impossible.";
@@ -260,6 +325,8 @@ export function initAdminDashboard() {
 
   // Session déjà ouverte : directement au tableau de bord.
   void loadMetrics().then(() => {
-    if (!dashboard.hidden) void loadContacts();
+    if (dashboard.hidden) return;
+    void loadContacts();
+    void loadAudience();
   });
 }

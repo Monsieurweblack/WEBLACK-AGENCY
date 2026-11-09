@@ -18,6 +18,8 @@ personnes derrière elles. Livré le 2026-11-09 (branche
 | Export RGPD (droit d'accès) | `POST /api/admin/contacts/export` | Adresse dans le corps, jamais dans l'URL ; chaque export est journalisé |
 | Journal d'audit | table `admin_audit` · `functions/lib/audit.ts` | Action + cible technique + détail court ; aucune donnée personnelle |
 | Tableau de bord de direction | `/admin/` · `GET /api/admin/metrics` | Données réelles de D1, datées ; alertes et relances dues |
+| Effacement complet d'une personne | `POST /api/admin/contacts/erase` · `functions/lib/erasure.ts` | Adresse à retaper ; Drive → D1 → photos ; arrêt au premier échec sans perte |
+| Audience GA4 (lecture seule) | `GET /api/admin/analytics` · `functions/lib/ga4.ts` | Compte de service, périmètre `analytics.readonly` ; « non relié » tant que l'accès n'est pas fourni |
 
 ### Distinctions qui ne se confondent jamais
 
@@ -59,9 +61,16 @@ personnes derrière elles. Livré le 2026-11-09 (branche
 5. Pour une demande d'accès d'une personne, chercher son adresse dans
    **Contacts** puis **Exporter (RGPD)** : le fichier JSON rassemble tout ce
    que la base détient.
-6. Pour une demande d'effacement, supprimer chaque dossier concerné depuis
-   sa fiche (candidature ou demande). L'archive Drive part à la corbeille et
-   la suppression est journalisée.
+6. Pour une demande d'effacement : dans **Contacts**, **Effacer (RGPD)**,
+   puis retaper l'adresse. Sont effacés : toutes les candidatures (données,
+   photos, historique, e-mails en file), toutes les demandes commerciales et
+   leur historique, les jetons de connexion de l'espace membre. L'archive
+   Google Drive part à la corbeille (vidée par Google au bout de 30 jours).
+   Si Drive refuse, rien n'est effacé et l'opération peut être relancée.
+   Le journal d'audit ne garde que l'empreinte de la personne et les
+   compteurs. **Ce qui reste hors de portée** : les e-mails déjà reçus dans
+   les boîtes de l'équipe, et l'éventuel abonnement à la lettre (Resend) —
+   à traiter à la main, en réponse à la même demande.
 
 ## Conservation
 
@@ -71,6 +80,21 @@ personnes derrière elles. Livré le 2026-11-09 (branche
 | Candidature non retenue ou archivée | 3 mois | **Signalée** au tableau de bord ; suppression **manuelle** après vérification (pas de suppression automatique de dossiers Talent) |
 | Journal d'audit | Pas de purge automatique | Aucune donnée personnelle ; à réexaminer si le volume grandit |
 
+## Audience GA4 — ce qu'il faut fournir
+
+1. Dans Google Cloud (projet gratuit), créer un **compte de service** et une
+   **clé JSON**. Activer l'**API Google Analytics Data**.
+2. Dans GA4 → Administration → Gestion des accès à la propriété, ajouter
+   l'adresse du compte de service avec le seul rôle **Lecteur**.
+3. Dans Cloudflare Pages → weblack → Paramètres → Variables (Production),
+   ajouter les secrets `GA4_PROPERTY_ID` (identifiant numérique) et
+   `GA4_SERVICE_ACCOUNT_JSON` (contenu du fichier de clé).
+4. Redéployer, puis ouvrir `/admin/` : la section « Audience (GA4) » affiche
+   la période, la source et les chiffres, ou le code d'erreur exact.
+
+Coût : nul (quota gratuit de l'API Data, très au-delà de l'usage d'un
+tableau de bord interne).
+
 ## Sauvegarde et restauration
 
 - **D1 Time Travel** (inclus dans D1) permet de restaurer une base à un
@@ -79,6 +103,10 @@ personnes derrière elles. Livré le 2026-11-09 (branche
   `npx wrangler d1 time-travel restore weblack-talent-applications --timestamp=<ISO>`.
   La restauration est **destructive** pour les écritures postérieures : à
   décider par une personne habilitée.
+- **Exercice réalisé le 2026-11-09 sur la base preview** : signet relevé,
+  ligne témoin écrite, restauration au signet, ligne témoin absente et
+  données antérieures intactes. La procédure est éprouvée, pas seulement
+  documentée.
 - **Export ponctuel** : `npx wrangler d1 export weblack-talent-applications --remote --output=backup.sql`.
   Le fichier contient des données personnelles : à stocker chiffré et hors du dépôt.
 - **Site** : retour arrière Cloudflare Pages avec
@@ -105,3 +133,19 @@ dizaines de lignes) sont très loin des limites gratuites de D1.
 | Abonnés newsletter dans la vue Contacts | Non relié | Synchronisation Resend → D1 à décider (base légale, fréquence) |
 | GA4 dans le tableau de bord | Non relié | Compte de service Google avec accès en lecture à la propriété GA4 |
 | Automatisations de relance par e-mail | Non activé | Modèles de messages validés ; base légale par cas ; validation humaine avant envoi |
+
+## CSS public et CSS d'administration
+
+Le CSS est intégré dans chaque page publique (`inlineStylesheets: 'always'`)
+et l'accueil a un budget de poids serré (premier affichage en 4G lente).
+`src/styles/global.css` (pages publiques) exclut donc les sources
+d'administration de la détection Tailwind ; `src/styles/admin.css` les
+inclut. Les deux importent `src/styles/base.css` (jetons, polices,
+composants). Toute nouvelle page d'administration doit importer `admin.css`.
+
+## Agenda — archives
+
+Un événement vérifié et terminé garde sa page à la même adresse, marquée
+« Archive », hors de l'annonce de l'Agenda, et listé dans la section
+« Archives » de `/agenda/`. Un événement annulé ou repassé en revue n'a pas
+d'archive. Voir `getArchivedAgendaEvents` (`src/lib/content.ts`).

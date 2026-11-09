@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AgendaDetail from "../../components/pages/AgendaDetail.astro";
-import { getAllPublicAgendaEvents, getLiveForEvent } from "../../lib/content";
+import { getAllPublicAgendaEvents, getArchivedAgendaEvents, getLiveForEvent } from "../../lib/content";
 import { placeLine } from "../../lib/agenda-format";
 
 /**
@@ -17,17 +17,23 @@ import { placeLine } from "../../lib/agenda-format";
  */
 export async function getStaticPaths() {
   const events = await getAllPublicAgendaEvents("fr");
-  return events.map((event) => ({ params: { slug: event.slug }, props: { event } }));
+  // Archives : événements vérifiés terminés, à la même adresse (voir getArchivedAgendaEvents).
+  const live = new Set(events.map((event) => event.slug));
+  const archived = (await getArchivedAgendaEvents("fr")).filter((event) => !live.has(event.slug));
+  return [
+    ...events.map((event) => ({ params: { slug: event.slug }, props: { event, archived: false } })),
+    ...archived.map((event) => ({ params: { slug: event.slug }, props: { event, archived: true } })),
+  ];
 }
 
 const lang = "fr" as const;
-const { event } = Astro.props;
+const { event, archived } = Astro.props;
 const description = event.description ?? `${event.eventName} — ${placeLine(event)}`;
 const relatedLive = await getLiveForEvent(event.slug, lang);
 ---
 
 <BaseLayout lang={lang} title={event.eventName} description={description}>
-  <AgendaDetail lang={lang} event={event} relatedLive={relatedLive} />
+  <AgendaDetail lang={lang} event={event} relatedLive={relatedLive} archived={archived} />
 </BaseLayout>
 
 <script>

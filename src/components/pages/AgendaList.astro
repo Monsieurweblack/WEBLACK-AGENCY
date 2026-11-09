@@ -1,6 +1,6 @@
 ---
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
-import { getAgendaEvents, agendaFacets, type AgendaEventData } from "../../lib/content";
+import { getAgendaEvents, getArchivedAgendaEvents, agendaFacets, type AgendaEventData } from "../../lib/content";
 import { dayNumber, shortMonth, monthKey, monthLabel, dateRange, placeLine, withinDays, whoOf } from "../../lib/agenda-format";
 
 interface Props {
@@ -11,6 +11,8 @@ const { lang } = Astro.props;
 const t = useTranslations(lang);
 
 const events = await getAgendaEvents(lang);
+// Archives : maillage des pages d'événements terminés (sinon orphelines). Hors filtres, hors comptage.
+const archives = (await getArchivedAgendaEvents(lang)).filter((archived) => !events.some((event) => event.slug === archived.slug));
 const facets = agendaFacets(events);
 
 /**
@@ -222,6 +224,28 @@ const countLabel = events.length === 1 ? t("agenda.count.one") : `${events.lengt
     }
 
     <p id="agenda-empty" class="mt-14 text-(--color-paper)/60" hidden>{t("agenda.emptyFiltered")}</p>
+
+    {
+      archives.length > 0 && (
+        <section class="mt-24 border-t border-(--color-line) pt-12" aria-labelledby="agenda-archive-title">
+          <h2 id="agenda-archive-title" class="label-tracked label-tracked-dot text-(--color-gold)">{t("agenda.archive.title")}</h2>
+          <p class="mt-3 max-w-xl text-sm text-(--color-paper)/55">{t("agenda.archive.intro")}</p>
+          <ul class="mt-8 divide-y divide-(--color-line) border-y border-(--color-line)">
+            {archives.map((event) => (
+              <li>
+                <a
+                  href={localizedPath(lang, `/agenda/${event.slug}/`)}
+                  class="grid grid-cols-1 gap-1 py-4 transition-colors hover:text-(--color-gold) sm:grid-cols-[1fr_auto] sm:gap-6"
+                >
+                  <span class="min-w-0 text-(--color-paper)/80">{event.eventName} <span class="text-(--color-paper)/45">· {event.city}</span></span>
+                  <span class="label-tracked text-(--color-paper)/45">{dateRange(event, lang, t("agenda.dateTo"))}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
 
     <a
       href={localizedPath(lang, "/journal/")}

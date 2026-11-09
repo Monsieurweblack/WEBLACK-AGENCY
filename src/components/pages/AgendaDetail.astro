@@ -10,9 +10,11 @@ interface Props {
   event: AgendaEventData;
   /** Phase 10 : présente uniquement si une diffusion WEBLACK Live référence cet événement. */
   relatedLive?: LivePublicData;
+  /** Événement vérifié et terminé, conservé en archive à la même adresse. */
+  archived?: boolean;
 }
 
-const { lang, event, relatedLive } = Astro.props;
+const { lang, event, relatedLive, archived = false } = Astro.props;
 const t = useTranslations(lang);
 
 // Rien à regarder pour une diffusion annulée ou archivée sans replay — le
@@ -66,10 +68,11 @@ const facts: { label: string; value: string }[] = [
 
     <header class="mt-10 max-w-4xl" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">
-        {t(`agenda.status.${event.status}`)}
+        {archived ? t("agenda.archive.label") : t(`agenda.status.${event.status}`)}
       </p>
       <h1 class="font-display text-balance mt-4 text-4xl text-(--color-paper) sm:text-5xl">{event.eventName}</h1>
       {event.description && <p class="mt-6 text-lg text-(--color-paper)/70">{event.description}</p>}
+      {archived && <p class="mt-6 max-w-2xl border-l border-(--color-gold) pl-5 text-(--color-paper)/75">{t("agenda.archive.notice")}</p>}
     </header>
 
     <dl

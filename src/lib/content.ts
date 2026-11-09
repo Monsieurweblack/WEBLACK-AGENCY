@@ -875,6 +875,34 @@ export async function getAllPublicAgendaEvents(lang: Lang): Promise<AgendaEventD
   return [...upcoming, ...ongoing];
 }
 
+/**
+ * Archives de l'Agenda — les événements vérifiés et terminés.
+ *
+ * Décision 2026-11-09 : une page d'événement ne disparaît plus le lendemain
+ * de sa fin. Elle reste à la même adresse, marquée « Archive », hors de
+ * l'annonce (getAgendaEvents/getOngoingEvents restent inchangées). Même
+ * porte d'entrée que l'Agenda : vérifié, complet, statut public — un
+ * événement annulé ou repassé en revue n'a pas d'archive, puisqu'il n'a
+ * jamais été (ou n'est plus) une information établie.
+ */
+export async function getArchivedAgendaEvents(lang: Lang): Promise<AgendaEventData[]> {
+  const docs = await sanityClient.fetch(`*[${AGENDA_PUBLIC_FILTER}] | order(startDate desc) ${AGENDA_PROJECTION}`);
+  const today = new Date().toISOString().slice(0, 10);
+  const events: AgendaEventData[] = [];
+  const seen = new Set<string>();
+  for (const doc of docs as any[]) {
+    const event = toPublicEvent(doc);
+    if (!event || seen.has(event.slug)) continue;
+    if ((event.endDate || event.startDate) >= today) continue;
+    seen.add(event.slug);
+    const description = localized(lang, doc.descriptionFr, doc.descriptionEn);
+    const discipline = localized(lang, doc.discipline, doc.disciplineEn);
+    const country = localized(lang, doc.country, doc.countryEn);
+    events.push({ ...event, discipline: discipline || undefined, country: country || undefined, description: description || undefined });
+  }
+  return events;
+}
+
 /** Un événement précis, pour sa page propre. Même filtre que la liste : ce qui ne s'annonce pas n'a pas de page. */
 export async function getAgendaEvent(slug: string, lang: Lang): Promise<AgendaEventData | undefined> {
   const events = await getAllPublicAgendaEvents(lang);

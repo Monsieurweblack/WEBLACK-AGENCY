@@ -59,7 +59,7 @@ const translations = {
     "contact.form.mailto.budget": "Budget",
     "contact.form.mailto.message": "Message",
 
-    "home.hero.tagline": "Agence créative indépendante",
+    "home.hero.tagline": "Creative Industries Ecosystem",
     "home.hero.pillars": "Talent. Créativité. Culture.",
     "home.hero.cta.explore": "Découvrir WEBLACK",
     "home.hero.scroll": "Défiler",
@@ -609,6 +609,10 @@ const translations = {
     "agenda.label.time": "Horaire",
     "agenda.official": "Page officielle",
     "agenda.back": "Tout l'agenda",
+    "agenda.archive.label": "Archive · Événement terminé",
+    "agenda.archive.notice": "Cet événement est terminé. Sa page est conservée en archive, telle qu'elle a été vérifiée sur la page officielle.",
+    "agenda.archive.title": "Archives",
+    "agenda.archive.intro": "Les rendez-vous vérifiés déjà passés, conservés pour mémoire.",
     "agenda.verifiedOn": "Vérifié le",
     "agenda.sources": "Pages consultées",
     "agenda.count.one": "1 événement",
@@ -833,10 +837,10 @@ const translations = {
     "share.copy": "Copier le lien",
     "share.copied": "Lien copié",
 
-    "seo.default.title": "WEBLACK — Agence créative indépendante",
+    "seo.default.title": "WEBLACK — Creative Industries Ecosystem",
     "seo.default.description":
-      "WEBLACK est une agence créative indépendante — talent management, direction créative et conseil de marque, au-delà des frontières.",
-    "seo.ogImage.alt": "WEBLACK — Agence créative indépendante. Talent · Créativité · Culture.",
+      "WEBLACK, écosystème des industries créatives depuis 2010 : talents, direction créative et conseil de marque, d'une vision africaine et afro-descendante vers le monde.",
+    "seo.ogImage.alt": "WEBLACK — Creative Industries Ecosystem. Talent · Créativité · Culture.",
 
     "common.readMore": "En savoir plus",
     "common.discover": "Découvrir",
@@ -889,7 +893,7 @@ const translations = {
     "contact.form.mailto.budget": "Budget",
     "contact.form.mailto.message": "Message",
 
-    "home.hero.tagline": "Independent Creative Agency",
+    "home.hero.tagline": "Creative Industries Ecosystem",
     "home.hero.pillars": "Talent. Creativity. Culture.",
     "home.hero.cta.explore": "Explore WEBLACK",
     "home.hero.scroll": "Scroll",
@@ -1437,6 +1441,10 @@ const translations = {
     "agenda.label.time": "Time",
     "agenda.official": "Official page",
     "agenda.back": "All events",
+    "agenda.archive.label": "Archive · Past event",
+    "agenda.archive.notice": "This event has ended. Its page is kept as an archive, as verified on the official page.",
+    "agenda.archive.title": "Archive",
+    "agenda.archive.intro": "Verified events that have already taken place, kept for the record.",
     "agenda.verifiedOn": "Verified on",
     "agenda.sources": "Pages consulted",
     "agenda.count.one": "1 event",
@@ -1657,10 +1665,10 @@ const translations = {
     "share.copy": "Copy link",
     "share.copied": "Link copied",
 
-    "seo.default.title": "WEBLACK — Independent Creative Agency",
+    "seo.default.title": "WEBLACK — Creative Industries Ecosystem",
     "seo.default.description":
-      "WEBLACK is an independent creative agency — talent management, creative direction and brand consulting, across borders.",
-    "seo.ogImage.alt": "WEBLACK — Independent Creative Agency. Talent · Creativity · Culture.",
+      "WEBLACK, a creative industries ecosystem since 2010: talent, creative direction and brand consulting, from an African and Afro-descendant vision to the world.",
+    "seo.ogImage.alt": "WEBLACK — Creative Industries Ecosystem. Talent · Creativity · Culture.",
 
     "common.readMore": "Learn more",
     "common.discover": "Discover",

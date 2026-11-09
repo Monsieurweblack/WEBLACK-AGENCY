@@ -1,9 +1,9 @@
 import { json } from "../../../lib/json.ts";
 import { requireAdmin, UUID_RE } from "../../../lib/adminSession.ts";
-import { deletePhoto } from "../../../lib/photos.ts";
 import { APPLICATION_STATUSES, type ApplicationRecord } from "../../../lib/applicationTypes.ts";
-import { audit, auditStatement } from "../../../lib/audit.ts";
-import { DriveClient, DriveError, driveConfigured, folderUrl, type DriveEnv } from "../../../lib/googleDrive.ts";
+import { auditStatement } from "../../../lib/audit.ts";
+import { deleteApplicationRecord } from "../../../lib/erasure.ts";
+import { folderUrl, type DriveEnv } from "../../../lib/googleDrive.ts";
 
 interface Env extends DriveEnv {
   DB: D1Database;
@@ -160,38 +160,8 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
 
   const id = applicationId(params);
   if (!id) return json({ ok: false, reason: "invalid_id" }, 400);
-  const { results: photos } = await env.DB.prepare(`SELECT id FROM application_photos WHERE application_id = ?`)
-    .bind(id)
-    .all<{ id: string }>();
-
-  // Archive Drive d'abord, et seulement vers la corbeille (récupérable 30
-  // jours). Si Drive refuse, rien n'est supprimé : le dossier reste cohérent
-  // partout, l'administrateur peut réessayer.
-  const archived = await env.DB.prepare(`SELECT folder_id FROM drive_sync WHERE application_id = ?`).bind(id).first<{ folder_id: string | null }>();
-  if (archived?.folder_id) {
-    if (!driveConfigured(env)) return json({ ok: false, reason: "drive_not_configured" }, 409);
-    try {
-      await new DriveClient(env).trash(archived.folder_id);
-    } catch (error) {
-      if (!(error instanceof DriveError && error.code === "drive_not_found")) {
-        return json({ ok: false, reason: "drive_trash_failed", code: error instanceof DriveError ? error.code : "internal" }, 502);
-      }
-    }
-  }
-
-  // D1 d'abord, en une transaction : si elle échoue, rien n'est perdu. Les
-  // fichiers ne sont effacés qu'une fois le dossier réellement supprimé.
-  const [, , , , , deleted] = await env.DB.batch([
-    env.DB.prepare(`DELETE FROM application_events WHERE application_id = ?`).bind(id),
-    env.DB.prepare(`DELETE FROM drive_files WHERE application_id = ?`).bind(id),
-    env.DB.prepare(`DELETE FROM drive_sync WHERE application_id = ?`).bind(id),
-    env.DB.prepare(`DELETE FROM email_outbox WHERE application_id = ?`).bind(id),
-    env.DB.prepare(`DELETE FROM application_photos WHERE application_id = ?`).bind(id),
-    env.DB.prepare(`DELETE FROM applications WHERE id = ?`).bind(id),
-  ]);
-  if (!deleted || deleted.meta.changes === 0) return json({ ok: false, reason: "not_found" }, 404);
-
-  for (const photo of photos ?? []) await deletePhoto(env.PHOTOS, photo.id);
-  await audit(env.DB, "application.delete", "application", id);
+  // Ordre et garanties : voir functions/lib/erasure.ts (Drive → D1 → photos).
+  const result = await deleteApplicationRecord(env, id);
+  if (!result.ok) return json({ ok: false, reason: result.reason, ...(result.code ? { code: result.code } : {}) }, result.status);
   return json({ ok: true }, 200);
 };

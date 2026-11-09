@@ -1,0 +1,7 @@
+/*
+ * Administration (/admin/*) : Tailwind sur toutes les sources, administration
+ * comprise, plus la base commune du site. Voir global.css pour la raison de
+ * la séparation.
+ */
+@import "tailwindcss";
+@import "./base.css";
