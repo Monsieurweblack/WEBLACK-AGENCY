@@ -1,12 +1,14 @@
 ---
 /**
- * Catalogue WEBLACK Opportunities. Chaque entrée porte data-opportunity :
- * functions/opportunities/[[path]].ts retire à la requête celles qui ne
- * sont pas publiées et marque celles qui sont clôturées. Si plus rien ne
- * reste, le message « aucune opportunité » est rendu visible.
+ * Catalogue WEBLACK Opportunities, lu dans Sanity au build (getOpportunities) :
+ * les annonces en ligne ou clôturées, par date limite, puis les annonces
+ * archivées dans « Archives ». Une annonce en vérification n'y figure pas.
+ * La clôture à l'échéance est réappliquée à la requête par
+ * functions/opportunities/[[path]].ts (data-deadline / data-status).
  */
 import { localizedPath, type Lang } from "../../i18n/utils";
-import { OPPORTUNITIES } from "../../data/opportunities";
+import { getOpportunities } from "../../lib/content";
+import { isClosed } from "../../lib/opportunities";
 import { OPPORTUNITY_COPY, formatDeadline } from "../../lib/opportunity-copy";
 import RemoteImage from "../media/RemoteImage.astro";
 
@@ -16,7 +18,11 @@ interface Props {
 
 const { lang } = Astro.props;
 const c = OPPORTUNITY_COPY[lang];
-const items = [...OPPORTUNITIES].sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline));
+const all = await getOpportunities();
+const sections = [
+  { id: "current", title: undefined as string | undefined, items: all.filter((o) => o.status !== "archived") },
+  { id: "archives", title: c.archives, items: all.filter((o) => o.status === "archived").reverse() },
+];
 ---
 
 <section class="bg-(--color-ink) px-6 pb-14 pt-40 md:px-10">
@@ -28,41 +34,56 @@ const items = [...OPPORTUNITIES].sort((a, b) => Date.parse(a.deadline) - Date.pa
 </section>
 
 <section class="bg-(--color-ink) px-6 pb-24 md:px-10 md:pb-32">
-  <div class="mx-auto max-w-(--container-content)">
-    <ul class="divide-y divide-(--color-line) border-y border-(--color-line)" data-opportunity-list>
-      {
-        items.map((o) => {
-          const x = o.text[lang];
-          const closed = Date.now() > Date.parse(o.deadline);
-          const href = localizedPath(lang, `/opportunities/${o.slug}`);
-          return (
-            <li data-opportunity={o.slug}>
-              <a href={href} class="group grid grid-cols-1 gap-6 py-10 md:grid-cols-[12rem_1fr_auto] md:items-end md:gap-10">
-                {o.image && (
-                  <div class="aspect-[4/5] w-40 overflow-hidden bg-(--color-ink-soft) md:w-full">
-                    <RemoteImage src={o.image.src} alt={o.image.alt[lang]} width={o.image.width} height={o.image.height} sizes="(min-width: 768px) 12rem, 10rem" class="h-full w-full transition-transform duration-500 group-hover:scale-[1.02]" />
-                  </div>
-                )}
-                <div>
-                  <p class="label-tracked text-(--color-paper)/55">
-                    {x.category} · {x.location} · {x.eventDate}
-                  </p>
-                  <h2 class="font-display mt-3 text-3xl text-balance text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-4xl">{x.title}</h2>
-                  <p class="mt-3 max-w-2xl text-(--color-paper)/70">{x.summary}</p>
-                </div>
-                <div class="md:text-right">
-                  <p class="label-tracked text-(--color-paper)/55">{c.deadline}</p>
-                  <p class="font-display mt-1 text-2xl text-(--color-gold)">{formatDeadline(o.deadline, lang)}</p>
-                  <p class="label-tracked mt-3 text-(--color-gold)" data-when="open" hidden={closed}>{c.open}</p>
-                  <p class="label-tracked mt-3 text-(--color-paper)/60" data-when="closed" hidden={!closed}>{c.closed}</p>
-                  <span class="label-tracked mt-5 inline-flex text-(--color-paper)/70 group-hover:text-(--color-gold)">{c.view} &rarr;</span>
-                </div>
-              </a>
-            </li>
-          );
-        })
-      }
-    </ul>
-    <p class="py-10 text-(--color-paper)/60" data-opportunities-empty hidden={items.length > 0}>{c.empty}</p>
+  <div class="mx-auto max-w-(--container-content) space-y-16">
+    {
+      sections.map((section) =>
+        section.id === "current" || section.items.length > 0 ? (
+          <div>
+            {section.title && <h2 class="label-tracked mb-6 text-(--color-paper)/55">{section.title}</h2>}
+            <ul class="divide-y divide-(--color-line) border-y border-(--color-line)" data-opportunity-list={section.id}>
+              {section.items.map((o) => {
+                const x = o.text[lang];
+                const closed = isClosed(o);
+                return (
+                  <li data-opportunity={o.slug} data-deadline={o.deadline} data-status={o.status}>
+                    <a href={localizedPath(lang, `/opportunities/${o.slug}`)} class="group grid grid-cols-1 gap-6 py-10 md:grid-cols-[12rem_1fr_auto] md:items-end md:gap-10">
+                      {o.image && (
+                        <div class="aspect-[4/5] w-40 overflow-hidden bg-(--color-ink-soft) md:w-full">
+                          <RemoteImage
+                            src={o.image.src}
+                            alt={o.image.alt[lang]}
+                            width={o.image.width}
+                            height={o.image.height}
+                            sizes="(min-width: 768px) 12rem, 10rem"
+                            class="h-full w-full transition-transform duration-500 group-hover:scale-[1.02]"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <p class="label-tracked text-(--color-paper)/55">{[x.category, x.location, x.eventDate].filter(Boolean).join(" · ")}</p>
+                        <h3 class="font-display mt-3 text-3xl text-balance text-(--color-paper) transition-colors group-hover:text-(--color-gold) sm:text-4xl">{x.title}</h3>
+                        <p class="mt-3 max-w-2xl text-(--color-paper)/70">{x.summary}</p>
+                      </div>
+                      <div class="md:text-right">
+                        <p class="label-tracked text-(--color-paper)/55">{c.deadline}</p>
+                        <p class="font-display mt-1 text-2xl text-(--color-gold)">{formatDeadline(o.deadline, lang)}</p>
+                        <p class="label-tracked mt-3 text-(--color-gold)" data-when="open" hidden={closed}>
+                          {c.open}
+                        </p>
+                        <p class="label-tracked mt-3 text-(--color-paper)/60" data-when="closed" hidden={!closed}>
+                          {c.closed}
+                        </p>
+                        <span class="label-tracked mt-5 inline-flex text-(--color-paper)/70 group-hover:text-(--color-gold)">{c.view} &rarr;</span>
+                      </div>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+            {section.id === "current" && section.items.length === 0 && <p class="py-10 text-(--color-paper)/60" data-opportunities-empty>{c.empty}</p>}
+          </div>
+        ) : null,
+      )
+    }
   </div>
 </section>

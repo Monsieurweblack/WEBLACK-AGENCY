@@ -1,12 +1,17 @@
 ---
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OpportunityDetail from "../../../components/pages/OpportunityDetail.astro";
-import { OPPORTUNITIES, type Opportunity } from "../../../data/opportunities";
+import { getOpportunities } from "../../../lib/content";
+import type { Opportunity } from "../../../lib/opportunities";
 import { OPPORTUNITY_HERO_SIZES } from "../../../lib/opportunity-copy";
 
-/** Une page par annonce ; son statut (publiée, clôturée…) est appliqué à la requête — voir functions/opportunities/[[path]].ts. */
-export function getStaticPaths() {
-  return OPPORTUNITIES.map((opportunity) => ({ params: { slug: opportunity.slug }, props: { opportunity } }));
+/**
+ * Une page par annonce Sanity en ligne, clôturée ou archivée (jamais « en
+ * vérification » ni brouillon) — voir src/lib/opportunities.ts.
+ */
+export async function getStaticPaths() {
+  const opportunities = await getOpportunities();
+  return opportunities.map((opportunity) => ({ params: { slug: opportunity.slug }, props: { opportunity } }));
 }
 
 const lang = "en" as const;
@@ -16,8 +21,8 @@ const x = opportunity.text[lang];
 
 <BaseLayout
   lang={lang}
-  title={`${x.title} · Opportunities`}
-  description={`${x.summary} ${x.location}, ${x.eventDate}.`}
+  title={x.seoTitle ?? `${x.title} · Opportunities`}
+  description={x.seoDescription ?? [x.summary, [x.location, x.eventDate].filter(Boolean).join(", ")].join(" ") + "."}
   image={opportunity.ogImage}
   imageAlt={opportunity.image?.alt[lang]}
   lcpImage={opportunity.image ? { src: opportunity.image.src, width: opportunity.image.width, sizes: OPPORTUNITY_HERO_SIZES } : undefined}

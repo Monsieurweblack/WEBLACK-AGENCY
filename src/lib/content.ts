@@ -1,4 +1,5 @@
 import { createClient, type SanityClient } from "@sanity/client";
+import { normalizeOpportunity, OPPORTUNITY_PROJECTION, type Opportunity } from "./opportunities";
 import { toHTML } from "@portabletext/to-html";
 import { parseSanityImageUrl, sanityResponsiveImage } from "./sanity-image";
 import type { PortableTextBlock } from "@portabletext/types";
@@ -1362,4 +1363,34 @@ export async function getTalentApplicationSettings(lang: Lang): Promise<TalentAp
     seoTitle: localized(lang, doc?.seoTitleFr, doc?.seoTitleEn) || undefined,
     seoDescription: localized(lang, doc?.seoDescriptionFr, doc?.seoDescriptionEn) || undefined,
   };
+}
+
+// ── WEBLACK Opportunities ────────────────────────────────────────────────
+// Source unique : documents Sanity `opportunity` (voir src/lib/opportunities.ts).
+// Lus une fois par build ; un document incomplet est écarté et signalé dans
+// le journal de build plutôt que publié à moitié.
+let opportunitiesPromise: Promise<Opportunity[]> | undefined;
+
+export function getOpportunities(): Promise<Opportunity[]> {
+  opportunitiesPromise ??= (async () => {
+    const raw = await sanityClient.fetch<unknown[]>(`*[_type == "opportunity" && status in ["published", "closed", "archived"]] | order(deadline asc) ${OPPORTUNITY_PROJECTION}`);
+    const target = { projectId: import.meta.env.SANITY_PROJECT_ID, dataset: import.meta.env.SANITY_DATASET };
+    const out: Opportunity[] = [];
+    const seen = new Set<string>();
+    for (const doc of raw ?? []) {
+      const r = normalizeOpportunity(doc, target);
+      if (!r.ok) {
+        console.warn(`[opportunities] document ${r.id} écarté : ${r.reasons.join(" ; ")}`);
+        continue;
+      }
+      if (seen.has(r.opportunity.slug)) {
+        console.warn(`[opportunities] slug en double « ${r.opportunity.slug} » : seul le premier document est publié`);
+        continue;
+      }
+      seen.add(r.opportunity.slug);
+      out.push(r.opportunity);
+    }
+    return out;
+  })();
+  return opportunitiesPromise;
 }

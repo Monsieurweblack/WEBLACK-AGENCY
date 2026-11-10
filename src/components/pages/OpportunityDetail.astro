@@ -2,14 +2,15 @@
 /**
  * Fiche publique d'une opportunité (FR/EN).
  *
- * Le HTML est statique ; l'état vivant (ouvert / clôturé, organisateur
- * confirmé ou non) est appliqué à la requête par
- * functions/opportunities/[[path]].ts, qui bascule l'attribut `hidden` des
- * blocs marqués data-when. Rendu par défaut : ouvert, confirmation en cours
- * — jamais « confirmé » sans décision enregistrée au tableau de bord.
+ * Contenu lu dans Sanity au build (src/lib/opportunities.ts). Seule la
+ * clôture à la date limite est réappliquée à la requête par
+ * functions/opportunities/[[path]].ts (data-deadline / data-status → blocs
+ * data-when="open|closed"), pour qu'une annonce soit affichée clôturée dès
+ * l'échéance, sans attendre une reconstruction. « Organisateur confirmé »
+ * n'apparaît que si la case est cochée dans Studio.
  */
 import { localizedPath, type Lang } from "../../i18n/utils";
-import type { Opportunity } from "../../data/opportunities";
+import { isClosed, type Opportunity } from "../../lib/opportunities";
 import { OPPORTUNITY_COPY, OPPORTUNITY_HERO_SIZES, formatDeadline } from "../../lib/opportunity-copy";
 import RemoteImage from "../media/RemoteImage.astro";
 
@@ -22,7 +23,7 @@ const { lang, opportunity: o } = Astro.props;
 const c = OPPORTUNITY_COPY[lang];
 const x = o.text[lang];
 const deadline = formatDeadline(o.deadline, lang);
-const closedAtBuild = Date.now() > Date.parse(o.deadline);
+const closedAtBuild = isClosed(o);
 
 const HERO_SIZES = OPPORTUNITY_HERO_SIZES;
 const GALLERY_SIZES = "(min-width: 768px) 33vw, 50vw";
@@ -33,10 +34,11 @@ const facts = [
   { label: c.event, value: x.eventDate },
   { label: c.organizer, value: o.organizer.name },
   { label: c.broadcast, value: o.broadcastPartner },
-];
+].filter((f) => Boolean(f.value)) as { label: string; value: string }[];
+const verifiedOn = new Date(`${o.lastVerifiedAt}T12:00:00Z`).toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "long", year: "numeric" });
 ---
 
-<article class="bg-(--color-ink)" data-opportunity={o.slug}>
+<article class="bg-(--color-ink)" data-opportunity={o.slug} data-deadline={o.deadline} data-status={o.status}>
   <header class="px-6 pb-14 pt-36 md:px-10 md:pt-44">
     <div class="mx-auto grid max-w-(--container-content) grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-end lg:gap-16">
       <div class="min-w-0">
@@ -113,13 +115,13 @@ const facts = [
           </ol>
         </section>
 
-        <p class="max-w-[65ch] text-sm text-(--color-paper)/60">{x.notice}</p>
+        {x.notice && <p class="max-w-[65ch] text-sm text-(--color-paper)/60">{x.notice}</p>}
       </div>
 
       <aside class="space-y-10 lg:sticky lg:top-28 lg:self-start">
         <div class="scroll-mt-28 border border-(--color-gold) p-6 sm:p-8" id="contact-opportunity">
           <h2 class="font-display text-2xl text-(--color-paper)">{c.contactTitle}</h2>
-          <p class="mt-3 font-semibold text-(--color-gold)">{x.specialOffer}</p>
+          {x.specialOffer && <p class="mt-3 font-semibold text-(--color-gold)">{x.specialOffer}</p>}
           <div data-when="open" hidden={closedAtBuild}>
             <p class="mt-3 text-(--color-paper)/75">{c.contactLead}</p>
             <a
@@ -164,15 +166,15 @@ const facts = [
               </a>
             )
           }
-          <p class="text-(--color-paper)/55" data-when="pending">{c.pendingNote}</p>
-          <p class="text-(--color-paper)/55" data-when="verified" hidden>{c.verifiedNote}</p>
+          <p class="text-(--color-paper)/55" data-when={o.organizerVerified ? "verified" : "pending"}>{o.organizerVerified ? c.verifiedNote : c.pendingNote}</p>
+          <p class="text-(--color-paper)/45" data-verified-on={o.lastVerifiedAt}>{c.checkedOn} {verifiedOn}.</p>
         </div>
       </aside>
     </div>
   </div>
 
   {
-    o.galleries?.map((g) => (
+    o.galleries.map((g) => (
       <section class="px-6 pb-24 md:px-10" aria-labelledby={`opp-gallery-${g.id}`}>
         <div class="mx-auto max-w-(--container-content) border-t border-(--color-line) pt-12">
           <div class="flex flex-wrap items-baseline justify-between gap-4">

@@ -2,10 +2,10 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import OpportunityList from "../../components/pages/OpportunityList.astro";
 import { OPPORTUNITY_COPY } from "../../lib/opportunity-copy";
-import { OPPORTUNITIES } from "../../data/opportunities";
+import { getOpportunities } from "../../lib/content";
 
-/** Aperçu de partage : visuel de l'annonce la plus proche de sa date limite, s'il existe. */
-const lead = [...OPPORTUNITIES].sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline)).find((o) => o.ogImage);
+/** Aperçu de partage : visuel de l'annonce non archivée la plus proche de sa date limite, s'il existe. */
+const lead = (await getOpportunities()).find((o) => o.status !== "archived" && o.ogImage);
 
 const lang = "fr" as const;
 const c = OPPORTUNITY_COPY[lang];

@@ -301,75 +301,6 @@ export function initAdminDashboard() {
     );
   }
 
-  const OPP_STATUS: Record<string, string> = { draft: "Brouillon", review: "Vérification", published: "Publiée", closed: "Clôturée" };
-
-  /** Opportunities : statut et confirmation de l'organisateur, appliqués à la requête par la passerelle publique. */
-  async function loadOpportunities() {
-    const response = await fetch("/api/admin/opportunities");
-    if (response.status === 401) return showLogin();
-    if (!response.ok) {
-      $("opportunities-meta").textContent = "Statuts indisponibles sur cet environnement.";
-      return;
-    }
-    const { opportunities } = (await response.json()) as {
-      opportunities: { slug: string; title: string; deadline: string; status: string | null; organizerVerified: boolean; updatedAt: string | null; deadlinePassed: boolean }[];
-    };
-    $("opportunities-list").replaceChildren(
-      ...opportunities.map((o) => {
-        const li = el("li", "flex flex-wrap items-start justify-between gap-4 py-4");
-        const left = el("div", "min-w-0");
-        const link = el("a", "text-(--color-paper) hover:text-(--color-gold)", o.title);
-        link.href = `/opportunities/${o.slug}/`;
-        link.target = "_blank";
-        left.append(
-          link,
-          el(
-            "p",
-            "mt-1 text-xs text-(--color-paper)/50",
-            [
-              `Date limite ${new Date(o.deadline).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })}${o.deadlinePassed ? " (passée : affichée clôturée)" : ""}`,
-              o.status ? `état : ${OPP_STATUS[o.status] ?? o.status}` : "aucun statut enregistré (non servie)",
-              o.updatedAt ? `modifiée le ${new Date(o.updatedAt).toLocaleString("fr-FR")}` : "",
-            ]
-              .filter(Boolean)
-              .join(" · "),
-          ),
-        );
-        const controls = el("div", "flex flex-wrap items-center gap-4");
-        const select = el("select", "form-input min-h-10 w-auto py-1");
-        select.setAttribute("aria-label", `Statut — ${o.title}`);
-        for (const [value, label] of Object.entries(OPP_STATUS)) {
-          const opt = el("option", "", label);
-          opt.value = value;
-          opt.selected = (o.status ?? "draft") === value;
-          select.append(opt);
-        }
-        const verifiedLabel = el("label", "flex items-center gap-2 text-sm text-(--color-paper)/80");
-        const verified = el("input");
-        verified.type = "checkbox";
-        verified.checked = o.organizerVerified;
-        verifiedLabel.append(verified, document.createTextNode("Organisateur confirmé"));
-        const save = async (body: Record<string, unknown>) => {
-          const r = await fetch(`/api/admin/opportunities/${encodeURIComponent(o.slug)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-          if (r.status === 401) return showLogin();
-          await loadOpportunities();
-          $("opportunities-meta").textContent = r.ok ? `« ${o.title} » mise à jour — effet immédiat sur le site.` : "Échec de la mise à jour — rien n'a changé.";
-        };
-        select.addEventListener("change", () => {
-          if (select.value === "published" && !o.organizerVerified && !window.confirm("Publier alors que l'organisateur n'est pas confirmé ? La page l'indiquera aux visiteurs.")) {
-            select.value = o.status ?? "draft";
-            return;
-          }
-          void save({ status: select.value });
-        });
-        verified.addEventListener("change", () => void save({ organizerVerified: verified.checked }));
-        controls.append(select, verifiedLabel);
-        li.append(left, controls);
-        return li;
-      }),
-    );
-  }
-
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     loginStatus.textContent = "";
@@ -380,7 +311,6 @@ export function initAdminDashboard() {
       if (data.ok) {
         await loadMetrics();
         await loadContacts();
-        void loadOpportunities();
         void loadAudience();
       } else loginStatus.textContent = data.reason === "rate_limited" ? "Trop de tentatives. Réessayez plus tard." : data.reason === "unconfigured" ? "Administration non configurée sur cet environnement." : "Mot de passe incorrect.";
     } catch {
@@ -401,7 +331,6 @@ export function initAdminDashboard() {
   void loadMetrics().then(() => {
     if (dashboard.hidden) return;
     void loadContacts();
-    void loadOpportunities();
     void loadAudience();
   });
 }
