@@ -1,0 +1,18 @@
+---
+/**
+ * Émission d'un bloc JSON-LD.
+ *
+ * Le même `JSON.stringify(...).replace(/</g, "\u003c")` était recopié dans
+ * cinq composants : un oubli de l'échappement dans un sixième suffirait à
+ * laisser une chaîne de contenu Sanity fermer le <script>. Un seul endroit
+ * le fait désormais, et `data` à `null` n'émet rien du tout — une page sans
+ * donnée vérifiable ne doit pas porter un objet vide.
+ */
+interface Props {
+  data: unknown | null | undefined;
+}
+
+const { data } = Astro.props;
+---
+
+{data && <script type="application/ld+json" is:inline set:html={JSON.stringify(data).replace(/</g, "\u003c")} />}

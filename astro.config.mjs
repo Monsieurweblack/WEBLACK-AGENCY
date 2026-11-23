@@ -30,12 +30,33 @@ function loadEnv() {
   return env;
 }
 
-// One real `_updatedAt` per Journal article, keyed by its site path — used
-// below to give the sitemap an honest <lastmod> instead of omitting it or
-// guessing. Never fabricated: pages with no matching entry (everything
-// that isn't a Journal detail page) simply get no lastmod, which is a
-// valid, standard sitemap entry.
-async function loadJournalLastmodByPath() {
+// Un vrai `_updatedAt` par document de contenu, indexé par son chemin sur
+// le site — pour que le sitemap porte un <lastmod> honnête plutôt que de
+// l'omettre ou de l'inventer.
+//
+// Seul le Journal était couvert. Les autres types n'avaient donc aucune
+// date : pour un moteur, une étude de cas corrigée hier et une page
+// inchangée depuis deux ans se présentaient exactement pareil, et rien ne
+// l'incitait à repasser. Les quatre types que le site publie en pages de
+// détail sont désormais lus en une seule requête — ils vivent dans le même
+// dataset, les interroger séparément multipliait les allers-retours sans
+// rien apporter.
+//
+// Les segments d'URL sont ceux des routes réelles (src/pages/) : ils ne
+// coïncident PAS avec les noms de types Sanity (`work` →
+// /selected-work/, `partners` → /partners/, qui est une page unique sans
+// détail et n'entre donc pas ici). Jamais fabriqué : un type ou une page
+// sans correspondance n'obtient simplement pas de lastmod, ce qui reste
+// une entrée de sitemap parfaitement valide.
+/** @type {Record<string, string>} */
+const SITEMAP_ROUTE_SEGMENT = {
+  journal: 'journal',
+  work: 'selected-work',
+  talent: 'talent',
+  opportunity: 'opportunities',
+};
+
+async function loadContentLastmodByPath() {
   const env = loadEnv();
   if (!env.SANITY_PROJECT_ID || !env.SANITY_DATASET) return new Map();
   try {
@@ -47,23 +68,32 @@ async function loadJournalLastmodByPath() {
       useCdn: false,
       perspective: 'published',
     });
+    const types = Object.keys(SITEMAP_ROUTE_SEGMENT);
     const docs = await client.fetch(
-      '*[_type == "journal" && defined(slug.current)]{ lang, "slug": slug.current, _updatedAt }',
+      `*[_type in $types && defined(slug.current)]{ _type, lang, "slug": slug.current, _updatedAt }`,
+      { types },
     );
     const map = new Map();
     for (const doc of docs) {
-      const localePrefix = doc.lang === 'en' ? '/en' : '';
-      map.set(`${localePrefix}/journal/${doc.slug}/`, doc._updatedAt);
+      const segment = SITEMAP_ROUTE_SEGMENT[doc._type];
+      if (!segment) continue;
+      // Les opportunités n'ont pas de champ `lang` : un même document sert
+      // les deux langues (textes FR et EN dans le même document). Les deux
+      // chemins portent donc la même date, ce qui est exact.
+      const prefixes = doc.lang === 'en' ? ['/en'] : doc.lang === 'fr' ? [''] : ['', '/en'];
+      for (const prefix of prefixes) {
+        map.set(`${prefix}/${segment}/${doc.slug}/`, doc._updatedAt);
+      }
     }
     return map;
   } catch {
-    // Sitemap generation must never fail the build over a lastmod lookup —
-    // worst case, those entries just get no lastmod (still a valid sitemap).
+    // La génération du sitemap ne doit jamais faire échouer le build pour
+    // une recherche de lastmod — au pire, ces entrées n'en ont pas.
     return new Map();
   }
 }
 
-const journalLastmodByPath = await loadJournalLastmodByPath();
+const contentLastmodByPath = await loadContentLastmodByPath();
 
 export default defineConfig({
   site: 'https://weblack.fr',
@@ -107,10 +137,16 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      filter: (page) => !NOINDEX_PATHS.some((path) => page.endsWith(path)),
+      // Un sitemap liste des PAGES. Le flux RSS, la carte /llms.txt et les
+      // fichiers .ics d'un live sont des ressources machine : les y faire
+      // figurer ferait signaler par la Search Console des « URL non
+      // indexables » sur un site qui n'en a par ailleurs aucune.
+      filter: (page) =>
+        !NOINDEX_PATHS.some((path) => page.endsWith(path)) &&
+        !/\.(xml|txt|ics|json)$/.test(new URL(page).pathname),
       serialize(item) {
         const pathname = new URL(item.url).pathname;
-        const lastmod = journalLastmodByPath.get(pathname);
+        const lastmod = contentLastmodByPath.get(pathname);
         return lastmod ? { ...item, lastmod } : item;
       },
     }),

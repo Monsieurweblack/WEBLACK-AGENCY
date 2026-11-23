@@ -2,6 +2,8 @@
 import RemoteImage from "../media/RemoteImage.astro";
 import TalentApplicationForm from "../forms/TalentApplicationForm.astro";
 import TalentApplicationPdfLinks from "../forms/TalentApplicationPdfLinks.astro";
+import JsonLd from "../layout/JsonLd.astro";
+import { faqSchema } from "../../lib/structured-data";
 import weblackMark from "../../assets/logo/weblack-mark-gold-180.png";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import type { TalentApplicationSettingsData } from "../../lib/content";
@@ -126,6 +128,7 @@ const facts = ["age", "account", "privacy"] as const;
         <TalentApplicationPdfLinks lang={lang} />
         {settings.faqItems.length > 0 && (
           <div class="border-t border-(--color-line) pt-12">
+            <JsonLd data={faqSchema(settings.faqItems, new URL(Astro.url.pathname, Astro.site).toString(), lang)} />
             <h2 class="font-display text-2xl text-(--color-paper)">FAQ</h2>
             <dl class="mt-6 space-y-6">
               {settings.faqItems.map((item) => (

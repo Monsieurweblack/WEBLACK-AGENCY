@@ -13,6 +13,8 @@ import { localizedPath, type Lang } from "../../i18n/utils";
 import { isClosed, type Opportunity } from "../../lib/opportunities";
 import { OPPORTUNITY_COPY, OPPORTUNITY_HERO_SIZES, formatDeadline } from "../../lib/opportunity-copy";
 import RemoteImage from "../media/RemoteImage.astro";
+import JsonLd from "../layout/JsonLd.astro";
+import { opportunitySchema } from "../../lib/structured-data";
 
 interface Props {
   lang: Lang;
@@ -36,7 +38,10 @@ const facts = [
   { label: c.broadcast, value: o.broadcastPartner },
 ].filter((f) => Boolean(f.value)) as { label: string; value: string }[];
 const verifiedOn = new Date(`${o.lastVerifiedAt}T12:00:00Z`).toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
 ---
+
+<JsonLd data={opportunitySchema(o, lang, canonicalUrl)} />
 
 <article class="bg-(--color-ink)" data-opportunity={o.slug} data-deadline={o.deadline} data-status={o.status}>
   <header class="px-6 pb-14 pt-36 md:px-10 md:pt-44">

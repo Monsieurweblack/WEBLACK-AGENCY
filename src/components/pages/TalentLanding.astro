@@ -1,6 +1,8 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
 import CardTalent from "../cards/CardTalent.astro";
+import JsonLd from "../layout/JsonLd.astro";
+import { collectionSchema } from "../../lib/structured-data";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 import { getEntriesByLang, sortByDateDesc, type TalentEntry } from "../../lib/content";
 import { TALENT_HERO } from "../../lib/hero-images";
@@ -26,6 +28,26 @@ const projects = sortByDateDesc(await getEntriesByLang("work", lang));
 const zeDefile = projects.find((p) => p.data.slug.includes("ze-defile") || p.data.client.includes("ZÉ DÉFILÉ"));
 const nta = projects.find((p) => p.data.slug.includes("nuit-du-textile") || p.data.client.includes("Marie Kaba"));
 const t = useTranslations(lang);
+
+/**
+ * Le réseau comme ensemble, pas comme une page de plus.
+ *
+ * Nul tant qu'aucun profil n'est publié (collectionSchema renvoie null sur
+ * une liste vide) : on n'annonce pas un roster qui n'existe pas encore.
+ */
+const rosterSchema = collectionSchema({
+  lang,
+  canonical: new URL(Astro.url.pathname, Astro.site).toString(),
+  name: t("talent.seo.title"),
+  description: t("talent.hero.lead"),
+  items: talent
+    .filter((entry) => entry.data.status === "active")
+    .map((entry) => ({
+      url: localizedPath(lang, `/talent/${entry.data.slug}/`),
+      name: entry.data.name,
+      image: entry.data.portraitImage.url,
+    })),
+});
 
 /**
  * Talent, reconstruit autour d'une question : que dit-on quand il n'y a

@@ -11,6 +11,13 @@ export function initNav() {
   const barTop = trigger?.querySelector<HTMLElement>("[data-menu-bar-top]");
   const barBottom = trigger?.querySelector<HTMLElement>("[data-menu-bar-bottom]");
   const links = panel?.querySelectorAll<HTMLAnchorElement>(".menu-link");
+  /**
+   * Ce qui apparaît à l'ouverture : les entrées ET les intitulés de groupe.
+   * `links` reste strictement les liens — c'est lui qui reçoit le focus
+   * initial et les écouteurs de clic, et un titre de groupe n'est ni
+   * focalisable ni cliquable.
+   */
+  const revealed = panel?.querySelectorAll<HTMLElement>(".menu-link, .menu-group-title");
   if (!header || !trigger || !panel) return;
 
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -67,17 +74,17 @@ export function initNav() {
 
     if (prefersReducedMotion) {
       panel!.style.opacity = "1";
-      links?.forEach((link) => {
-        link.style.opacity = "1";
-        link.style.transform = "none";
+      revealed?.forEach((element) => {
+        element.style.opacity = "1";
+        element.style.transform = "none";
       });
       return;
     }
 
     const { gsap } = await import("gsap");
     gsap.to(panel, { opacity: 1, duration: 0.4, ease: "power2.out" });
-    if (links?.length) {
-      gsap.to(links, {
+    if (revealed?.length) {
+      gsap.to(revealed, {
         opacity: 1,
         y: 0,
         duration: 0.6,

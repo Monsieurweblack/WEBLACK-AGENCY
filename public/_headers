@@ -83,3 +83,17 @@
   Cache-Control: public, max-age=3600
 /search-index.json
   Cache-Control: public, max-age=3600
+
+# Flux RSS du Journal et carte /llms.txt : générés à chaque déploiement
+# depuis le contenu réel. Une heure de fraîcheur — comme le sitemap — puis
+# réutilisables une journée le temps de revalider, pour qu'un agrégateur
+# qui interroge souvent ne reparte pas à zéro à chaque passage.
+/journal/rss.xml
+  Content-Type: application/rss+xml; charset=utf-8
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+/en/journal/rss.xml
+  Content-Type: application/rss+xml; charset=utf-8
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400

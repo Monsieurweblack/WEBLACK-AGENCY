@@ -5,6 +5,8 @@ import CardJournal from "../../../components/cards/CardJournal.astro";
 import ViewToggle from "../../../components/layout/ViewToggle.astro";
 import AgendaPreview from "../../../components/sections/AgendaPreview.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
+import JsonLd from "../../../components/layout/JsonLd.astro";
+import { collectionSchema } from "../../../lib/structured-data";
 import { useTranslations, localizedPath, type UiKey } from "../../../i18n/utils";
 import { intlTagFor } from "../../../i18n/locales";
 import { getEntriesByLang, sortByDateDesc, JOURNAL_CATEGORY_ORDER } from "../../../lib/content";
@@ -26,9 +28,17 @@ const leadDate = featuredFirst
 const leadCategoryLabel = featuredFirst
   ? (t(`journal.category.${featuredFirst.data.category}` as UiKey) ?? featuredFirst.data.category)
   : "";
+const collection = collectionSchema({
+  lang,
+  canonical: new URL(Astro.url.pathname, Astro.site).toString(),
+  name: t("journal.seo.title"),
+  description: t("journal.seo.description"),
+  items: articles.map((entry) => ({ url: `/en/journal/${entry.data.slug}/`, name: entry.data.title, image: entry.data.coverImage.url })),
+});
 ---
 
 <BaseLayout lang={lang} title={t("journal.seo.title")} description={t("journal.seo.description")}>
+  <JsonLd data={collection} />
   <section class="bg-(--color-ink) px-6 pb-12 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("journal.hero.eyebrow")}</p>

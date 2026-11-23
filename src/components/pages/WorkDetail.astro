@@ -2,6 +2,8 @@
 import RemoteImage from "../media/RemoteImage.astro";
 import CardWork from "../cards/CardWork.astro";
 import CtaContact from "../sections/CtaContact.astro";
+import JsonLd from "../layout/JsonLd.astro";
+import { workCreativeWorkSchema } from "../../lib/structured-data";
 import { useTranslations, localizedPath, type Lang } from "../../i18n/utils";
 import { getEntriesByLang, imageFit, type WorkEntry } from "../../lib/content";
 import { getRelatedProjects } from "../../lib/content-graph";
@@ -28,7 +30,10 @@ const related = getRelatedProjects(work, await getEntriesByLang("work", lang));
  * qui prolonge la page. Aucune liste de cas particuliers à tenir : c'est
  * l'image elle-même qui décide.
  */
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
 ---
+
+<JsonLd data={workCreativeWorkSchema(work, lang, canonicalUrl)} />
 
 <article class="bg-(--color-ink)">
   <header class="relative flex min-h-[60vh] items-end overflow-hidden">

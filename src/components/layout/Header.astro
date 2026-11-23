@@ -49,20 +49,63 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 // activée dans Sanity (boutiqueSettings.active) — jamais un lien vers un
 // catalogue vide ou une fonctionnalité non encore voulue.
 
-const navItems = [
-  { label: t("nav.talent"), href: "/talent" },
-  { label: t("nav.creative"), href: "/creative" },
-  { label: t("nav.consulting"), href: "/consulting" },
-  { label: t("nav.selectedwork"), href: "/selected-work" },
-  ...(boutiqueSettings.active ? [{ label: boutiqueSettings.navigationLabel, href: "/boutique" }] : []),
-  { label: t("nav.journal"), href: "/journal" },
-  { label: t("nav.agenda"), href: "/agenda" },
-  { label: t("nav.responsibility"), href: "/responsibility" },
-  { label: t("nav.about"), href: "/about" },
-].map((item) => {
-  const href = localizedPath(lang, item.href);
-  return { ...item, href, isActive: href.replace(/\/$/, "") === currentPath };
-});
+/**
+ * Le menu, en trois groupes nommés plutôt qu'en une liste plate.
+ *
+ * Neuf entrées à plat — Talent, Créatif, Consulting, Projets, Journal,
+ * Agenda, Engagements, À propos — demandaient au visiteur de deviner que
+ * les trois premières sont les métiers de l'agence, que les trois
+ * suivantes sont ce qu'elle publie, et que les deux dernières parlent
+ * d'elle. Rien ne le disait. Les groupes le disent, et ils le disent aussi
+ * à un moteur : trois ensembles thématiques explicites valent mieux, pour
+ * comprendre de quoi traite un site, qu'une énumération dont l'ordre est
+ * la seule indication.
+ *
+ * Opportunities entre ici. La rubrique existe, elle porte du contenu réel
+ * et daté (appels à candidatures vérifiés) — c'est exactement ce qu'un
+ * candidat cherche, et ce qu'un assistant est susceptible de citer — et
+ * elle n'était atteignable que par un lien du pied de page. Une page que
+ * la navigation principale ignore est une page que les moteurs traitent
+ * comme secondaire.
+ */
+const navGroups = [
+  {
+    title: t("nav.group.divisions"),
+    items: [
+      { label: t("nav.talent"), href: "/talent" },
+      { label: t("nav.creative"), href: "/creative" },
+      { label: t("nav.consulting"), href: "/consulting" },
+    ],
+  },
+  {
+    title: t("nav.group.work"),
+    items: [
+      { label: t("nav.selectedwork"), href: "/selected-work" },
+      { label: t("nav.journal"), href: "/journal" },
+      { label: t("nav.agenda"), href: "/agenda" },
+      { label: t("nav.opportunities"), href: "/opportunities" },
+      ...(boutiqueSettings.active ? [{ label: boutiqueSettings.navigationLabel, href: "/boutique" }] : []),
+    ],
+  },
+  {
+    title: t("nav.group.house"),
+    items: [
+      { label: t("nav.about"), href: "/about" },
+      { label: t("nav.responsibility"), href: "/responsibility" },
+      { label: t("nav.partners"), href: "/partners" },
+    ],
+  },
+].map((group) => ({
+  ...group,
+  items: group.items.map((item) => {
+    const href = localizedPath(lang, item.href);
+    return { ...item, href, isActive: href.replace(/\/$/, "") === currentPath };
+  }),
+}));
+
+// Liste à plat, pour la navigation sans JavaScript : un seul endroit
+// définit les entrées, aucune ne peut exister dans une vue et pas l'autre.
+const navItems = navGroups.flatMap((group) => group.items);
 
 const homeHref = localizedPath(lang, "/");
 const contactHref = localizedPath(lang, "/contact");
@@ -188,10 +231,22 @@ const liveHref = localizedPath(lang, "/live");
       aria-label={t("nav.ariaLabel")}
     >
       {
-        navItems.map((item) => (
-          <a href={item.href} class="menu-link nav-tab translate-y-4 opacity-0" aria-current={item.isActive ? "page" : undefined}>
-            {item.label}
-          </a>
+        navGroups.map((group) => (
+          <section class="menu-group" aria-labelledby={`menu-group-${group.title.replace(/[^a-zA-Z]/g, "").toLowerCase()}`}>
+            <h2
+              id={`menu-group-${group.title.replace(/[^a-zA-Z]/g, "").toLowerCase()}`}
+              class="menu-group-title label-tracked translate-y-4 opacity-0 text-(--color-gold)"
+            >
+              {group.title}
+            </h2>
+            <div class="menu-group-items">
+              {group.items.map((item) => (
+                <a href={item.href} class="menu-link nav-tab translate-y-4 opacity-0" aria-current={item.isActive ? "page" : undefined}>
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          </section>
         ))
       }
     </nav>
@@ -411,9 +466,35 @@ const liveHref = localizedPath(lang, "/live");
     font-size: 1rem;
   }
 
+  /*
+   * Le menu porte désormais trois groupes nommés, non plus une liste
+   * plate. La grille s'applique donc aux GROUPES : une colonne sur
+   * téléphone (on fait défiler les trois sections l'une après l'autre),
+   * trois côte à côte dès qu'il y a la largeur — chaque colonne est alors
+   * une division, ce que le regard lit immédiatement. Les entrées, elles,
+   * s'empilent toujours verticalement à l'intérieur de leur groupe : une
+   * entrée ne doit jamais se retrouver dans la colonne d'un autre groupe
+   * que le sien.
+   */
   .menu-nav {
     grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .menu-group-items {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.5rem;
+    margin-top: 0.625rem;
+  }
+
+  .menu-group-title {
+    /* Un intitulé de groupe n'est pas un onglet : il nomme, il ne mène
+       nulle part. Filet sous le texte plutôt que le bouton doré des
+       entrées, pour qu'aucun visiteur n'essaie de cliquer dessus. */
+    display: block;
+    border-bottom: 1px solid var(--color-line);
+    padding-bottom: 0.5rem;
   }
 
   @media (min-width: 640px) {
@@ -433,7 +514,11 @@ const liveHref = localizedPath(lang, "/live");
 
     .menu-nav {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: 1.5rem 1.25rem;
+    }
+
+    .menu-group-items {
+      gap: 0.625rem;
     }
 
     .menu-link {
@@ -445,7 +530,12 @@ const liveHref = localizedPath(lang, "/live");
   @media (min-width: 1024px) {
     .menu-nav {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1rem;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    .menu-group-items {
+      gap: 0.75rem;
     }
 
     .menu-link {
@@ -457,7 +547,11 @@ const liveHref = localizedPath(lang, "/live");
 
   @media (min-width: 1920px) {
     .menu-nav {
-      gap: 1.25rem;
+      gap: 2.5rem;
+    }
+
+    .menu-group-items {
+      gap: 1rem;
     }
 
     .menu-link {
@@ -493,7 +587,16 @@ const liveHref = localizedPath(lang, "/live");
     }
 
     .menu-nav {
+      gap: 0.75rem;
+    }
+
+    .menu-group-items {
       gap: 0.375rem;
+      margin-top: 0.375rem;
+    }
+
+    .menu-group-title {
+      padding-bottom: 0.25rem;
     }
 
     /* Cible tactile maintenue à 44 px même sur écran court (téléphone couché). */

@@ -4,14 +4,24 @@ import CardWork from "../../../components/cards/CardWork.astro";
 import SelectedWorkEditorial from "../../../components/sections/SelectedWorkEditorial.astro";
 import CtaContact from "../../../components/sections/CtaContact.astro";
 import { useTranslations } from "../../../i18n/utils";
+import JsonLd from "../../../components/layout/JsonLd.astro";
+import { collectionSchema } from "../../../lib/structured-data";
 import { getEntriesByLang, sortByDateDesc } from "../../../lib/content";
 
 const lang = "en" as const;
 const t = useTranslations(lang);
 const work = sortByDateDesc(await getEntriesByLang("work", lang));
+const collection = collectionSchema({
+  lang,
+  canonical: new URL(Astro.url.pathname, Astro.site).toString(),
+  name: t("selectedwork.hero.title"),
+  description: t("selectedwork.seo.description"),
+  items: work.map((entry) => ({ url: `/en/selected-work/${entry.data.slug}/`, name: entry.data.title, image: entry.data.coverImage.url })),
+});
 ---
 
 <BaseLayout lang={lang} title={t("selectedwork.hero.title")} description={t("selectedwork.seo.description")}>
+  <JsonLd data={collection} />
   <section class="bg-(--color-ink) px-6 pb-16 pt-40 md:px-10">
     <div class="mx-auto max-w-(--container-content)" data-reveal>
       <p class="label-tracked label-tracked-dot text-(--color-gold)">{t("selectedwork.hero.eyebrow")}</p>

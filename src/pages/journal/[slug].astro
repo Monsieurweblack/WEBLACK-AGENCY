@@ -48,6 +48,11 @@ const lang = "fr" as const;
   image={article.data.coverImage.url}
   imageAlt={article.data.coverImage.alt}
   translations={translations}
+  ogType="article"
+  publishedTime={article.data.publishDate.toISOString()}
+  modifiedTime={article.data.updatedAt.toISOString()}
+  author={article.data.author}
+  section={article.data.category}
 >
   <JournalDetail lang={lang} article={article} />
 </BaseLayout>

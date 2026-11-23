@@ -20,20 +20,42 @@ const sinceText = siteSettings?.footerText ?? t("footer.since");
 const year = new Date().getFullYear();
 const currentUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
-const exploreLinks = [
+/**
+ * Quatre colonnes de liens, et pourquoi elles changent de contenu.
+ *
+ * La colonne « Agence » rassemblait six liens de trois natures : ce que
+ * l'agence est (À propos, Engagements, Partenaires) et ce qu'elle publie
+ * (Journal, Agenda, Opportunities). La colonne « Informations légales »,
+ * elle, hébergeait Contact — qui n'a rien de légal — à côté des mentions.
+ * Un visiteur cherchant à joindre l'agence n'avait aucune raison de
+ * regarder sous « Informations légales », et un moteur qui déduit la
+ * structure d'un site de ses blocs de liens y lisait trois sujets mêlés.
+ *
+ * Désormais : les divisions (ce qu'on fait), les publications (ce qu'on
+ * édite, datées, avec le flux), la maison (qui l'on est et comment nous
+ * joindre), le légal (rien d'autre que le légal).
+ *
+ * Opportunities prend son libellé traduit : il était écrit en dur en
+ * anglais, donc identique sur la version française.
+ */
+const divisionLinks = [
   { label: t("nav.talent"), href: "/talent" },
   { label: t("nav.creative"), href: "/creative" },
   { label: t("nav.consulting"), href: "/consulting" },
   { label: t("nav.selectedwork"), href: "/selected-work" },
 ];
 
-const studioLinks = [
-  { label: t("nav.about"), href: "/about" },
+const publicationLinks = [
   { label: t("nav.journal"), href: "/journal" },
   { label: t("nav.agenda"), href: "/agenda" },
-  { label: "Opportunities", href: "/opportunities" },
+  { label: t("nav.opportunities"), href: "/opportunities" },
+];
+
+const houseLinks = [
+  { label: t("nav.about"), href: "/about" },
   { label: t("nav.responsibility"), href: "/responsibility" },
   { label: t("nav.partners"), href: "/partners" },
+  { label: t("nav.contact"), href: "/contact" },
 ];
 
 const legalLinks = [
@@ -42,11 +64,14 @@ const legalLinks = [
   // Page d'accueil de l'application déclarée dans Google Auth Platform : atteignable depuis toutes les pages.
   { label: t("footer.talentPlatform"), href: "/talent/plateforme" },
 ];
+
+// Le flux de la langue de la page — jamais l'autre.
+const rssHref = lang === "fr" ? "/journal/rss.xml" : "/en/journal/rss.xml";
 ---
 
 <footer class="border-t border-(--color-line) bg-(--color-ink) text-(--color-paper)">
   <div class="mx-auto max-w-(--container-content) px-6 py-16 md:px-10 md:py-20">
-    <div class="grid grid-cols-1 gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+    <div class="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,minmax(0,1fr))]">
       <div>
         <div class="flex items-center gap-3">
           <Image src={weblackIcon} alt="WEBLACK" width={36} height={36} />
@@ -73,7 +98,7 @@ const legalLinks = [
         <p class="label-tracked text-(--color-gold)">{t("footer.explore")}</p>
         <ul class="mt-4 space-y-3">
           {
-            exploreLinks.map((link) => (
+            divisionLinks.map((link) => (
               <li>
                 <a
                   href={localizedPath(lang, link.href)}
@@ -87,11 +112,38 @@ const legalLinks = [
         </ul>
       </nav>
 
+      <nav aria-label={t("footer.publications")}>
+        <p class="label-tracked text-(--color-gold)">{t("footer.publications")}</p>
+        <ul class="mt-4 space-y-3">
+          {
+            publicationLinks.map((link) => (
+              <li>
+                <a
+                  href={localizedPath(lang, link.href)}
+                  class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))
+          }
+          <li>
+            {/* Le flux existe : un lecteur doit pouvoir le trouver sans lire le code source de la page. */}
+            <a
+              href={rssHref}
+              class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
+            >
+              {t("footer.rss")}
+            </a>
+          </li>
+        </ul>
+      </nav>
+
       <nav aria-label={t("footer.studio")}>
         <p class="label-tracked text-(--color-gold)">{t("footer.studio")}</p>
         <ul class="mt-4 space-y-3">
           {
-            studioLinks.map((link) => (
+            houseLinks.map((link) => (
               <li>
                 <a
                   href={localizedPath(lang, link.href)}
@@ -128,14 +180,6 @@ const legalLinks = [
             >
               {t("footer.privacyPreferences")}
             </button>
-          </li>
-          <li>
-            <a
-              href={localizedPath(lang, "/contact")}
-              class="text-sm text-(--color-paper)/70 transition-colors hover:text-(--color-paper)"
-            >
-              {t("nav.contact")}
-            </a>
           </li>
         </ul>
       </nav>

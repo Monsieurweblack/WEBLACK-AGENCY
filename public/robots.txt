@@ -1,6 +1,120 @@
+# WEBLACK — https://weblack.fr
+#
+# Politique explicite plutôt qu'implicite.
+#
+# Le fichier précédent se contentait d'un « User-agent: * / Allow: / ».
+# Cela autorise déjà tout le monde — mais pas tous les robots ne lisent la
+# règle générique de la même façon, et deux d'entre eux ne la lisent pas du
+# tout : Google-Extended et Applebot-Extended ne gouvernent PAS
+# l'indexation, ils gouvernent le droit d'utiliser le contenu pour
+# alimenter les réponses génératives (AI Overviews, Gemini, Apple
+# Intelligence). Un site qui veut apparaître dans ces réponses doit les
+# nommer. C'est précisément l'objet de ce fichier.
+#
+# Rien n'est bloqué ici qui ne le soit déjà pour des raisons de fond :
+# l'administration, les API, l'espace membre. Le reste du site est ouvert
+# sans restriction, à tous les robots, de recherche classique comme
+# génératifs.
+
+# ---------------------------------------------------------------------
+# Règle générale
+# ---------------------------------------------------------------------
 User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
+#
+# /espace/ (espace membre) n'est PAS bloqué ici, bien qu'il n'ait rien à
+# faire dans un index. La page est déjà en `noindex` — et les deux
+# directives se contredisent : un robot qui ne peut pas la charger ne peut
+# pas y lire le `noindex`, et Google range alors ce genre d'URL en
+# « indexée malgré le blocage par robots.txt », URL nue dans les
+# résultats. Comme /espace/ est liée depuis /talent/ et la politique de
+# confidentialité, le robot y arrivera : il faut donc qu'il puisse lire la
+# consigne. `noindex` seul est la règle la plus forte des deux.
+#
+# Les URL paramétrées (/contact?profile=…, /brief/?from=…) ne sont PAS
+# bloquées ici, bien qu'elles soient des doublons de leur page canonique.
+# Les bloquer paraissait propre et aurait été une faute : /brief/ n'est
+# jamais liée autrement qu'avec un paramètre — un Disallow l'aurait coupée
+# de tout lien interne. La balise <link rel="canonical">, présente sur
+# chaque page et pointant l'URL sans paramètre, est l'outil juste pour
+# cela : elle regroupe les variantes au lieu de les rendre invisibles.
 
+# ---------------------------------------------------------------------
+# Recherche générative et assistants — autorisés nommément.
+#
+# Deux familles à ne pas confondre :
+#   · les robots qui PARCOURENT le site pour l'indexer et le citer en
+#     réponse (OAI-SearchBot, PerplexityBot, Claude-SearchBot…) ;
+#   · ceux qui récupèrent une page à la demande d'un utilisateur qui l'a
+#     mentionnée (ChatGPT-User, Perplexity-User, Claude-User).
+# Les uns comme les autres sont utiles ici : le premier groupe fait entrer
+# le site dans les réponses, le second le rend consultable en conversation.
+# ---------------------------------------------------------------------
+
+# OpenAI
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: GPTBot
+Allow: /
+
+# Anthropic
+User-agent: Claude-SearchBot
+Allow: /
+User-agent: Claude-User
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+User-agent: Perplexity-User
+Allow: /
+
+# Google — Google-Extended ne concerne QUE l'usage génératif (Gemini, AI
+# Overviews), jamais le classement dans la recherche : le refuser
+# n'améliorerait aucun positionnement et exclurait le site des réponses.
+User-agent: Google-Extended
+Allow: /
+
+# Apple Intelligence / Siri
+User-agent: Applebot
+Allow: /
+User-agent: Applebot-Extended
+Allow: /
+
+# Microsoft Copilot
+User-agent: Bingbot
+Allow: /
+
+# Autres moteurs et index génératifs
+User-agent: Amazonbot
+Allow: /
+User-agent: Meta-ExternalAgent
+Allow: /
+User-agent: cohere-ai
+Allow: /
+User-agent: YouBot
+Allow: /
+User-agent: Diffbot
+Allow: /
+User-agent: CCBot
+Allow: /
+User-agent: MistralAI-User
+Allow: /
+
+# ---------------------------------------------------------------------
+# Plans du site
+#
+# Le sitemap XML énumère les URL. /llms.txt dit ce qu'elles contiennent et
+# comment le site s'organise, en texte — c'est la forme qu'un modèle de
+# langage lit le plus directement. Les deux sont générés à chaque
+# déploiement depuis le contenu réel.
+# ---------------------------------------------------------------------
 Sitemap: https://weblack.fr/sitemap-index.xml
+
+# LLM-friendly site map: https://weblack.fr/llms.txt

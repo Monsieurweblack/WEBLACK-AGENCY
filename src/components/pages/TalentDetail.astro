@@ -1,7 +1,9 @@
 ---
 import RemoteImage from "../media/RemoteImage.astro";
 import CtaContact from "../sections/CtaContact.astro";
+import JsonLd from "../layout/JsonLd.astro";
 import type { TalentEntry } from "../../lib/content";
+import { talentPersonSchema } from "../../lib/structured-data";
 import { useTranslations, localizedPath, type Lang, type UiKey } from "../../i18n/utils";
 
 interface Props {
@@ -12,7 +14,10 @@ interface Props {
 const { lang, talent } = Astro.props;
 const t = useTranslations(lang);
 const categoryLabel = t(`talent.category.${talent.data.category}` as UiKey);
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
 ---
+
+<JsonLd data={talentPersonSchema(talent, lang, canonicalUrl)} />
 
 <article class="bg-(--color-ink)">
   <div class="mx-auto max-w-(--container-content) px-6 pb-20 pt-40 md:px-10">

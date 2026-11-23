@@ -23,6 +23,12 @@ interface Props {
   image?: string;
   imageAlt?: string;
   noindex?: boolean;
+  /** Transmis tel quel à Seo.astro — voir les commentaires de ses props. */
+  ogType?: "website" | "article" | "profile";
+  publishedTime?: string;
+  modifiedTime?: string;
+  author?: string;
+  section?: string;
   bodyClass?: string;
   translations?: TranslationMap;
   /**
@@ -34,7 +40,7 @@ interface Props {
   lcpImage?: { src: string; width: number; sizes?: string; portrait?: string; crop?: ImageCrop };
 }
 
-const { lang, title, description, image, imageAlt, noindex, bodyClass, translations, lcpImage } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex, bodyClass, translations, lcpImage, ogType, publishedTime, modifiedTime, author, section } = Astro.props;
 const t = useTranslations(lang);
 const siteSettings = await getSiteSettings(lang);
 // Variante locale : seules les sources AVIF sont préchargées, filtrées par
@@ -248,6 +254,11 @@ const lcpPreload = lcpPreloads.length > 0;
       noindex={noindex}
       translations={translations}
       siteSettings={siteSettings}
+      ogType={ogType}
+      publishedTime={publishedTime}
+      modifiedTime={modifiedTime}
+      author={author}
+      section={section}
     />
   </head>
   <body class:list={["bg-(--color-ink)", bodyClass]}>

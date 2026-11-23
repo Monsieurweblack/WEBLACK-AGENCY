@@ -23,6 +23,7 @@ const t = useTranslations(lang);
   title={`${talent.data.name} — ${t("nav.talent")}`}
   description={`${talent.data.role} · ${talent.data.country}`}
   image={talent.data.portraitImage.url}
+  ogType="profile"
 >
   <TalentDetail lang={lang} talent={talent} />
 </BaseLayout>

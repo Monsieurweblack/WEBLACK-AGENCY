@@ -11,6 +11,23 @@ interface Props {
   image?: string;
   imageAlt?: string;
   noindex?: boolean;
+  /**
+   * Nature de la page pour Open Graph. Tout le site annonçait
+   * `og:type=website`, y compris sur un article du Journal et sur la fiche
+   * d'un talent : un partage d'article s'affichait donc comme une page
+   * d'accueil, sans date ni auteur, et les agrégateurs qui trient par type
+   * (dont les robots des moteurs génératifs) n'avaient aucun moyen de
+   * distinguer un billet daté d'une page institutionnelle. Les trois
+   * valeurs admises sont celles que le site publie réellement.
+   */
+  ogType?: "website" | "article" | "profile";
+  /** ISO 8601. Uniquement sur ogType="article", et seulement si la date est réelle. */
+  publishedTime?: string;
+  modifiedTime?: string;
+  /** Auteur affiché de l'article, quand il est renseigné dans le CMS. */
+  author?: string;
+  /** Rubrique de l'article (catégorie éditoriale réelle). */
+  section?: string;
   /** From the "siteSettings" Sanity singleton — used only as the fallback source for title/description/OG image when the page doesn't supply its own. Falls back to i18n copy when unavailable. */
   siteSettings?: SiteSettingsData;
   /**
@@ -27,7 +44,7 @@ interface Props {
   translations?: TranslationMap;
 }
 
-const { lang, title, description, image, imageAlt, noindex = false, translations, siteSettings } = Astro.props;
+const { lang, title, description, image, imageAlt, noindex = false, translations, siteSettings, ogType = "website", publishedTime, modifiedTime, author, section } = Astro.props;
 const t = useTranslations(lang);
 
 const pageTitle = title ? `${title} — WEBLACK` : (siteSettings?.seoTitle ?? t("seo.default.title"));
@@ -239,6 +256,19 @@ const structuredData = {
 <title>{pageTitle}</title>
 <meta name="description" content={pageDescription} />
 <link rel="canonical" href={canonicalUrl} />
+{/*
+  Le flux du Journal, déclaré sur chaque page : c'est par cette balise
+  qu'un lecteur, un agrégateur ou un robot d'indexation le découvre sans
+  qu'on ait à le lui donner. Le flux de la langue de la page, jamais
+  l'autre — un lecteur francophone ne doit pas se retrouver abonné aux
+  articles anglais.
+*/}
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  title={`WEBLACK — ${t("nav.journal")}`}
+  href={new URL(lang === defaultLocale ? "/journal/rss.xml" : `/${lang}/journal/rss.xml`, Astro.site).toString()}
+/>
 {
   !noindex && hasAlternates && (
     <link rel="alternate" hreflang={LOCALES[lang].hreflang} href={canonicalUrl.toString()} />
@@ -261,7 +291,11 @@ const structuredData = {
 }
 {noindex && <meta name="robots" content="noindex,nofollow" />}
 
-<meta property="og:type" content="website" />
+<meta property="og:type" content={ogType} />
+{ogType === "article" && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+{ogType === "article" && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+{ogType === "article" && author && <meta property="article:author" content={author} />}
+{ogType === "article" && section && <meta property="article:section" content={section} />}
 <meta property="og:title" content={pageTitle} />
 <meta property="og:description" content={pageDescription} />
 <meta property="og:image" content={ogImage} />
