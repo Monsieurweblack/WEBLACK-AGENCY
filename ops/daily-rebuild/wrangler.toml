@@ -1,0 +1,17 @@
+# Worker planifié, indépendant du site (le site reste un projet Cloudflare
+# Pages construit par l'intégration Git). Voir src/index.js et DEPLOYMENT.md.
+# Déploiement : depuis ce dossier, `npx wrangler deploy`.
+name = "weblack-daily-rebuild"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Aucune adresse publique : ce worker ne répond à aucune requête.
+workers_dev = false
+preview_urls = false
+
+[triggers]
+# 04:00 UTC = 05:00 à Paris en hiver, 06:00 en été.
+crons = ["0 4 * * *"]
+
+[observability]
+enabled = true

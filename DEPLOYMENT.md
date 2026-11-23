@@ -71,6 +71,24 @@ Points ouverts :
 
 ---
 
+### Reconstruction quotidienne automatique (worker `weblack-daily-rebuild`)
+
+Le site étant statique, tout ce qui dépend de la date (Agenda : à venir / en cours / archive ; éléments datés de l'accueil) n'est recalculé qu'à la construction. Sans publication ni commit, rien ne reconstruit le site : le 2026-11-23, après 13 jours sans construction, 3 événements terminés étaient encore affichés « en cours » ou « à venir ».
+
+Depuis le 2026-11-23, un worker Cloudflare planifié reconstruit le site **chaque jour à 04:00 UTC** (05:00 à Paris en hiver, 06:00 en été) :
+
+- code : `ops/daily-rebuild/` (`src/index.js`, `wrangler.toml`) — aucun gestionnaire de requêtes, aucune adresse publique (`workers_dev = false`) ;
+- il appelle le deploy hook Cloudflare Pages dédié **`daily-rebuild`** (branche `main`), dont l'URL est le secret `DEPLOY_HOOK_URL` du worker — jamais dans Git ni dans un journal ;
+- Cloudflare reconstruit le dernier commit de production avec le contenu Sanity publié du moment ; ce n'est **pas** un second pipeline de déploiement (aucun code n'est déployé par ce biais) ;
+- redéployer le worker : `cd ops/daily-rebuild && npx wrangler deploy` ; journaux : Cloudflare → Workers → `weblack-daily-rebuild` → Logs ;
+- coût : nul (plan gratuit Workers, 1 construction Pages par jour sur un quota de 500/mois).
+
+Preuve de fonctionnement : déployé d'abord avec une planification de test toutes les 2 minutes, le worker a déclenché 63 constructions de production réussies (2026-11-23, 16:18 → 19:22 UTC), avant le retour à la planification quotidienne. Ces constructions ont reconstruit le même commit ; elles ont seulement consommé du quota de construction (129 constructions en novembre sur 500).
+
+Pour arrêter la reconstruction quotidienne : `npx wrangler delete --name weblack-daily-rebuild`, puis supprimer le deploy hook `daily-rebuild` (Pages → `weblack` → Settings → Builds → Deploy hooks).
+
+---
+
 ## Candidatures WEBLACK TALENTS — e-mails et dossiers PDF
 
 **Ouverture de la campagne** : uniquement `applicationsOpen` du document Sanity `talentApplicationSettings`. `minorsAllowed` doit rester `false`. Si Sanity ne répond pas, le formulaire refuse l'envoi (« service momentanément indisponible ») — jamais ouvert par défaut.

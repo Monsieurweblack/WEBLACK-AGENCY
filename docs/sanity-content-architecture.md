@@ -80,6 +80,8 @@ Les doublons rapprochés sont refusés par Cloudflare (code 304), ce qui limite 
 
 (sans liste de types : tout nouveau type de contenu publié est couvert sans retouche ; les brouillons, versions de release et fichiers téléversés sont exclus). Supprimer ensuite le second webhook et le deploy hook Cloudflare qu'il appelle.
 
+En complément, le worker `weblack-daily-rebuild` reconstruit le site chaque jour à 04:00 UTC même sans publication, pour que l'Agenda et la clôture des annonces suivent la date (voir `DEPLOYMENT.md`).
+
 Les URL de deploy hook sont des secrets : jamais dans Git, le frontend ou un journal. Pour les lire ou les modifier : Cloudflare → Pages → `weblack` → Settings → Builds → Deploy hooks ; Sanity → manage → projet `pzpm4xjp` → API → Webhooks.
 
 ## Retour arrière
