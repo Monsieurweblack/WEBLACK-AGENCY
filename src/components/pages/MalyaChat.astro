@@ -1,0 +1,93 @@
+---
+import type { Lang } from "../../i18n/utils";
+import { malyaCopy, MALYA_SIGNATURE } from "../../lib/malya-copy";
+import { PROJECT_KINDS } from "../../../functions/lib/malya/projectBrief";
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = malyaCopy(lang);
+const field = "mt-2 w-full border border-(--color-line) bg-transparent px-4 py-3 text-(--color-paper) placeholder:text-(--color-paper)/50 focus:border-(--color-gold)";
+const btn = "label-tracked min-h-11 border border-(--color-gold) px-6 py-3 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-ink) disabled:opacity-50";
+const ghost = "label-tracked min-h-11 border border-(--color-line) px-5 py-3 text-(--color-paper) transition-colors hover:border-(--color-gold) hover:text-(--color-gold)";
+---
+
+<section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32" data-malya data-lang={lang} data-hints={JSON.stringify(c.hints)}
+  data-copy={JSON.stringify({ sending: c.sending, suspended: c.suspended, rateLimited: c.rateLimited, error: c.error, offline: c.offline, cleared: c.cleared, copied: c.builder.copied, proposalCancelled: c.proposalCancelled, reliability: c.reliability, verification: c.verification, sources: c.sources, you: c.you, malya: c.malya, proposalTitle: c.proposalTitle, proposalConfirm: c.proposalConfirm, proposalCancel: c.proposalCancel, openMail: c.openMail, errorGoal: c.builder.errorGoal, resultLabel: c.builder.result })}>
+  <div class="mx-auto max-w-3xl">
+    <p class="label-tracked label-tracked-dot text-(--color-gold)">{c.eyebrow}</p>
+    <h1 class="font-display mt-4 text-5xl text-(--color-paper) sm:text-6xl">MALYA</h1>
+    <p class="font-display mt-3 text-lg text-(--color-gold)" lang="en">{MALYA_SIGNATURE}</p>
+    <p class="mt-6 max-w-xl text-(--color-paper)/70">{c.lead}</p>
+
+    <div role="tablist" aria-label="MALYA" class="mt-12 flex gap-6 border-b border-(--color-line)">
+      <button type="button" role="tab" id="tab-chat" aria-selected="true" aria-controls="panel-chat" class="label-tracked min-h-11 border-b-2 border-(--color-gold) pb-3 text-(--color-gold)" data-tab="chat">{c.tabChat}</button>
+      <button type="button" role="tab" id="tab-builder" aria-selected="false" aria-controls="panel-builder" tabindex="-1" class="label-tracked min-h-11 border-b-2 border-transparent pb-3 text-(--color-paper)/70" data-tab="builder">{c.tabBuilder}</button>
+    </div>
+
+    <div id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" class="pt-8">
+      <div id="malya-log" role="log" aria-live="polite" aria-label={c.logLabel} tabindex="0" class="max-h-[55vh] min-h-40 space-y-6 overflow-y-auto pr-1"></div>
+      <div id="malya-proposal" class="mt-6 hidden border border-(--color-gold) p-5" role="group" aria-labelledby="malya-proposal-title"></div>
+      <div id="malya-suggestions" class="mt-6 flex flex-wrap gap-3">
+        {c.suggestions.map((s) => <button type="button" data-suggestion={s} class={ghost}>{s}</button>)}
+      </div>
+      <form id="malya-form" class="mt-6" novalidate>
+        <label for="malya-input" class="label-tracked text-(--color-gold)">{c.inputLabel}</label>
+        <textarea id="malya-input" name="message" rows="3" maxlength="2000" required placeholder={c.placeholder} class={field}></textarea>
+        <div class="mt-4 flex flex-wrap items-center gap-4">
+          <button type="submit" id="malya-send" class={btn}>{c.send}</button>
+          <p id="malya-status" class="text-sm text-(--color-paper)/70" role="status"></p>
+        </div>
+      </form>
+      <div class="mt-8 space-y-3 border-t border-(--color-line) pt-6 text-sm text-(--color-paper)/70">
+        <p>{c.aiNotice}</p>
+        <div class="flex items-start gap-3">
+          <input type="checkbox" id="malya-consent" class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold)" aria-describedby="malya-consent-help" />
+          <div>
+            <label for="malya-consent" class="text-(--color-paper)">{c.consentLabel}</label>
+            <p id="malya-consent-help" class="mt-1">{c.consentHelp}</p>
+          </div>
+        </div>
+        <button type="button" id="malya-clear" class="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-(--color-gold)">{c.clear}</button>
+      </div>
+    </div>
+
+    <div id="panel-builder" role="tabpanel" aria-labelledby="tab-builder" class="hidden pt-8" hidden>
+      <h2 class="font-display text-3xl text-(--color-paper)">{c.builder.title}</h2>
+      <p class="mt-3 max-w-xl text-(--color-paper)/70">{c.builder.lead}</p>
+      <form id="builder-form" class="mt-8 space-y-6" novalidate>
+        <div>
+          <label for="b-kind" class="label-tracked text-(--color-gold)">{c.builder.kind}</label>
+          <select id="b-kind" name="kind" class={field + " bg-(--color-ink)"}>
+            {PROJECT_KINDS.map((k) => <option value={k}>{c.kinds[k]}</option>)}
+          </select>
+        </div>
+        <div>
+          <label for="b-goal" class="label-tracked text-(--color-gold)">{c.builder.goal}</label>
+          <textarea id="b-goal" name="goal" rows="3" maxlength="600" required aria-describedby="b-error" class={field}></textarea>
+          <p id="b-error" class="mt-2 text-sm text-(--color-gold)" role="alert"></p>
+        </div>
+        <div class="grid gap-6 sm:grid-cols-2">
+          <div><label for="b-audience" class="label-tracked text-(--color-gold)">{c.builder.audience}</label><input id="b-audience" name="audience" maxlength="200" class={field} /></div>
+          <div><label for="b-timeline" class="label-tracked text-(--color-gold)">{c.builder.timeline}</label><input id="b-timeline" name="timeline" maxlength="200" class={field} /></div>
+          <div><label for="b-budget" class="label-tracked text-(--color-gold)">{c.builder.budget}</label><input id="b-budget" name="budget" maxlength="200" class={field} /></div>
+          <div><label for="b-location" class="label-tracked text-(--color-gold)">{c.builder.location}</label><input id="b-location" name="location" maxlength="200" class={field} /></div>
+        </div>
+        <div><label for="b-notes" class="label-tracked text-(--color-gold)">{c.builder.notes}</label><textarea id="b-notes" name="notes" rows="3" maxlength="800" class={field}></textarea></div>
+        <button type="submit" class={btn}>{c.builder.generate}</button>
+      </form>
+      <div id="builder-result" class="mt-10 hidden">
+        <label for="builder-output" class="label-tracked text-(--color-gold)">{c.builder.result}</label>
+        <textarea id="builder-output" rows="12" readonly class={field}></textarea>
+        <div class="mt-4 flex flex-wrap items-center gap-4">
+          <button type="button" id="builder-copy" class={ghost}>{c.builder.copy}</button>
+          <button type="button" id="builder-send" class={btn}>{c.builder.send}</button>
+          <p id="builder-status" class="text-sm text-(--color-paper)/70" role="status"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import "../../scripts/malya";
+</script>
