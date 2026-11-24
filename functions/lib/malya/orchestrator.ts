@@ -5,17 +5,22 @@
  * appels (isolation des utilisateurs par construction).
  */
 import type { ChatRequest, ChatResponse, Citation, KnowledgeEntry, Lang, SkillId } from "./types.ts";
-import { SEED, retrieve, toCitation } from "./knowledge.ts";
+import { KNOWLEDGE, isOutdated, retrieve, toCitation } from "./knowledge.ts";
 import { detectLanguage } from "./language.ts";
 import { LIMITS, cleanText, detectInjection, sanitizeOutput, validateTurns } from "./safety.ts";
 import { SKILLS, assertToolAllowed, route } from "./skills.ts";
 import { GroundedModel, hasEmotion, type ModelProvider } from "./model.ts";
-import { confirmHandoff, proposeHandoff } from "./actions.ts";
+import { asCategory, confirmHandoff, proposeHandoff, type HandoffCategory } from "./actions.ts";
 import { normalizeConsent } from "./consent.ts";
+import { REASON_LABEL, type Llm } from "./llm.ts";
+import { buildPrompt } from "./prompt.ts";
 
 export interface Deps {
   model?: ModelProvider;
   knowledge?: KnowledgeEntry[];
+  /** Passerelle Anthropic. Absente ou refusée : MALYA répond en mode documentaire, et le dit. */
+  llm?: Llm;
+  now?: () => Date;
   /** Interrupteur d'urgence des fonctions sensibles (actions + mémoire). */
   sensitiveSuspended?: boolean;
   /** Journal des événements sensibles — sans contenu de conversation. */
@@ -23,7 +28,7 @@ export interface Deps {
 }
 
 export interface AuditEvent {
-  type: "injection_blocked" | "invalid_request" | "handoff_proposed" | "handoff_confirmed" | "handoff_rejected" | "tool_denied";
+  type: "injection_blocked" | "invalid_request" | "handoff_proposed" | "handoff_confirmed" | "handoff_rejected" | "tool_denied" | "llm_fallback";
   skill?: SkillId;
 }
 
@@ -55,12 +60,22 @@ const SUSPENDED: Record<Lang, string> = {
   en: "This function is temporarily suspended. The conversation remains available.",
 };
 
+function categorize(skill: SkillId, message: string): HandoffCategory {
+  if (/\b(partenariat|partenaire|sponsor\w*|partnership|partner)\b/i.test(message)) return "partnership";
+  if (/\b(defile|défilé|evenement|événement|event|show|fashion week)\b/i.test(message)) return "event";
+  if (skill === "talent_guidance") return "talent";
+  if (skill === "consulting") return "consulting";
+  if (skill === "creative_brief") return "creative";
+  return "general";
+}
+
 function empty(lang: Lang, reply: string, extra: Partial<ChatResponse>): ChatResponse {
   return { reply, lang, skill: "general", citations: [], verification: "none", suggestions: [], ...extra };
 }
 
 export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<ChatResponse> {
-  const knowledge = deps.knowledge ?? SEED;
+  const knowledge = deps.knowledge ?? KNOWLEDGE;
+  const now = deps.now ? deps.now() : new Date();
   const model = deps.model ?? new GroundedModel();
   const audit = deps.audit ?? (() => {});
   const pageLang: Lang = req.lang === "en" ? "en" : "fr";
@@ -70,7 +85,7 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
   // ── Proposition d'envoi d'un contenu préparé par l'utilisateur ───────
   if (typeof req.proposeDraft === "string") {
     if (deps.sensitiveSuspended) return empty(pageLang, SUSPENDED[pageLang], { blocked: "suspended" });
-    const proposal = await proposeHandoff(req.proposeDraft, pageLang);
+    const proposal = await proposeHandoff(req.proposeDraft, pageLang, asCategory(req.proposeCategory));
     if (!proposal) {
       audit({ type: "invalid_request" });
       return empty(pageLang, INVALID[pageLang], { blocked: "invalid" });
@@ -86,7 +101,7 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
       audit({ type: "invalid_request" });
       return empty(pageLang, INVALID[pageLang], { blocked: "invalid" });
     }
-    const handoff = await confirmHandoff(req.confirm.draft, req.confirm.digest, pageLang);
+    const handoff = await confirmHandoff(req.confirm.draft, req.confirm.digest, pageLang, asCategory(req.confirm.category));
     if (!handoff) {
       audit({ type: "handoff_rejected" });
       return empty(pageLang, pageLang === "fr" ? "La confirmation ne correspond pas à ce qui a été proposé : rien n'a été préparé." : "The confirmation does not match what was proposed: nothing was prepared.", { blocked: "invalid" });
@@ -131,7 +146,7 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
   }
 
   // ── Recherche documentaire (outil autorisé par la compétence) ────────
-  let entries: KnowledgeEntry[] = [];
+  let retrieved: ReturnType<typeof retrieve> = [];
   let uncovered = false;
   if (skill && skill.tools.includes("knowledge.search")) {
     assertToolAllowed(routing.skill, "knowledge.search");
@@ -140,21 +155,71 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
       : skill.domains === "sector"
         ? knowledge.filter((e) => e.domain !== "weblack") // connaissance sectorielle uniquement : un fait WEBLACK ne répond pas à une question de marché
         : knowledge.filter((e) => (skill.domains as string[]).includes(e.domain));
-    entries = retrieve(message, pool, 3).map((r) => r.entry);
-    if (entries.length === 0 && routing.skill === "sector_research") uncovered = true;
+    // Requête de recherche = message + dernier message utilisateur : résout « et pour la mode ? ».
+    const lastUser = [...turns.turns].reverse().find((t) => t.role === "user");
+    const query = lastUser && message.split(/\s+/).length <= 6 ? lastUser.content + " " + message : message;
+    retrieved = retrieve(query, pool, 4, now);
+    if (retrieved.length === 0 && routing.skill === "sector_research") uncovered = true;
+  }
+  const entries = retrieved.map((r) => r.entry);
+  const outdatedIds = new Set(retrieved.filter((r) => r.outdated).map((r) => r.entry.id));
+
+  // ── Choix du moteur : modèle seulement si nécessaire (coût) ──────────
+  const simpleDeterministic =
+    routing.skill === "assistant_meta" ||
+    routing.skill === "contact_handoff" ||
+    (routing.skill === "general" && entries.length === 0 && message.split(/\s+/).length <= 3) ||
+    (routing.skill === "weblack_info" && entries.length > 0 && retrieved[0].score >= 9 && message.split(/\s+/).length <= 8 && turns.turns.length === 0);
+
+  let mode: "ai" | "documentary" = "documentary";
+  let modeReason: string | undefined;
+  let reply = "";
+  let citations: Citation[] = entries.slice(0, 2).map((e) => toCitation(e, lang, now));
+  let verification: ChatResponse["verification"] | undefined;
+
+  if (!simpleDeterministic) {
+    if (!deps.llm) {
+      modeReason = REASON_LABEL.no_api_key[lang];
+    } else {
+      const plan = await deps.llm.plan();
+      if (!plan.ok) {
+        modeReason = REASON_LABEL[plan.reason][lang];
+        if (plan.reason !== "disabled") audit({ type: "llm_fallback", skill: routing.skill });
+      } else {
+        const built = buildPrompt({ lang, skill: routing.skill, message, history: turns.turns, entries, outdatedIds, limits: plan.limits, from: req.from });
+        const out = await deps.llm.call({ system: built.system, messages: built.messages, inputChars: built.inputChars, limits: plan.limits });
+        if (out.ok) {
+          mode = "ai";
+          // Les marqueurs [S#] ne sont retenus que s'ils désignent un passage réellement fourni.
+          const cited = new Map<string, KnowledgeEntry>();
+          let text = out.text.replace(/\[S(\d+)\]/g, (m, n: string) => {
+            const e = built.refs.get("S" + n);
+            if (!e) return "";
+            cited.set("S" + n, e);
+            return m;
+          });
+          text = text.replace(/[ \t]+([.,;:])/g, "$1");
+          reply = text;
+          citations = [...cited.entries()].map(([ref, e]) => ({ ...toCitation(e, lang, now), ref }));
+          verification = citations.length === 0 ? "unverified" : citations.every((c) => c.reliability === "verified" && !c.outdated) ? "verified" : "mixed";
+        } else {
+          modeReason = REASON_LABEL[out.reason][lang];
+          audit({ type: "llm_fallback", skill: routing.skill });
+        }
+      }
+    }
   }
 
-  // ── Génération puis filtrage de la sortie ────────────────────────────
-  const raw = await model.generate({ lang, skill: routing.skill, message, entries, uncovered, firstTurn: turns.turns.length === 0 });
-  const citations: Citation[] = entries.slice(0, 2).map((e) => toCitation(e, lang));
+  if (mode === "documentary") {
+    reply = await model.generate({ lang, skill: routing.skill, message, entries, uncovered, firstTurn: turns.turns.length === 0 });
+    citations = entries.slice(0, 2).map((e) => toCitation(e, lang, now));
+  }
+
   const allowed = ["https://weblack.fr/", ...citations.flatMap((c) => (c.url ? [c.url] : []))];
-  const reply = sanitizeOutput(raw, allowed);
+  reply = sanitizeOutput(reply, allowed);
+  verification = verification ?? (citations.length === 0 ? "unverified" : citations.every((c) => c.reliability === "verified" && !c.outdated) ? "verified" : "mixed");
 
-  const verification: ChatResponse["verification"] = citations.length === 0
-    ? "unverified"
-    : citations.every((c) => c.reliability === "verified") ? "verified" : "mixed";
-
-  const response: ChatResponse = { reply, lang, skill: routing.skill, citations, verification, suggestions: SUGGESTIONS[routing.skill][lang] };
+  const response: ChatResponse = { reply, lang, skill: routing.skill, citations, verification, suggestions: SUGGESTIONS[routing.skill][lang], mode, ...(modeReason ? { modeReason } : {}) };
 
   // ── Action externe : proposée, jamais exécutée ───────────────────────
   if ((routing.skill === "contact_handoff" || routing.skill === "sector_research") && !deps.sensitiveSuspended) {
@@ -162,7 +227,7 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
     if (wantsHandoff) {
       try {
         assertToolAllowed(routing.skill, "handoff.prepare");
-        const proposal = await proposeHandoff(message, lang);
+        const proposal = await proposeHandoff(message, lang, categorize(routing.skill, message));
         if (proposal) {
           response.proposal = proposal;
           audit({ type: "handoff_proposed", skill: routing.skill });

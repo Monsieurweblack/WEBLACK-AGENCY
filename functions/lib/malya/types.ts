@@ -19,6 +19,8 @@ export interface Source {
   url?: string;
 }
 
+export type ValidationStatus = "draft" | "machine-checked" | "human-validated";
+
 export interface KnowledgeEntry {
   id: string;
   /** Domaine de la taxonomie sectorielle (voir knowledge.ts). */
@@ -27,8 +29,22 @@ export interface KnowledgeEntry {
   text: Record<Lang, string>;
   keywords: string[];
   source: Source;
-  /** Date de vérification ISO (AAAA-MM-JJ). Obligatoire. */
+  /** Auteur ou institution à l'origine de l'information. */
+  author: string;
+  /** Date de publication de la source, si connue (AAAA-MM-JJ). */
+  publishedAt?: string;
+  /** Date de consultation de la source (AAAA-MM-JJ). */
+  consultedAt: string;
+  /** Date de dernière vérification ISO (AAAA-MM-JJ). Obligatoire. */
   verifiedAt: string;
+  /** Prochaine révision prévue ; passée, l'entrée est signalée obsolète. */
+  nextReviewAt: string;
+  /** Langue du contenu source. */
+  lang: Lang;
+  /** Étape de validation : seul « human-validated » a été relu par WEBLACK. */
+  validation: ValidationStatus;
+  /** Entrées avec lesquelles celle-ci est en contradiction connue. */
+  contradicts?: string[];
   reliability: Reliability;
   /** Chaîne de traçabilité : d'où vient l'information, qui l'a validée. */
   provenance: string;
@@ -41,6 +57,10 @@ export interface Citation {
   url?: string;
   verifiedAt: string;
   reliability: Reliability;
+  /** Marqueur [S#] utilisé dans la réponse du modèle. */
+  ref?: string;
+  /** Entrée dont la date de révision est dépassée. */
+  outdated?: boolean;
 }
 
 export type SkillId =
@@ -67,6 +87,7 @@ export interface ConsentState {
 
 export interface ActionProposal {
   kind: "transmit_request";
+  category: "talent" | "consulting" | "creative" | "event" | "partnership" | "general";
   /** Empreinte du contenu : la confirmation doit la reproduire à l'identique. */
   digest: string;
   summary: string;
@@ -84,7 +105,9 @@ export interface ChatRequest {
   /** Contenu à transmettre (ex. brief du Project Builder) : renvoie une proposition à valider, rien d'autre. */
   proposeDraft?: string;
   /** Confirmation explicite d'une action proposée. */
-  confirm?: { digest: string; draft: string };
+  confirm?: { digest: string; draft: string; category?: string };
+  /** Catégorie d'une proposition (ex. issue du Project Builder). */
+  proposeCategory?: string;
 }
 
 export interface ChatResponse {
@@ -99,5 +122,9 @@ export interface ChatResponse {
   /** Brouillon prêt à ouvrir dans le client mail — seulement après confirmation. */
   handoff?: { mailto: string };
   blocked?: "injection" | "invalid" | "suspended";
+  /** Mode réel de cette réponse : modèle (ai) ou base documentaire seule. */
+  mode?: "ai" | "documentary";
+  /** Raison lorsque le mode documentaire est imposé (clé absente, budget, arrêt…). */
+  modeReason?: string;
   clarification?: boolean;
 }

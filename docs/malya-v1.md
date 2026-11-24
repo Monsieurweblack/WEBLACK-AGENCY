@@ -1,5 +1,7 @@
 # MALYA / WEBLACK AI — rapport technique V1
 
+> **V1.1 :** ce document décrit la V1 (commit `0094f53`). Les évolutions (connexion Anthropic, budget, base documentaire sourcée, lanceur global, mémoire locale par conversation, supervision) sont décrites dans [`docs/malya-v1-1/`](malya-v1-1/architecture.md). Plusieurs « limites » ci-dessous ont changé : modèle de langage (désormais prévu, désactivé sans clé), présence sur toutes les pages (faite), corpus (7 sources sectorielles ajoutées). Mémoire serveur, comptes, chiffrement et sauvegardes restent **non réalisés**.
+
 Branche : `feature/weblack-ai-ecosystem` (depuis `origin/main` 9bc65fd). Rien n'est fusionné dans `main`, rien n'est déployé.
 Fondations d'une plateforme d'intelligence sectorielle, **pas** un chatbot branché sur un modèle externe : la V1 n'appelle aucun service payant.
 

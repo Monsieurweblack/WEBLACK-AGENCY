@@ -33,6 +33,7 @@
     "editorial:agenda-audit": "node --experimental-strip-types editorial-engine/agenda/audit.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0",
     "@astrojs/sitemap": "^3.7.3",
     "@extractus/article-extractor": "^8.0.17",
     "@fontsource-variable/fraunces": "^5.3.0",

@@ -14,10 +14,19 @@ import { json } from "../../lib/json.ts";
 import { checkRateLimit } from "../../lib/rateLimit.ts";
 import { handleTurn, type AuditEvent } from "../../lib/malya/orchestrator.ts";
 import type { ChatRequest } from "../../lib/malya/types.ts";
+import { createLlm } from "../../lib/malya/llm.ts";
 
 interface Env {
   MALYA_ENABLED?: string;
+  /** Suspend appels Anthropic, transmissions, outils externes et mémoire serveur ; le mode documentaire reste servi. */
+  MALYA_EMERGENCY_STOP?: string;
   MALYA_SENSITIVE_SUSPENDED?: string;
+  /** Secret Cloudflare : jamais dans Git, ni côté navigateur, ni dans les journaux. */
+  ANTHROPIC_API_KEY?: string;
+  MALYA_MODEL?: string;
+  MALYA_MONTHLY_BUDGET_EUR?: string;
+  MALYA_FX_USD_PER_EUR?: string;
+  DB?: D1Database;
   PHOTOS?: KVNamespace;
 }
 
@@ -60,7 +69,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!body || typeof body !== "object" || Array.isArray(body)) return json({ error: "invalid" }, 400);
 
   const reply = await handleTurn(body as ChatRequest, {
-    sensitiveSuspended: env.MALYA_SENSITIVE_SUSPENDED === "true",
+    sensitiveSuspended: env.MALYA_SENSITIVE_SUSPENDED === "true" || env.MALYA_EMERGENCY_STOP === "true",
+    llm: createLlm(env),
     audit,
   });
   return json(reply as unknown as Record<string, unknown>, 200);

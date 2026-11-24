@@ -27,8 +27,12 @@ export const SKILLS: Skill[] = [
   { id: "sector_research", triggers: ["marche", "market", "luxe", "luxury", "fashion week", "salon", "haute couture", "pret a porter", "ready to wear", "tendance", "trend", "sponsoring", "partenariat", "partnership", "industrie", "industry", "chiffre", "statistique", "statistics"], tools: ["knowledge.search", "handoff.prepare"], domains: "sector" },
   { id: "project_builder", triggers: ["brief", "mon projet", "my project", "construire un projet", "build a project", "dossier", "cahier des charges"], tools: ["brief.build", "handoff.prepare", "knowledge.search"], domains: "all" },
   { id: "contact_handoff", triggers: ["contacter", "contact", "equipe", "team", "rendez vous", "meeting", "transmettre", "transmit", "parler a quelqu", "speak to someone", "humain", "human"], tools: ["handoff.prepare"], domains: [] },
+  { id: "general", triggers: [], tools: ["knowledge.search"], domains: "all" },
   { id: "assistant_meta", triggers: ["malya", "qui es tu", "who are you", "que sais tu faire", "what can you do", "comment fonctionnes", "how do you work", "tu es une ia", "are you an ai", "tes limites", "your limits"], tools: [], domains: [] },
 ];
+
+/** Ordre de départage quand plusieurs compétences sont à égalité : intention d'action d'abord. */
+const PRIORITY: SkillId[] = ["contact_handoff", "project_builder", "talent_guidance", "opportunities", "consulting", "creative_brief", "sector_research", "weblack_info", "assistant_meta"];
 
 export class ToolNotAllowed extends Error {}
 
@@ -63,9 +67,16 @@ export function route(message: string, history: { role: string; content: string 
     }
     return { skill: "general", confidence: "low" };
   }
-  const [a, b] = scores;
-  if (b && b.score === a.score && a.id !== "weblack_info" && b.id !== "weblack_info") {
-    return { skill: a.id, confidence: "low", tie: [a.id, b.id] };
+  const top = scores.filter((x) => x.score === scores[0].score);
+  if (top.length > 1) {
+    const ids = top.map((x) => x.id);
+    // Seule ambiguïté réellement utile à lever : stratégie de marque ou production créative.
+    if (ids.length === 2 && ids.includes("consulting") && ids.includes("creative_brief")) {
+      return { skill: "consulting", confidence: "low", tie: ["consulting", "creative_brief"] };
+    }
+    // Sinon l'intention d'action prime, puis la plus spécifique : pas de question inutile.
+    const best = PRIORITY.find((p) => ids.includes(p));
+    if (best) return { skill: best, confidence: "low" };
   }
-  return { skill: a.id, confidence: "high" };
+  return { skill: scores[0].id, confidence: "high" };
 }

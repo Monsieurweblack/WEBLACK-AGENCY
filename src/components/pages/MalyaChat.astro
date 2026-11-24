@@ -1,6 +1,6 @@
 ---
 import type { Lang } from "../../i18n/utils";
-import { malyaCopy, MALYA_SIGNATURE } from "../../lib/malya-copy";
+import { malyaCopy, clientCopy, MALYA_SIGNATURE } from "../../lib/malya-copy";
 import { PROJECT_KINDS } from "../../../functions/lib/malya/projectBrief";
 
 interface Props { lang: Lang }
@@ -12,7 +12,7 @@ const ghost = "label-tracked min-h-11 border border-(--color-line) px-5 py-3 tex
 ---
 
 <section class="bg-(--color-ink) px-6 pb-24 pt-40 md:px-10 md:pb-32" data-malya data-lang={lang} data-hints={JSON.stringify(c.hints)}
-  data-copy={JSON.stringify({ sending: c.sending, suspended: c.suspended, rateLimited: c.rateLimited, error: c.error, offline: c.offline, cleared: c.cleared, copied: c.builder.copied, proposalCancelled: c.proposalCancelled, reliability: c.reliability, verification: c.verification, sources: c.sources, you: c.you, malya: c.malya, proposalTitle: c.proposalTitle, proposalConfirm: c.proposalConfirm, proposalCancel: c.proposalCancel, openMail: c.openMail, errorGoal: c.builder.errorGoal, resultLabel: c.builder.result })}>
+  data-copy={JSON.stringify(clientCopy(c))}>
   <div class="mx-auto max-w-3xl">
     <p class="label-tracked label-tracked-dot text-(--color-gold)">{c.eyebrow}</p>
     <h1 class="font-display mt-4 text-5xl text-(--color-paper) sm:text-6xl">MALYA</h1>
@@ -25,6 +25,12 @@ const ghost = "label-tracked min-h-11 border border-(--color-line) px-5 py-3 tex
     </div>
 
     <div id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" class="pt-8">
+      <div class="mb-4 flex flex-wrap items-center gap-3">
+        <p id="malya-mode" class="text-sm text-(--color-paper)/70" role="status"></p>
+        <label for="malya-conv" class="sr-only">{c.conversations}</label>
+        <select id="malya-conv" hidden class="min-h-11 border border-(--color-line) bg-(--color-ink) px-3 text-(--color-paper)"></select>
+        <button type="button" id="malya-new" class="min-h-11 text-sm underline underline-offset-4 text-(--color-paper)/70 hover:text-(--color-gold)">{c.newConversation}</button>
+      </div>
       <div id="malya-log" role="log" aria-live="polite" aria-label={c.logLabel} tabindex="0" class="max-h-[55vh] min-h-40 space-y-6 overflow-y-auto pr-1"></div>
       <div id="malya-proposal" class="mt-6 hidden border border-(--color-gold) p-5" role="group" aria-labelledby="malya-proposal-title"></div>
       <div id="malya-suggestions" class="mt-6 flex flex-wrap gap-3">
@@ -41,7 +47,7 @@ const ghost = "label-tracked min-h-11 border border-(--color-line) px-5 py-3 tex
       <div class="mt-8 space-y-3 border-t border-(--color-line) pt-6 text-sm text-(--color-paper)/70">
         <p>{c.aiNotice}</p>
         <div class="flex items-start gap-3">
-          <input type="checkbox" id="malya-consent" class="mt-1 h-5 w-5 shrink-0 accent-(--color-gold)" aria-describedby="malya-consent-help" />
+          <input type="checkbox" id="malya-consent" class="mt-1 h-6 w-6 shrink-0 accent-(--color-gold)" aria-describedby="malya-consent-help" />
           <div>
             <label for="malya-consent" class="text-(--color-paper)">{c.consentLabel}</label>
             <p id="malya-consent-help" class="mt-1">{c.consentHelp}</p>

@@ -32,3 +32,46 @@ export function pruneMemory(items: StoredTurn[], now: number): StoredTurn[] {
 export function recallable(consent: ConsentState, items: StoredTurn[], now: number): StoredTurn[] {
   return consent.memory ? pruneMemory(items, now) : [];
 }
+
+// ── Conversations séparées (mémoire locale, niveau 1) ──────────────────
+export const MAX_CONVERSATIONS = 5;
+
+export interface Conversation {
+  id: string;
+  /** Dernière activité (ms). */
+  at: number;
+  turns: StoredTurn[];
+}
+
+export interface ConversationStore {
+  active: string;
+  items: Conversation[];
+}
+
+export function emptyStore(id: string, now: number): ConversationStore {
+  return { active: id, items: [{ id, at: now, turns: [] }] };
+}
+
+/** Ouvre une conversation neuve ; les plus anciennes au-delà du plafond sont supprimées. */
+export function startConversation(store: ConversationStore, id: string, now: number): ConversationStore {
+  const items = [...store.items, { id, at: now, turns: [] }].sort((a, b) => a.at - b.at).slice(-MAX_CONVERSATIONS);
+  return { active: id, items };
+}
+
+export function appendTurn(store: ConversationStore, turn: StoredTurn): ConversationStore {
+  return {
+    ...store,
+    items: store.items.map((c) => (c.id === store.active ? { ...c, at: turn.at, turns: [...c.turns, turn].slice(-MEMORY_MAX_ITEMS) } : c)),
+  };
+}
+
+export function pruneStore(store: ConversationStore, now: number): ConversationStore {
+  const items = store.items.map((c) => ({ ...c, turns: pruneMemory(c.turns, now) })).filter((c) => c.turns.length > 0 || c.id === store.active);
+  return { active: store.active, items };
+}
+
+export function deleteConversation(store: ConversationStore, id: string, fallbackId: string, now: number): ConversationStore {
+  const items = store.items.filter((c) => c.id !== id);
+  if (items.length === 0) return emptyStore(fallbackId, now);
+  return { active: store.active === id ? items[items.length - 1].id : store.active, items };
+}

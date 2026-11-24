@@ -43,6 +43,15 @@ function fold(text: string): string {
 }
 
 const INJECTION_PATTERNS: RegExp[] = [
+  // Multilingue (ES, DE, IT, PT) : « ignora/ignoriere/ignora/ignore … instrucciones/Anweisungen/istruzioni/instrucoes »
+  /\b(ignora|ignoriere|ignorieren|ignorare|ignore|olvida|vergiss|dimentica|esquece)\b.{0,50}\b(instrucciones|instrucoes|instrucoes|anweisungen|regeln|istruzioni|regole|reglas|regras|anterior|anteriores|vorherigen|precedenti|anteriores)\b/,
+  /\b(revela|muestra|zeig|zeige|mostra|mostre|enthulle)\b.{0,40}\b(prompt|instrucciones|anweisungen|istruzioni|sistema|system)\b/,
+  // Reformulations et extraction du prompt
+  /\b(disregard|set aside|put aside|stop following|do not follow|ne suis plus|arrete de suivre)\b.{0,50}\b(everything|all|above|rules|instructions|guidelines|consignes|regles|tout ce)\b/,
+  /\b(repeat|recite|print|output|copy|repete|recopie|ecris)\b.{0,40}\b(text|words|message|content|texte|mots|contenu)\b.{0,30}\b(above|before|prior|ci dessus|avant|precedent)\b/,
+  /\b(starting with|commencant par|beginning with)\b.{0,10}\b(you are|tu es|vous etes)\b/,
+  /\b(i am|je suis|as the|en tant que)\b.{0,25}\b(developer|developpeur|admin|administrator|administrateur|anthropic|openai|owner|proprietaire)\b.{0,60}\b(authori[sz]e|autorise|override|desactive|disable|bypass|debloque|unlock)\b/,
+  /\b(disable|turn off|desactive|desactiver|deactivate)\b.{0,30}\b(safety|safeguards?|filters?|securite|garde fous|restrictions?|budget|limits?|limites?)\b/,
   /(ignore|ignorez|oublie|oubliez|disregard|forget|override|bypass|contourne)\b.{0,40}\b(instruction|instructions|consigne|consignes|regle|regles|rules|prompt|guideline|guidelines|previous|precedent|precedentes|above|ci dessus)/,
   /(reveal|show|print|display|affiche|montre|donne|revele|dis moi|repete|repeat|leak).{0,40}\b(system prompt|prompt systeme|instructions? systeme|tes instructions|your instructions|hidden instructions|initial prompt|developer message)/,
   /\b(system prompt|prompt systeme|developer mode|mode developpeur|jailbreak|dan mode)\b/,

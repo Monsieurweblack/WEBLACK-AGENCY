@@ -210,7 +210,7 @@ test("7. l'interrupteur d'urgence suspend les actions sensibles", async () => {
 test("7. le brouillon ne peut pas injecter d'en-tête de mail", async () => {
   assert.equal(singleLine("Sujet\r\nBcc: x@y.z"), "Sujet Bcc: x@y.z");
   const draft = "Bonjour\r\nBcc: pirate@example.com\r\nje souhaite un rendez-vous.";
-  const r = await confirmHandoff(draft, await digestOf(cleanText(draft)), "fr");
+  const r = await confirmHandoff(draft, await digestOf("general|" + cleanText(draft)), "fr");
   assert.ok(r);
   assert.doesNotMatch(r.mailto.split("?")[0], /Bcc/);
 });

@@ -5,6 +5,7 @@ import Footer from "../components/layout/Footer.astro";
 import Seo from "../components/layout/Seo.astro";
 import ConsentBanner from "../components/layout/ConsentBanner.astro";
 import NewsletterPopup from "../components/sections/NewsletterPopup.astro";
+import MalyaLauncher from "../components/layout/MalyaLauncher.astro";
 import { useTranslations, type Lang, type TranslationMap } from "../i18n/utils";
 import { LOCALES } from "../i18n/locales";
 import { getSiteSettings } from "../lib/content";
@@ -40,6 +41,8 @@ interface Props {
   lcpImage?: { src: string; width: number; sizes?: string; portrait?: string; crop?: ImageCrop };
 }
 
+// MALYA est proposée sur toutes les pages publiques, sauf sa propre page et l'administration.
+const showMalya = !/^\/(en\/)?(malya|admin)(\/|$)/.test(Astro.url.pathname);
 const { lang, title, description, image, imageAlt, noindex, bodyClass, translations, lcpImage, ogType, publishedTime, modifiedTime, author, section } = Astro.props;
 const t = useTranslations(lang);
 const siteSettings = await getSiteSettings(lang);
@@ -275,6 +278,7 @@ const lcpPreload = lcpPreloads.length > 0;
     <Footer lang={lang} siteSettings={siteSettings} />
     <NewsletterPopup lang={lang} />
     <ConsentBanner lang={lang} />
+    {showMalya && <MalyaLauncher lang={lang} />}
     {
       /*
         Libère les images [data-after-lcp] (voir global.css, .defer-media)
