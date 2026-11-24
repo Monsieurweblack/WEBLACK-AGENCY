@@ -53,6 +53,15 @@ APP_ENV = "preview"
 SANITY_PROJECT_ID = "pzpm4xjp"
 SANITY_DATASET = "production"
 RESEND_FROM = "WEBLACK TALENTS <talents@weblack.fr>"
+# MALYA (PREVIEW UNIQUEMENT — la production n'a aucune variable MALYA, donc l'API y répond 503).
+# Variables non secrètes : le fichier wrangler.toml fait foi, le tableau de bord ne les lit pas.
+# Secrets (tableau de bord Cloudflare, jamais ici) : ANTHROPIC_API_KEY, MALYA_EMERGENCY_STOP.
+# Plafond effectif = 15 € × 1,0 × 0,90 = 13,50 $ ; taux BCE du 2026-11-23 : 1 € = 1,0939 $,
+# soit ≈ 12,34 € de dépense maximale réelle (voir docs/malya-v1-1/anthropic-et-budget.md).
+MALYA_ENABLED = "true"
+MALYA_MODEL = "claude-haiku-5-5"
+MALYA_MONTHLY_BUDGET_EUR = "15"
+MALYA_FX_USD_PER_EUR = "1.0"
 
 [[env.preview.d1_databases]]
 binding = "DB"

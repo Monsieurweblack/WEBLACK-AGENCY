@@ -96,3 +96,15 @@ test("scripts : le test d'appel réel refuse de dépenser sans confirmation expl
   assert.doesNotMatch(src, /process\.argv[^;\n]*API_KEY/);
   assert.match(src, /MALYA_MONTHLY_BUDGET_EUR: "0\.05"/);
 });
+
+test("configuration : MALYA n'est activée que dans l'environnement Preview de wrangler.toml, jamais en production", () => {
+  const toml = readFileSync(new URL("../../wrangler.toml", import.meta.url), "utf8");
+  const previewAt = toml.indexOf("[env.preview]");
+  const top = toml.slice(0, previewAt);
+  const preview = toml.slice(previewAt);
+  assert.doesNotMatch(top, /MALYA_/, "aucune variable MALYA dans la configuration de production");
+  assert.match(preview, /MALYA_ENABLED = "true"/);
+  assert.match(preview, /MALYA_MONTHLY_BUDGET_EUR = "15"/);
+  assert.doesNotMatch(toml, /ANTHROPIC_API_KEY\s*=/, "la clé n'est jamais dans le dépôt");
+  assert.doesNotMatch(toml, /MALYA_EMERGENCY_STOP\s*=/, "l'arrêt d'urgence est un secret du tableau de bord");
+});
