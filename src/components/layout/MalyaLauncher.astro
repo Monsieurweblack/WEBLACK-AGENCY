@@ -1,15 +1,19 @@
 ---
 import type { Lang } from "../../i18n/utils";
 import { malyaCopy } from "../../lib/malya-copy";
+import { SILHOUETTE_ICON } from "../../lib/malya-silhouette";
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const c = malyaCopy(lang);
 ---
 <button type="button" id="malya-launcher" data-lang={lang} aria-haspopup="dialog" aria-label={c.launcher}
-  class="fixed bottom-4 right-4 z-40 inline-flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-full border border-(--color-gold) bg-(--color-ink) px-4 text-(--color-gold) transition-colors hover:bg-(--color-gold) hover:text-(--color-ink) sm:bottom-6 sm:right-6">
-  <span class="font-display text-lg leading-none" aria-hidden="true">M</span>
-  <span class="label-tracked hidden sm:inline" aria-hidden="true">MALYA</span>
+  class="fixed bottom-4 right-4 z-40 inline-flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-full border border-[#a9834c] bg-[#faf6ec] px-3 text-[#7a5b2b] shadow-[0_10px_26px_-12px_rgba(27,23,18,.6)] transition-colors hover:bg-[#f3ecdd] motion-safe:animate-[mly-in_.5s_ease-out_.8s_both] sm:bottom-6 sm:right-6 sm:px-4">
+  <span class="block h-[30px] w-[14px] [&>svg]:h-full [&>svg]:w-full" aria-hidden="true" set:html={SILHOUETTE_ICON} />
+  <span class="label-tracked hidden text-[#7a5b2b] sm:inline" aria-hidden="true">MALYA</span>
 </button>
+<style is:global>
+  @keyframes mly-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+</style>
 <script>
   import "../../scripts/malya-launcher";
 </script>

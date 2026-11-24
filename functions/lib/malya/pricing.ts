@@ -1,45 +1,40 @@
 /**
- * Tarifs Anthropic — configuration versionnée, jamais inventée.
+ * Tarification Workers AI en Neurons — configuration versionnée, jamais inventée.
  *
- * Source : https://platform.claude.com/docs/en/about-claude/pricing
- * Consultée et recoupée avec https://platform.claude.com/docs/en/models/overview
- * le 2026-11-24. Un prix de ce fichier doit être revérifié avant toute
- * activation (PRICING_VERIFIED_AT est affiché dans l'administration).
- *
- * Unité : USD par million de tokens (MTok). 1 USD/MTok = 1 micro-USD par token,
- * donc coût_micro = tokens × prix.
+ * Source : https://developers.cloudflare.com/workers-ai/platform/pricing/ (lue le 2026-11-24).
+ * Plan gratuit : 10 000 Neurons par jour, réinitialisés à 00:00 UTC, aucun frais.
+ * Un Neuron n'est PAS une conversation : le coût d'un tour dépend des tokens lus et écrits.
  */
 export const PRICING_VERIFIED_AT = "2026-11-24";
-export const PRICING_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing";
+export const PRICING_SOURCE = "https://developers.cloudflare.com/workers-ai/platform/pricing/";
+export const FREE_DAILY_NEURONS = 10_000;
 
-export interface ModelPrice {
-  /** Prix jusqu'au seuil de prompt. */
-  input: number;
-  output: number;
-  /** Haiku 5.5 : au-delà de 100 000 tokens de prompt, tarif supérieur. */
-  longPromptThreshold?: number;
-  longInput?: number;
-  longOutput?: number;
-}
+/** Neurons par million de tokens (entrée / sortie), tels que publiés. */
+export interface ModelRate { input: number; output: number }
 
-export const PRICES: Record<string, ModelPrice> = {
-  "claude-haiku-5-5": { input: 0.1, output: 0.5, longPromptThreshold: 100_000, longInput: 0.5, longOutput: 2.5 },
-  "claude-sonnet-5-5": { input: 2, output: 10 },
-  "claude-opus-5-5": { input: 4, output: 20 },
+export const RATES: Record<string, ModelRate> = {
+  // Modèle retenu (essais du 2026-11-24 : meilleur français, structure, 4–8 s, ≈ 56 Neurons par tour type).
+  "@cf/mistralai/mistral-small-3.1-24b-instruct": { input: 31876, output: 50488 },
+  // Alternative évaluée : plus rapide, ton plus promotionnel, ≈ 80 Neurons par tour type.
+  "@cf/meta/llama-3.3-70b-instruct-fp8-fast": { input: 26668, output: 204805 },
 };
 
-export const DEFAULT_MODEL = "claude-haiku-5-5";
+export const DEFAULT_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct";
 
-export function priceFor(model: string): ModelPrice | null {
-  return PRICES[model] ?? null;
+/** Modèles que la documentation déclare payants : jamais acceptés, même configurés. */
+export const PAID_ONLY = new Set([
+  "@cf/moonshotai/kimi-k2.6", "@cf/moonshotai/kimi-k2.7-code", "@cf/zai-org/glm-5.2", "@cf/zai-org/glm-5.3", "@cf/zai-org/glm-5.3-flash",
+  "@cf/deepseek-ai/deepseek-v4-flash-0731", "@cf/deepseek-ai/deepseek-v4.1-flash-1017", "@cf/deepseek-ai/deepseek-v4-pro-0813", "@cf/thinkingmachines/inkling-2-small",
+]);
+
+export function rateFor(model: string): ModelRate | null {
+  return PAID_ONLY.has(model) ? null : (RATES[model] ?? null);
 }
 
-/** Coût en micro-USD, arrondi à l'entier supérieur ; null si le modèle n'a pas de tarif connu (fail-closed). */
-export function costMicro(model: string, inputTokens: number, outputTokens: number): number | null {
-  const p = priceFor(model);
-  if (!p) return null;
-  const long = p.longPromptThreshold !== undefined && inputTokens > p.longPromptThreshold;
-  const pin = long ? (p.longInput ?? p.input) : p.input;
-  const pout = long ? (p.longOutput ?? p.output) : p.output;
-  return Math.ceil(inputTokens * pin + outputTokens * pout);
+/** Coût en milli-Neurons (entier, arrondi au supérieur) ; null si le modèle n'a pas de tarif gratuit connu (fail-closed). */
+export function costMilli(model: string, inputTokens: number, outputTokens: number): number | null {
+  const r = rateFor(model);
+  if (!r) return null;
+  // neurons = tokens × taux / 1e6 → milli-neurons = tokens × taux / 1e3
+  return Math.max(1, Math.ceil((inputTokens * r.input + outputTokens * r.output) / 1000));
 }

@@ -1,9 +1,13 @@
 /**
- * Fenêtre MALYA (chargée à la demande, jamais au chargement de la page).
- * Une <dialog> native : piège du focus, fermeture par Échap, arrière-plan inerte
- * et restitution du focus au lanceur sans code supplémentaire.
+ * Fenêtre MALYA (chargée à la demande, jamais au chargement de la page). Une <dialog> native : piège du focus,
+ * fermeture par Échap, arrière-plan inerte et restitution du focus au lanceur sans code supplémentaire.
+ * Thème clair (ivoire / crème / champagne) défini dans src/styles/malya.css, importé ici : il n'est donc
+ * téléchargé qu'avec la fenêtre.
  */
+// ?inline : le CSS est une simple chaîne injectée à l'ouverture — Astro ne l'ajoute donc pas au HTML de chaque page.
+import malyaCss from "../styles/malya.css?inline";
 import { malyaCopy, clientCopy } from "../lib/malya-copy";
+import { SILHOUETTE_FULL } from "../lib/malya-silhouette";
 import { ChatController, type Copy } from "./malya-core";
 
 type Lang = "fr" | "en";
@@ -20,57 +24,75 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = "", attrs: Reco
   return e;
 }
 
+const SEND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+
 function build(lang: Lang, trigger: HTMLElement): HTMLDialogElement {
+  if (!document.getElementById("malya-style")) {
+    const st = document.createElement("style");
+    st.id = "malya-style";
+    st.textContent = malyaCss;
+    document.head.append(st);
+  }
   const c = malyaCopy(lang);
   const from = FROM_PATH.find(([re]) => re.test(location.pathname))?.[1];
-  const d = el("dialog", "m-0 flex h-dvh max-h-none w-full max-w-none flex-col overflow-hidden border border-(--color-line) bg-(--color-ink) p-0 text-(--color-paper) backdrop:bg-black/60 sm:mb-4 sm:ml-auto sm:mr-4 sm:mt-auto sm:h-[min(42rem,calc(100dvh-2rem))] sm:w-[26rem]", { "aria-labelledby": "mw-title" });
+  const d = el("dialog", "mly mly-dialog", { "aria-labelledby": "mw-title" });
 
-  const head = el("div", "flex items-center justify-between gap-3 border-b border-(--color-line) px-5 py-3");
-  const title = el("h2", "font-display text-xl", { id: "mw-title" }, "MALYA");
-  const tools = el("div", "flex items-center gap-1");
-  const full = el("a", "inline-flex min-h-11 items-center px-3 text-sm underline underline-offset-4 hover:text-(--color-gold)", { href: (lang === "en" ? "/en/malya/" : "/malya/") + (from ? `?from=${from}` : "") }, c.openFull);
-  const close = el("button", "inline-flex min-h-11 min-w-11 items-center justify-center text-xl hover:text-(--color-gold)", { type: "button", "aria-label": c.launcherClose }, "×");
+  // En-tête : silhouette, prénom, statut de disponibilité et de mode
+  const head = el("div", "mly-head");
+  const avatar = el("div", "mly-avatar");
+  avatar.innerHTML = SILHOUETTE_FULL; // constante du dépôt : jamais du texte d'utilisateur ni du modèle
+  const who = el("div", "mly-who");
+  const mode = el("p", "mly-status", { id: "mw-mode", role: "status" });
+  mode.append(el("span", "mly-dot", { "aria-hidden": "true" }));
+  who.append(el("h2", "mly-name", { id: "mw-title" }, "MALYA"), mode);
+  const tools = el("div", "mly-tools");
+  const full = el("a", "mly-iconbtn", { href: (lang === "en" ? "/en/malya/" : "/malya/") + (from ? `?from=${from}` : ""), "aria-label": c.openFull, title: c.openFull }, "⤢");
+  const close = el("button", "mly-iconbtn", { type: "button", "aria-label": c.launcherClose }, "×");
   tools.append(full, close);
-  head.append(title, tools);
+  head.append(avatar, who, tools);
 
-  const body = el("div", "flex min-h-0 flex-1 flex-col px-5 pt-3");
-  const bar = el("div", "mb-3 flex flex-wrap items-center gap-2");
-  const mode = el("p", "w-full text-xs text-(--color-paper)/70", { role: "status", id: "mw-mode" });
-  const sel = el("select", "min-h-11 max-w-full border border-(--color-line) bg-(--color-ink) px-2 text-sm text-(--color-paper)", { "aria-label": c.conversations });
+  const body = el("div", "mly-body");
+  const bar = el("div", "mly-bar");
+  const sel = el("select", "mly-select", { "aria-label": c.conversations });
   sel.hidden = true;
-  const newBtn = el("button", "min-h-11 text-sm underline underline-offset-4 text-(--color-paper)/70 hover:text-(--color-gold)", { type: "button" }, c.newConversation);
-  bar.append(mode, sel, newBtn);
+  const newBtn = el("button", "mly-link", { type: "button" }, c.newConversation);
+  bar.append(sel, newBtn);
 
-  const log = el("div", "min-h-0 flex-1 space-y-5 overflow-y-auto pr-1 text-sm", { role: "log", "aria-live": "polite", "aria-label": c.logLabel, tabindex: "0" });
-  const proposal = el("div", "mt-3 hidden border border-(--color-gold) p-4 text-sm", { id: "mw-proposal", role: "group" });
-  const sugg = el("div", "mt-3 flex flex-wrap gap-2");
-  for (const s of c.suggestions.filter((x) => !/project builder/i.test(x))) sugg.append(el("button", "label-tracked min-h-11 border border-(--color-line) px-3 py-2 text-left text-xs hover:border-(--color-gold) hover:text-(--color-gold)", { type: "button", "data-suggestion": s }, s));
+  const log = el("div", "mly-log", { role: "log", "aria-live": "polite", "aria-label": c.logLabel, tabindex: "0" });
+  const notice = el("p", "mly-notice", { role: "status" });
+  notice.hidden = true;
+  const proposal = el("div", "mly-proposal", { id: "mw-proposal", role: "group" });
+  proposal.hidden = true;
+  const sugg = el("div", "mly-chips");
+  for (const s of c.suggestions.filter((x) => !/project builder/i.test(x))) sugg.append(el("button", "mly-chip", { type: "button", "data-suggestion": s }, s));
 
-  const form = el("form", "mt-3", { novalidate: "" });
-  const label = el("label", "sr-only", { for: "mw-input" }, c.inputLabel);
-  const input = el("textarea", "w-full border border-(--color-line) bg-transparent px-3 py-2 text-(--color-paper) placeholder:text-(--color-paper)/50 focus:border-(--color-gold)", { id: "mw-input", rows: "2", maxlength: "2000", placeholder: c.placeholder, required: "" });
-  const row = el("div", "mt-2 flex items-center gap-3");
-  const send = el("button", "label-tracked min-h-11 border border-(--color-gold) px-5 py-2 text-(--color-gold) hover:bg-(--color-gold) hover:text-(--color-ink) disabled:opacity-50", { type: "submit" }, c.send);
-  const status = el("p", "text-xs text-(--color-paper)/70", { role: "status" });
-  row.append(send, status);
-  form.append(label, input, row);
+  const form = el("form", "mly-composer", { novalidate: "" });
+  const label = el("label", "", { for: "mw-input", style: "position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)" }, c.inputLabel);
+  const field = el("div", "mly-field");
+  const input = el("textarea", "", { id: "mw-input", rows: "1", maxlength: "2000", placeholder: c.placeholder, required: "" });
+  const send = el("button", "mly-send", { type: "submit", "aria-label": c.send });
+  send.innerHTML = SEND_ICON;
+  field.append(input, send);
+  const hint = el("p", "mly-hint", { id: "mw-hint", role: "status" });
+  form.append(label, field, hint);
 
-  const foot = el("div", "mt-2 space-y-2 border-t border-(--color-line) py-3 text-xs text-(--color-paper)/70");
+  const foot = el("details", "mly-foot mly-foot--fold");
+  foot.append(el("summary", "", {}, c.privacyTitle));
   foot.append(el("p", "", {}, c.aiNotice));
-  const consentRow = el("div", "flex items-start gap-2");
-  const consent = el("input", "mt-0.5 h-6 w-6 shrink-0 accent-(--color-gold)", { type: "checkbox", id: "mw-consent", "aria-describedby": "mw-consent-help" });
+  const consentRow = el("div", "mly-consent");
+  const consent = el("input", "", { type: "checkbox", id: "mw-consent", "aria-describedby": "mw-consent-help" });
   const consentText = el("div");
-  consentText.append(el("label", "text-(--color-paper)", { for: "mw-consent" }, c.consentLabel), el("p", "mt-1", { id: "mw-consent-help" }, c.consentHelp));
+  consentText.append(el("label", "", { for: "mw-consent" }, c.consentLabel), el("p", "", { id: "mw-consent-help" }, c.consentHelp));
   consentRow.append(consent, consentText);
-  const clear = el("button", "inline-flex min-h-11 items-center underline underline-offset-4 hover:text-(--color-gold)", { type: "button" }, c.clear);
+  const clear = el("button", "mly-link", { type: "button" }, c.clear);
   foot.append(consentRow, clear);
 
-  body.append(bar, log, proposal, sugg, form, foot);
+  body.append(bar, log, notice, proposal, sugg, form, foot);
   d.append(head, body);
   document.body.append(d);
 
   controller = new ChatController({
-    log, form, input, send, status, proposalBox: proposal, suggestionsBox: sugg, consent, clear, newConv: newBtn, modeBadge: mode, convSelect: sel,
+    log, form, input, send, status: hint, proposalBox: proposal, suggestionsBox: sugg, consent, clear, newConv: newBtn, modeBadge: mode, convSelect: sel, notice,
   }, clientCopy(c) as unknown as Copy, lang, from);
   controller.onOpenBuilder = () => { location.href = full.href; };
 

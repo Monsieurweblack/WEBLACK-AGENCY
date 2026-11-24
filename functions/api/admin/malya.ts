@@ -1,13 +1,13 @@
 /**
  * Supervision MALYA — lecture seule, protégée par la session admin existante
  * (aucun second système d'authentification). Ne contient AUCUNE conversation :
- * uniquement l'état du service, le budget, la base documentaire et les compteurs.
+ * uniquement l'état du service, l'usage de l'allocation gratuite, la base documentaire et les compteurs.
  */
 import { json } from "../../lib/json.ts";
 import { requireAdmin } from "../../lib/adminSession.ts";
-import { createLlm, type LlmEnv } from "../../lib/malya/llm.ts";
-import { capMicro, snapshot } from "../../lib/malya/budget.ts";
-import { PRICING_SOURCE, PRICING_VERIFIED_AT, DEFAULT_MODEL } from "../../lib/malya/pricing.ts";
+import { createLlm, dailyCapOf, type LlmEnv } from "../../lib/malya/llm.ts";
+import { snapshot } from "../../lib/malya/budget.ts";
+import { DEFAULT_MODEL, FREE_DAILY_NEURONS, PRICING_SOURCE, PRICING_VERIFIED_AT } from "../../lib/malya/pricing.ts";
 import { KNOWLEDGE, coverage, reviewReport } from "../../lib/malya/knowledge.ts";
 import { SKILLS } from "../../lib/malya/skills.ts";
 
@@ -22,29 +22,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   const now = new Date();
   const plan = await createLlm(env, { now: () => now }).plan();
-  const cap = capMicro(Number(env.MALYA_MONTHLY_BUDGET_EUR ?? "15"), env.MALYA_FX_USD_PER_EUR ? Number(env.MALYA_FX_USD_PER_EUR) : 1.0);
-  let budget: unknown = { available: false };
+  const cap = dailyCapOf(env);
+  let usage: unknown = { available: false };
   if (env.DB) {
     try {
       const s = await snapshot(env.DB, now, cap);
-      budget = {
-        available: true, month: s.month, state: s.state, ratio: Number(s.ratio.toFixed(4)),
-        capUsd: s.capMicro / 1e6, committedUsd: s.committedMicro / 1e6, settledUsd: s.settledMicro / 1e6,
-        calls: s.calls, errors: s.errors, refusals: s.refusals, blockedCalls: s.blocked, inputTokens: s.inputTokens, outputTokens: s.outputTokens,
+      usage = {
+        available: true, day: s.day, state: s.state, ratio: Number(s.ratio.toFixed(4)),
+        dailyCapNeurons: s.capMilli / 1000, freeAllocationNeurons: FREE_DAILY_NEURONS, committedNeurons: s.committedMilli / 1000, settledNeurons: s.settledMilli / 1000,
+        calls: s.calls, errors: s.errors, quotaHits: s.quotaHits, blockedCalls: s.blocked, inputTokens: s.inputTokens, outputTokens: s.outputTokens,
       };
     } catch {
-      budget = { available: false, error: "registre illisible" };
+      usage = { available: false, error: "registre illisible" };
     }
   }
   return json({
     generatedAt: now.toISOString(),
     service: {
       enabled: env.MALYA_ENABLED === "true", emergencyStop: env.MALYA_EMERGENCY_STOP === "true",
-      provider: { keyConfigured: Boolean(env.ANTHROPIC_API_KEY), model: env.MALYA_MODEL?.trim() || DEFAULT_MODEL, mode: plan.ok ? "ai" : "documentary", reason: plan.ok ? null : plan.reason },
+      provider: { name: env.MALYA_AI_PROVIDER ?? null, bindingPresent: Boolean(env.AI), model: env.MALYA_MODEL?.trim() || DEFAULT_MODEL, mode: plan.ok ? "ai" : "documentary", reason: plan.ok ? null : plan.reason },
       pricing: { verifiedAt: PRICING_VERIFIED_AT, source: PRICING_SOURCE },
       memory: { local: "available (browser, consent)", server: "not implemented" },
     },
-    budget,
+    usage,
     knowledge: { coverage: coverage(KNOWLEDGE), ...reviewReport(KNOWLEDGE, now) },
     skills: SKILLS.map((s) => ({ id: s.id, tools: s.tools })),
   }, 200);

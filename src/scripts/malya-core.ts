@@ -1,10 +1,7 @@
 /**
- * Noyau de conversation MALYA — partagé par la page /malya/ et par le lanceur
- * présent sur toutes les pages. Règles :
- *  - tout texte venu du serveur est inséré via textContent (jamais innerHTML) ;
- *  - la mémoire locale n'existe qu'avec consentement, expire, est séparée par
- *    conversation et s'efface en un clic ; rien n'est envoyé au serveur pour
- *    être conservé ;
+ * Noyau de conversation MALYA — partagé par la page /malya/ et par le lanceur présent sur toutes les pages.
+ *  - tout texte venu du serveur est inséré via textContent (rendu riche sûr, jamais de HTML interprété) ;
+ *  - la mémoire locale n'existe qu'avec consentement, expire, est séparée par conversation et s'efface en un clic ;
  *  - aucune action n'est exécutée sans clic de confirmation ;
  *  - aucun appel réseau au chargement : le premier appel suit une action de l'utilisateur.
  */
@@ -12,6 +9,8 @@ import {
   appendTurn, deleteConversation, emptyStore, normalizeConsent, pruneStore, startConversation,
   type ConversationStore, type StoredTurn,
 } from "../../functions/lib/malya/consent";
+import { renderRich } from "../lib/malya-rich";
+import { SILHOUETTE_FULL } from "../lib/malya-silhouette";
 
 export type Reliability = "verified" | "historical" | "estimate" | "hypothesis";
 export interface Citation { id: string; title: string; source: string; url?: string; verifiedAt: string; reliability: Reliability; ref?: string; outdated?: boolean }
@@ -19,13 +18,18 @@ export interface Proposal { digest: string; summary: string; recipient: string; 
 export interface Reply {
   reply: string; citations: Citation[]; verification: "verified" | "mixed" | "unverified" | "none";
   suggestions: string[]; proposal?: Proposal; handoff?: { mailto: string }; blocked?: string;
-  mode?: "ai" | "documentary"; modeReason?: string;
+  mode?: "ai" | "documentary"; modeReason?: string; modeCode?: string;
 }
 
 export interface Els {
   log: HTMLElement; form: HTMLFormElement; input: HTMLTextAreaElement; send: HTMLButtonElement;
+  /** Ligne d'aide sous la saisie (aria-live) : consignes d'envoi et confirmations brèves. */
   status: HTMLElement; proposalBox: HTMLElement; suggestionsBox: HTMLElement; consent: HTMLInputElement;
-  clear: HTMLElement; newConv: HTMLElement; modeBadge: HTMLElement; convSelect: HTMLSelectElement;
+  clear: HTMLElement; newConv: HTMLElement;
+  /** Ligne d'état de l'en-tête (disponibilité + mode) : contient un point et un texte. */
+  modeBadge: HTMLElement; convSelect: HTMLSelectElement;
+  /** Zone d'avis (erreur, quota, mode documentaire, arrêt d'urgence). */
+  notice: HTMLElement;
 }
 
 export interface Copy {
@@ -33,6 +37,8 @@ export interface Copy {
   proposalCancelled: string; reliability: Record<Reliability, string>; verification: Record<string, string>;
   sources: string; you: string; malya: string; proposalTitle: string; proposalConfirm: string; proposalCancel: string;
   openMail: string; modeAi: string; modeDoc: string; outdated: string; conversationLabel: string; newConversationDone: string;
+  welcomeTitle: string; welcomeText: string; typing: string; hintSend: string; statusAi: string; statusDoc: string; statusStop: string; statusOff: string;
+  noticeQuota: string; noticeEmergency: string; noticeDoc: string;
 }
 
 const KEY = "malya.conv.v2", CONSENT_KEY = "malya.consent.v1";
@@ -44,15 +50,28 @@ export const storage = {
 };
 
 const uid = () => (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : String(Date.now()));
+const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = "", text?: string): HTMLElementTagNameMap[K] => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+};
 
 export class ChatController {
   private store: ConversationStore;
   private busy = false;
+  private typingEl: HTMLElement | null = null;
   constructor(private els: Els, private copy: Copy, private lang: "fr" | "en", private from?: string) {
     this.store = emptyStore(uid(), Date.now());
     this.restore();
+    this.showHint();
     els.form.addEventListener("submit", (e) => { e.preventDefault(); void this.ask(els.input.value); });
-    els.input.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void this.ask(els.input.value); } });
+    els.input.addEventListener("input", () => this.autosize());
+    els.input.addEventListener("keydown", (e) => {
+      // Entrée envoie sur ordinateur ; sur écran tactile elle passe à la ligne (le bouton envoie).
+      const fine = typeof matchMedia === "function" && matchMedia("(pointer: fine)").matches;
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing && (fine || e.ctrlKey || e.metaKey)) { e.preventDefault(); void this.ask(els.input.value); }
+    });
     els.suggestionsBox.addEventListener("click", (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-suggestion]");
       if (b?.dataset.suggestion) void this.ask(b.dataset.suggestion);
@@ -68,19 +87,49 @@ export class ChatController {
   }
 
   get consentGiven(): boolean { return this.els.consent.checked; }
-  /** Mode d'exécution connu : lu à la demande, jamais au chargement de la page. */
+
+  /** Mode d'exécution connu : lu à la demande, jamais au chargement des pages du site. */
   async refreshMode(): Promise<void> {
     try {
       const r = await fetch("/api/malya/status", { credentials: "same-origin" });
-      if (r.status === 503) { this.els.modeBadge.textContent = this.copy.suspended; return; }
-      const j = (await r.json()) as { mode?: string; message?: Record<string, string> };
-      this.setMode(j.mode === "ai" ? "ai" : "documentary", j.message?.[this.lang]);
+      if (r.status === 503) { this.setStatus("off"); return; }
+      const j = (await r.json()) as { mode?: string; reason?: string };
+      if (j.mode === "ai") { this.setStatus("ai"); return; }
+      this.setStatus(j.reason === "emergency_stop" ? "stop" : "doc");
+      this.noticeFor(j.reason);
     } catch { /* l'état sera connu à la première réponse */ }
   }
 
-  private setMode(mode: "ai" | "documentary", reason?: string) {
-    this.els.modeBadge.textContent = mode === "ai" ? this.copy.modeAi : this.copy.modeDoc + (reason ? " — " + reason : "");
-    this.els.modeBadge.dataset.mode = mode;
+  private setStatus(kind: "ai" | "doc" | "stop" | "off") {
+    const text = kind === "ai" ? this.copy.statusAi : kind === "doc" ? this.copy.statusDoc : kind === "stop" ? this.copy.statusStop : this.copy.statusOff;
+    this.els.modeBadge.dataset.mode = kind === "ai" ? "ai" : "doc";
+    let span = this.els.modeBadge.querySelector<HTMLElement>("[data-status-text]");
+    if (!span) { span = el("span"); span.dataset.statusText = ""; this.els.modeBadge.append(span); }
+    span.textContent = text;
+  }
+
+  private noticeFor(code?: string) {
+    if (code === "emergency_stop") this.setNotice("emergency", this.copy.noticeEmergency);
+    else if (code === "quota_exhausted" || code === "budget_exhausted" || code === "budget_suspended") this.setNotice("quota", this.copy.noticeQuota);
+    else if (code) this.setNotice("documentary", this.copy.noticeDoc);
+    else this.setNotice(null);
+  }
+
+  private setNotice(kind: "error" | "quota" | "documentary" | "emergency" | null, text = "") {
+    const n = this.els.notice;
+    if (!kind) { n.hidden = true; n.textContent = ""; return; }
+    n.hidden = false; n.dataset.kind = kind; n.textContent = text;
+  }
+
+  private showHint() {
+    const fine = typeof matchMedia === "function" && matchMedia("(pointer: fine)").matches;
+    this.els.status.textContent = fine ? this.copy.hintSend : "";
+  }
+
+  private autosize() {
+    const t = this.els.input;
+    t.style.height = "auto";
+    t.style.height = Math.min(t.scrollHeight, 144) + "px";
   }
 
   private active() { return this.store.items.find((c) => c.id === this.store.active)!; }
@@ -114,22 +163,36 @@ export class ChatController {
     sel.hidden = this.store.items.length < 2;
   }
 
+  /** Accueil éditorial : silhouette, salutation et invitation ; il disparaît dès le premier échange. */
+  private welcome(): HTMLElement {
+    const w = el("div", "mly-welcome");
+    w.dataset.welcome = "";
+    const fig = el("div", "mly-figwrap");
+    fig.innerHTML = SILHOUETTE_FULL; // constante interne au dépôt, jamais du texte venant d'un utilisateur ou du modèle
+    const txt = el("div");
+    txt.append(el("h3", "", this.copy.welcomeTitle), el("p", "", this.copy.welcomeText));
+    w.append(fig, txt);
+    return w;
+  }
+
   private renderConversation() {
     this.els.log.replaceChildren();
-    for (const t of this.active().turns) this.bubble(t.role === "user" ? "you" : "malya", t.content);
+    const turns = this.active().turns;
+    if (turns.length === 0) { this.els.log.append(this.welcome()); this.els.suggestionsBox.hidden = false; return; }
+    for (const t of turns) this.bubble(t.role === "user" ? "you" : "malya", t.content);
   }
 
   private switchTo(id: string) {
     if (!this.store.items.some((c) => c.id === id)) return;
     this.store = { ...this.store, active: id };
-    this.els.proposalBox.classList.add("hidden");
+    this.els.proposalBox.hidden = true;
     this.renderConversation();
     this.persist();
   }
 
   newConversation() {
     this.store = startConversation(this.store, uid(), Date.now());
-    this.els.proposalBox.classList.add("hidden");
+    this.els.proposalBox.hidden = true;
     this.renderConversation();
     this.renderSelect();
     this.persist();
@@ -140,8 +203,8 @@ export class ChatController {
   private clearAll() {
     storage.del(KEY); storage.del("malya.builder.v1");
     this.store = emptyStore(uid(), Date.now());
-    this.els.log.replaceChildren();
-    this.els.proposalBox.classList.add("hidden");
+    this.els.proposalBox.hidden = true;
+    this.renderConversation();
     this.renderSelect();
     this.els.status.textContent = this.copy.cleared;
   }
@@ -153,46 +216,48 @@ export class ChatController {
   }
 
   bubble(who: "you" | "malya", text: string, extra?: HTMLElement): HTMLElement {
-    const wrap = document.createElement("div");
-    const label = document.createElement("p");
-    label.className = "label-tracked " + (who === "malya" ? "text-(--color-gold)" : "text-(--color-paper)/60");
-    label.textContent = who === "malya" ? this.copy.malya : this.copy.you;
-    wrap.append(label);
-    for (const para of text.split(/\n{2,}/)) {
-      const p = document.createElement("p");
-      p.className = "mt-2 whitespace-pre-line " + (who === "malya" ? "text-(--color-paper)" : "text-(--color-paper)/80");
-      p.textContent = para;
-      wrap.append(p);
-    }
+    this.els.log.querySelector("[data-welcome]")?.remove();
+    const wrap = el("div", `mly-msg ${who === "malya" ? "mly-msg--bot" : "mly-msg--me"}`);
+    wrap.append(el("p", "mly-msg__label", who === "malya" ? this.copy.malya : this.copy.you));
+    const card = el("div", "mly-msg__card");
+    if (who === "malya") renderRich(card, text); else card.append(el("p", "", text));
+    wrap.append(card);
     if (extra) wrap.append(extra);
     this.els.log.append(wrap);
-    this.els.log.scrollTop = this.els.log.scrollHeight;
+    // Une longue réponse s'ouvre à son début ; un message de l'utilisateur ou l'attente restent calés en bas.
+    this.els.log.scrollTop = who === "malya" ? Math.max(0, wrap.offsetTop - this.els.log.offsetTop - 8) : this.els.log.scrollHeight;
     return wrap;
   }
 
+  private showTyping() {
+    this.els.log.querySelector("[data-welcome]")?.remove();
+    const wrap = el("div", "mly-msg mly-msg--bot");
+    wrap.setAttribute("role", "status");
+    const t = el("div", "mly-typing");
+    t.append(el("i"), el("i"), el("i"), el("span", "", this.copy.typing));
+    wrap.append(t);
+    this.els.log.append(wrap);
+    this.els.log.scrollTop = this.els.log.scrollHeight;
+    this.typingEl = wrap;
+  }
+
+  private hideTyping() { this.typingEl?.remove(); this.typingEl = null; }
+
   private sourcesBlock(r: Reply): HTMLElement | undefined {
     if (r.citations.length === 0 && r.verification === "none") return undefined;
-    const box = document.createElement("div");
-    box.className = "mt-3 border-l border-(--color-line) pl-4 text-sm text-(--color-paper)/70";
-    const v = document.createElement("p");
-    v.textContent = this.copy.verification[r.verification] ?? "";
-    box.append(v);
+    const box = el("div", "mly-sources");
+    box.append(el("p", "", this.copy.verification[r.verification] ?? ""));
     if (r.citations.length) {
-      const details = document.createElement("details");
-      const sum = document.createElement("summary");
-      sum.className = "mt-1 inline-flex min-h-11 cursor-pointer items-center";
-      sum.textContent = `${this.copy.sources} (${r.citations.length})`;
-      details.append(sum);
-      const ul = document.createElement("ul");
-      ul.className = "mt-2 space-y-2";
+      const details = el("details");
+      details.append(el("summary", "", `${this.copy.sources} (${r.citations.length})`));
+      const ul = el("ul");
       for (const c of r.citations) {
-        const li = document.createElement("li");
-        li.textContent = `${c.ref ? `[${c.ref}] ` : ""}${this.copy.reliability[c.reliability]}${c.outdated ? " · " + this.copy.outdated : ""} · ${c.title} — ${c.source} · ${c.verifiedAt}`;
+        const li = el("li");
+        li.append(el("span", "mly-pill", `${c.ref ? `[${c.ref}] ` : ""}${this.copy.reliability[c.reliability]}${c.outdated ? " · " + this.copy.outdated : ""}`));
+        li.append(document.createTextNode(`${c.title} — ${c.source} · ${c.verifiedAt}`));
         if (c.url && /^https:\/\//.test(c.url)) {
-          const a = document.createElement("a");
-          a.href = c.url; a.rel = "noopener noreferrer"; a.target = "_blank";
-          a.className = "ml-2 underline underline-offset-4 hover:text-(--color-gold)";
-          a.textContent = "↗"; a.setAttribute("aria-label", c.source);
+          const a = el("a", "", " ↗");
+          a.href = c.url; a.rel = "noopener noreferrer"; a.target = "_blank"; a.setAttribute("aria-label", c.source);
           li.append(a);
         }
         ul.append(li);
@@ -205,10 +270,9 @@ export class ChatController {
 
   setSuggestions(items: string[]) {
     if (!items.length) return;
-    const cls = this.els.suggestionsBox.querySelector("button")?.className ?? "label-tracked min-h-11 border border-(--color-line) px-5 py-3 text-(--color-paper) hover:border-(--color-gold) hover:text-(--color-gold)";
     this.els.suggestionsBox.replaceChildren(...items.map((s) => {
-      const b = document.createElement("button");
-      b.type = "button"; b.dataset.suggestion = s; b.textContent = s; b.className = cls;
+      const b = el("button", "mly-chip", s);
+      b.type = "button"; b.dataset.suggestion = s;
       return b;
     }));
   }
@@ -216,17 +280,17 @@ export class ChatController {
   async call(body: Record<string, unknown>): Promise<Reply | null> {
     try {
       const res = await fetch("/api/malya/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), credentials: "same-origin" });
-      if (res.status === 503) { this.els.status.textContent = this.copy.suspended; return null; }
-      if (res.status === 429) { this.els.status.textContent = this.copy.rateLimited; return null; }
-      if (!res.ok) { this.els.status.textContent = this.copy.error; return null; }
+      if (res.status === 503) { this.setNotice("error", this.copy.suspended); this.setStatus("off"); return null; }
+      if (res.status === 429) { this.setNotice("quota", this.copy.rateLimited); return null; }
+      if (!res.ok) { this.setNotice("error", this.copy.error); return null; }
       return (await res.json()) as Reply;
     } catch {
-      this.els.status.textContent = this.copy.offline;
+      this.setNotice("error", this.copy.offline);
       return null;
     }
   }
 
-  /** Sert à l'ouverture du Project Builder depuis une suggestion (géré par la page). */
+  /** Ouverture du Project Builder depuis une suggestion (gérée par la page ou par le lanceur). */
   onOpenBuilder: (() => void) | undefined;
 
   async ask(message: string) {
@@ -234,20 +298,25 @@ export class ChatController {
     if (!text || this.busy) return;
     if (/^(ouvrir le project builder|open the project builder)$/i.test(text)) { this.onOpenBuilder?.(); return; }
     this.busy = true;
+    this.setNotice(null);
     this.bubble("you", text);
     const conv = this.active();
     const history = conv.turns.slice(-13).map(({ role, content }) => ({ role, content }));
     this.store = appendTurn(this.store, { role: "user", content: text, at: Date.now() });
-    this.els.input.value = ""; this.els.send.disabled = true; this.els.status.textContent = this.copy.sending; this.els.proposalBox.classList.add("hidden");
+    this.els.input.value = ""; this.autosize();
+    this.els.send.disabled = true; this.els.proposalBox.hidden = true; this.els.suggestionsBox.hidden = true;
+    this.showTyping();
     const r = await this.call({ message: text, history, lang: this.lang, from: this.from, consent: { memory: this.consentGiven } });
+    this.hideTyping();
     this.els.send.disabled = false; this.busy = false;
-    if (!r) { this.dropLastUser(); return; }
-    this.els.status.textContent = "";
+    if (!r) { this.dropLastUser(); this.els.suggestionsBox.hidden = false; return; }
     this.bubble("malya", r.reply, this.sourcesBlock(r));
-    if (r.mode) this.setMode(r.mode, r.modeReason);
+    if (r.mode === "ai") { this.setStatus("ai"); this.setNotice(null); }
+    else if (r.mode === "documentary") { this.setStatus(r.modeCode === "emergency_stop" ? "stop" : "doc"); this.noticeFor(r.modeCode); }
     if (r.blocked) this.dropLastUser();
     else { this.store = appendTurn(this.store, { role: "assistant", content: r.reply, at: Date.now() }); this.persist(); this.renderSelect(); }
     this.setSuggestions(r.suggestions ?? []);
+    this.els.suggestionsBox.hidden = false;
     if (r.proposal) this.showProposal(r.proposal, text);
     this.els.input.focus();
   }
@@ -259,34 +328,27 @@ export class ChatController {
   showProposal(p: Proposal, draft: string) {
     const box = this.els.proposalBox;
     box.replaceChildren();
-    const title = document.createElement("p");
-    title.id = box.id + "-title"; title.className = "label-tracked text-(--color-gold)"; title.textContent = `${this.copy.proposalTitle} · ${p.category}`;
+    const title = el("p", "mly-proposal__title", `${this.copy.proposalTitle} · ${p.category}`);
+    title.id = box.id + "-title";
     box.setAttribute("aria-labelledby", title.id);
-    const summary = document.createElement("p");
-    summary.className = "mt-3 text-(--color-paper)"; summary.textContent = p.summary;
-    const preview = document.createElement("p");
-    preview.className = "mt-3 whitespace-pre-line border-l border-(--color-line) pl-4 text-sm text-(--color-paper)/70"; preview.textContent = draft;
-    const actions = document.createElement("div");
-    actions.className = "mt-4 flex flex-wrap gap-3";
-    const ok = document.createElement("button"); ok.type = "button"; ok.textContent = this.copy.proposalConfirm;
-    ok.className = "label-tracked min-h-11 border border-(--color-gold) px-5 py-3 text-(--color-gold) hover:bg-(--color-gold) hover:text-(--color-ink)";
-    const no = document.createElement("button"); no.type = "button"; no.textContent = this.copy.proposalCancel;
-    no.className = "label-tracked min-h-11 border border-(--color-line) px-5 py-3 text-(--color-paper) hover:border-(--color-gold)";
+    const draftEl = el("p", "mly-draft", draft);
+    const actions = el("div", "mly-actions");
+    const ok = el("button", "mly-btn", this.copy.proposalConfirm); ok.type = "button";
+    const no = el("button", "mly-btn mly-btn--ghost", this.copy.proposalCancel); no.type = "button";
     ok.addEventListener("click", async () => {
       ok.disabled = true;
       const r = await this.call({ message: "", lang: this.lang, confirm: { digest: p.digest, draft, category: p.category } });
       if (r?.handoff && r.handoff.mailto.startsWith("mailto:")) {
-        const a = document.createElement("a");
-        a.href = r.handoff.mailto; a.textContent = this.copy.openMail;
-        a.className = "label-tracked inline-flex min-h-11 items-center border border-(--color-gold) px-5 py-3 text-(--color-gold) hover:bg-(--color-gold) hover:text-(--color-ink)";
+        const a = el("a", "mly-btn", this.copy.openMail);
+        a.href = r.handoff.mailto; a.style.textDecoration = "none";
         actions.replaceChildren(a); a.focus();
         this.els.status.textContent = r.reply;
       } else { ok.disabled = false; this.els.status.textContent = r?.reply ?? this.copy.error; }
     });
-    no.addEventListener("click", () => { box.classList.add("hidden"); this.els.status.textContent = this.copy.proposalCancelled; this.els.input.focus(); });
+    no.addEventListener("click", () => { box.hidden = true; this.els.status.textContent = this.copy.proposalCancelled; this.els.input.focus(); });
     actions.append(ok, no);
-    box.append(title, summary, preview, actions);
-    box.classList.remove("hidden");
+    box.append(title, el("p", "", p.summary), draftEl, actions);
+    box.hidden = false;
   }
 }
 

@@ -1,5 +1,8 @@
 # Anthropic et budget — configuration, tarifs, contrôle
 
+> **⚠ Remplacé par la V1.3 pour le fournisseur d'IA :** Anthropic a été retiré (aucune clé, aucun SDK, aucun appel) au profit de Cloudflare Workers AI (plan gratuit). Les passages sur Anthropic, les tarifs en dollars, le budget de 15 €/mois et `ANTHROPIC_API_KEY` sont historiques : voir [`docs/malya-v1-3.md`](../malya-v1-3.md).
+
+
 ## Modèle et tarifs (relevés dans la documentation officielle le 2026-11-24)
 Sources : <https://platform.claude.com/docs/en/about-claude/pricing> et <https://platform.claude.com/docs/en/models/overview>.
 

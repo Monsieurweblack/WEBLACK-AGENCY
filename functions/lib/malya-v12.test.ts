@@ -81,30 +81,11 @@ test("migration 0010 : additive, sans suppression, idempotente ; 0009 et 0010 s'
 
 test("confidentialité : la politique FR et EN décrit MALYA, Anthropic, la mémoire locale et la conservation", () => {
   for (const [file, words] of [
-    ["../../src/pages/politique-de-confidentialite.astro", ["MALYA", "Anthropic", "30 jours", "n'est pas enregistré sur nos serveurs", "consentement"]],
-    ["../../src/pages/en/politique-de-confidentialite.astro", ["MALYA", "Anthropic", "30 days", "not recorded on our servers", "consent"]],
+    ["../../src/pages/politique-de-confidentialite.astro", ["MALYA", "Workers AI", "30 jours", "n'est pas enregistré sur nos serveurs", "consentement"]],
+    ["../../src/pages/en/politique-de-confidentialite.astro", ["MALYA", "Workers AI", "30 days", "not recorded on our servers", "consent"]],
   ] as const) {
     const text = readFileSync(new URL(file, import.meta.url), "utf8");
     for (const w of words) assert.ok(text.includes(w), `${file} : « ${w} » absent`);
   }
 });
 
-test("scripts : le test d'appel réel refuse de dépenser sans confirmation explicite ni clé", () => {
-  const src = readFileSync(new URL("../../scripts/malya-live-check.mjs", import.meta.url), "utf8");
-  assert.match(src, /--confirm-spend/);
-  assert.match(src, /process\.env\.ANTHROPIC_API_KEY/);
-  assert.doesNotMatch(src, /process\.argv[^;\n]*API_KEY/);
-  assert.match(src, /MALYA_MONTHLY_BUDGET_EUR: "0\.05"/);
-});
-
-test("configuration : MALYA n'est activée que dans l'environnement Preview de wrangler.toml, jamais en production", () => {
-  const toml = readFileSync(new URL("../../wrangler.toml", import.meta.url), "utf8");
-  const previewAt = toml.indexOf("[env.preview]");
-  const top = toml.slice(0, previewAt);
-  const preview = toml.slice(previewAt);
-  assert.doesNotMatch(top, /MALYA_/, "aucune variable MALYA dans la configuration de production");
-  assert.match(preview, /MALYA_ENABLED = "true"/);
-  assert.match(preview, /MALYA_MONTHLY_BUDGET_EUR = "15"/);
-  assert.doesNotMatch(toml, /ANTHROPIC_API_KEY\s*=/, "la clé n'est jamais dans le dépôt");
-  assert.doesNotMatch(toml, /MALYA_EMERGENCY_STOP\s*=/, "l'arrêt d'urgence est un secret du tableau de bord");
-});

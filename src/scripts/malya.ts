@@ -20,7 +20,7 @@ function init(root: HTMLElement) {
   const chat = new ChatController({
     log: $("malya-log"), form: $<HTMLFormElement>("malya-form"), input: $<HTMLTextAreaElement>("malya-input"), send: $<HTMLButtonElement>("malya-send"),
     status: $("malya-status"), proposalBox: $("malya-proposal"), suggestionsBox: $("malya-suggestions"), consent: $<HTMLInputElement>("malya-consent"),
-    clear: $("malya-clear"), newConv: $("malya-new"), modeBadge: $("malya-mode"), convSelect: $<HTMLSelectElement>("malya-conv"),
+    clear: $("malya-clear"), newConv: $("malya-new"), modeBadge: $("malya-mode"), convSelect: $<HTMLSelectElement>("malya-conv"), notice: $("malya-notice"),
   }, copy, lang, from);
   void chat.refreshMode();
 
@@ -31,11 +31,8 @@ function init(root: HTMLElement) {
       const on = t === tab;
       t.setAttribute("aria-selected", String(on));
       t.tabIndex = on ? 0 : -1;
-      t.classList.toggle("border-(--color-gold)", on);
-      t.classList.toggle("text-(--color-gold)", on);
-      t.classList.toggle("border-transparent", !on);
       const panel = document.getElementById(t.getAttribute("aria-controls") ?? "");
-      if (panel) { panel.hidden = !on; panel.classList.toggle("hidden", !on); }
+      if (panel) panel.hidden = !on;
     }
     tab.focus();
   }
@@ -69,7 +66,7 @@ function init(root: HTMLElement) {
     e.preventDefault();
     const built = buildBrief(fieldsOf(), lang);
     if (!built.ok) { bError.textContent = copy.errorGoal; $("b-goal").focus(); return; }
-    bError.textContent = ""; bOut.value = built.text; bResult.classList.remove("hidden"); bOut.focus();
+    bError.textContent = ""; bOut.value = built.text; bResult.hidden = false; bOut.focus();
   });
   $("builder-copy").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(bOut.value); bStatus.textContent = copy.copied; } catch { bOut.select(); }

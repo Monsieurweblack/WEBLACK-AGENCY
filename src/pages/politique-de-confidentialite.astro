@@ -276,10 +276,11 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         <li>
           Données traitées : le message que vous écrivez, les derniers échanges de la conversation en cours et, lorsque la
           réponse est générée par le modèle d'intelligence artificielle, de courts extraits de la base documentaire de
-          WEBLACK. Lorsque ce mode est actif, ces éléments sont transmis au prestataire d'intelligence artificielle
-          Anthropic, qui les traite selon ses propres conditions pour produire la réponse. Lorsqu'il ne l'est pas, MALYA
-          répond depuis sa base documentaire, sans transmettre votre message à ce prestataire ; l'interface indique le mode
-          en cours.
+          WEBLACK. Lorsque ce mode est actif, ces éléments sont traités par le service d'intelligence
+          artificielle Cloudflare Workers AI (Cloudflare, déjà hébergeur du site), selon ses propres conditions, pour
+          produire la réponse ; ils ne sont pas transmis à un autre fournisseur d'intelligence artificielle. Lorsque ce mode
+          n'est pas actif, MALYA répond depuis sa base documentaire, sans faire appel à ce service ; l'interface indique le
+          mode en cours.
         </li>
         <li>
           Conservation par WEBLACK : le contenu de vos conversations n'est pas enregistré sur nos serveurs, ni dans les

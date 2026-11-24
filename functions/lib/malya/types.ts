@@ -126,5 +126,7 @@ export interface ChatResponse {
   mode?: "ai" | "documentary";
   /** Raison lorsque le mode documentaire est imposé (clé absente, budget, arrêt…). */
   modeReason?: string;
+  /** Code machine de la raison (pour l'état affiché : arrêt d'urgence, quota, documentaire…). */
+  modeCode?: string;
   clarification?: boolean;
 }

@@ -1,5 +1,8 @@
 # MALYA V1.2 — déploiement Preview (24 novembre 2026)
 
+> **⚠ Remplacé par la V1.3 pour le fournisseur d'IA :** Anthropic a été retiré (aucune clé, aucun SDK, aucun appel) au profit de Cloudflare Workers AI (plan gratuit). Les passages sur Anthropic, les tarifs en dollars, le budget de 15 €/mois et `ANTHROPIC_API_KEY` sont historiques : voir [`docs/malya-v1-3.md`](malya-v1-3.md).
+
+
 Branche `feature/weblack-ai-ecosystem`. **Aucune opération sur la production, `main` inchangée (`9bc65fd`).**
 
 ## Résumé honnête

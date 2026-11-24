@@ -18,7 +18,7 @@ import { buildPrompt } from "./prompt.ts";
 export interface Deps {
   model?: ModelProvider;
   knowledge?: KnowledgeEntry[];
-  /** Passerelle Anthropic. Absente ou refusée : MALYA répond en mode documentaire, et le dit. */
+  /** Passerelle Workers AI. Absente ou refusée : MALYA répond en mode documentaire, et le dit. */
   llm?: Llm;
   now?: () => Date;
   /** Interrupteur d'urgence des fonctions sensibles (actions + mémoire). */
@@ -173,17 +173,20 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
 
   let mode: "ai" | "documentary" = "documentary";
   let modeReason: string | undefined;
+  let modeCode: string | undefined;
   let reply = "";
   let citations: Citation[] = entries.slice(0, 2).map((e) => toCitation(e, lang, now));
   let verification: ChatResponse["verification"] | undefined;
 
   if (!simpleDeterministic) {
     if (!deps.llm) {
-      modeReason = REASON_LABEL.no_api_key[lang];
+      modeReason = REASON_LABEL.no_binding[lang];
+      modeCode = "no_binding";
     } else {
       const plan = await deps.llm.plan();
       if (!plan.ok) {
         modeReason = REASON_LABEL[plan.reason][lang];
+        modeCode = plan.reason;
         if (plan.reason !== "disabled") audit({ type: "llm_fallback", skill: routing.skill });
       } else {
         const built = buildPrompt({ lang, skill: routing.skill, message, history: turns.turns, entries, outdatedIds, limits: plan.limits, from: req.from });
@@ -204,6 +207,7 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
           verification = citations.length === 0 ? "unverified" : citations.every((c) => c.reliability === "verified" && !c.outdated) ? "verified" : "mixed";
         } else {
           modeReason = REASON_LABEL[out.reason][lang];
+          modeCode = out.reason;
           audit({ type: "llm_fallback", skill: routing.skill });
         }
       }
@@ -219,7 +223,7 @@ export async function handleTurn(req: ChatRequest, deps: Deps = {}): Promise<Cha
   reply = sanitizeOutput(reply, allowed);
   verification = verification ?? (citations.length === 0 ? "unverified" : citations.every((c) => c.reliability === "verified" && !c.outdated) ? "verified" : "mixed");
 
-  const response: ChatResponse = { reply, lang, skill: routing.skill, citations, verification, suggestions: SUGGESTIONS[routing.skill][lang], mode, ...(modeReason ? { modeReason } : {}) };
+  const response: ChatResponse = { reply, lang, skill: routing.skill, citations, verification, suggestions: SUGGESTIONS[routing.skill][lang], mode, ...(modeReason ? { modeReason, modeCode } : {}) };
 
   // ── Action externe : proposée, jamais exécutée ───────────────────────
   if ((routing.skill === "contact_handoff" || routing.skill === "sector_research") && !deps.sensitiveSuspended) {

@@ -14,18 +14,19 @@ import { json } from "../../lib/json.ts";
 import { checkMalyaRate, pruneRate } from "../../lib/malya/rateLimit.ts";
 import { handleTurn, type AuditEvent } from "../../lib/malya/orchestrator.ts";
 import type { ChatRequest } from "../../lib/malya/types.ts";
-import { createLlm } from "../../lib/malya/llm.ts";
+import { createLlm, type AiBinding } from "../../lib/malya/llm.ts";
 
 interface Env {
+  /** Binding Workers AI (wrangler.toml [env.preview.ai]). */
+  AI?: AiBinding;
   MALYA_ENABLED?: string;
-  /** Suspend appels Anthropic, transmissions, outils externes et mémoire serveur ; le mode documentaire reste servi. */
+  /** Seule valeur acceptée : « cloudflare ». */
+  MALYA_AI_PROVIDER?: string;
+  MALYA_MODEL?: string;
+  MALYA_DAILY_NEURON_CAP?: string;
+  /** Secret du tableau de bord : coupe l'inférence, les transmissions et la mémoire serveur ; le documentaire reste servi. */
   MALYA_EMERGENCY_STOP?: string;
   MALYA_SENSITIVE_SUSPENDED?: string;
-  /** Secret Cloudflare : jamais dans Git, ni côté navigateur, ni dans les journaux. */
-  ANTHROPIC_API_KEY?: string;
-  MALYA_MODEL?: string;
-  MALYA_MONTHLY_BUDGET_EUR?: string;
-  MALYA_FX_USD_PER_EUR?: string;
   DB?: D1Database;
 }
 

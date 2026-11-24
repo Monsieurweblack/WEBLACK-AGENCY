@@ -1,31 +1,37 @@
 /**
- * Passerelle Anthropic de MALYA — appels exclusivement côté serveur, via le SDK officiel.
+ * Passerelle IA de MALYA — Cloudflare Workers AI (binding `AI`), plan gratuit uniquement.
  *
- * Ordre d'une requête : interrupteurs → clé → tarif connu → registre budgétaire →
- * réservation atomique du pire coût → appel → réconciliation. À la moindre
- * défaillance avant l'appel, rien n'est facturé et MALYA répond en mode documentaire.
- *
- * Modèle : variable MALYA_MODEL (défaut claude-haiku-5-5). L'identifiant et son tarif
- * ont été relevés dans la documentation officielle le 2026-11-24 (voir pricing.ts) ;
- * un modèle sans tarif connu est refusé : on ne dépense pas sans pouvoir chiffrer.
+ * Aucun appel à un fournisseur tiers : la seule voie d'inférence est `env.AI.run(...)`. Une valeur de
+ * MALYA_AI_PROVIDER autre que « cloudflare » ferme la passerelle (aucun autre fournisseur n'existe dans
+ * le code). Ordre d'une requête : interrupteurs → fournisseur → binding → modèle gratuit à tarif connu →
+ * registre quotidien de Neurons → réservation atomique du pire coût → appel → réconciliation.
+ * À la moindre défaillance, MALYA répond en mode documentaire, sans repli payant.
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_MODEL, costMicro, priceFor } from "./pricing.ts";
-import { capMicro, estimateTokens, limitsFor, noteBlocked, noteError, release, reserve, settle, snapshot, type BudgetState, type Limits } from "./budget.ts";
+import { DEFAULT_MODEL, FREE_DAILY_NEURONS, costMilli, rateFor } from "./pricing.ts";
+import {
+  DEFAULT_DAILY_CAP_NEURONS, capMilli, estimateTokens, limitsFor, lockForToday, noteBlocked, noteError, release, reserve, settle, snapshot,
+  type BudgetState, type Limits,
+} from "./budget.ts";
+
+/** Surface minimale du binding Workers AI utilisée ici (permet une doublure en test). */
+export interface AiBinding {
+  run(model: string, input: Record<string, unknown>): Promise<unknown>;
+}
 
 export interface LlmEnv {
-  ANTHROPIC_API_KEY?: string;
+  AI?: AiBinding;
+  MALYA_AI_PROVIDER?: string;
   MALYA_MODEL?: string;
   MALYA_ENABLED?: string;
   MALYA_EMERGENCY_STOP?: string;
-  MALYA_MONTHLY_BUDGET_EUR?: string;
-  MALYA_FX_USD_PER_EUR?: string;
+  MALYA_DAILY_NEURON_CAP?: string;
   DB?: D1Database;
 }
 
 export type LlmFailure =
-  | "disabled" | "emergency_stop" | "no_api_key" | "unknown_model" | "budget_unavailable"
-  | "budget_suspended" | "budget_exhausted" | "provider_error" | "timeout" | "refusal" | "empty_reply";
+  | "disabled" | "emergency_stop" | "wrong_provider" | "no_binding" | "unknown_model" | "budget_unavailable"
+  | "budget_suspended" | "budget_exhausted" | "quota_exhausted" | "model_unavailable" | "provider_error" | "timeout"
+  | "invalid_response" | "empty_reply";
 
 export interface Plan { ok: true; limits: Limits; state: BudgetState; model: string }
 export type PlanResult = Plan | { ok: false; reason: LlmFailure };
@@ -45,28 +51,44 @@ export interface Llm {
   call(req: LlmCall): Promise<LlmResult>;
 }
 
-/** Surface minimale du SDK utilisée ici : permet d'injecter une doublure en test. */
-export interface MessagesApi {
-  create(params: Record<string, unknown>, options?: { timeout?: number }): Promise<{
-    content: { type: string; text?: string }[];
-    usage: { input_tokens: number; output_tokens: number };
-    stop_reason: string | null;
-  }>;
+export const TIMEOUT_MS = 25_000;
+
+export function dailyCapOf(env: LlmEnv): number {
+  const n = env.MALYA_DAILY_NEURON_CAP === undefined || env.MALYA_DAILY_NEURON_CAP === "" ? DEFAULT_DAILY_CAP_NEURONS : Number(env.MALYA_DAILY_NEURON_CAP);
+  return capMilli(n, FREE_DAILY_NEURONS);
 }
 
-const TIMEOUT_MS = 25_000;
+function parseOutput(raw: unknown): { text: string; inputTokens?: number; outputTokens?: number } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const inner = (r.result && typeof r.result === "object" ? r.result : r) as Record<string, unknown>;
+  const choice = (inner.choices as { message?: { content?: unknown } }[] | undefined)?.[0]?.message?.content;
+  const text = typeof inner.response === "string" ? inner.response : typeof choice === "string" ? choice : null;
+  if (text === null) return null;
+  const u = (inner.usage ?? {}) as Record<string, unknown>;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : undefined);
+  return { text, inputTokens: num(u.prompt_tokens), outputTokens: num(u.completion_tokens) };
+}
 
-export function createLlm(env: LlmEnv, opts: { now?: () => Date; messages?: MessagesApi } = {}): Llm {
+function classify(error: unknown): { reason: LlmFailure; quota: boolean } {
+  const msg = String((error as { message?: unknown })?.message ?? error ?? "");
+  if (/allocation|neurons|4006|quota|rate.?limit|429/i.test(msg)) return { reason: "quota_exhausted", quota: true };
+  if (/time(d)? ?out|timeout|aborted/i.test(msg)) return { reason: "timeout", quota: false };
+  if (/no such model|unknown model|model.*(not found|unavailable|deprecated)|5007|7003/i.test(msg)) return { reason: "model_unavailable", quota: false };
+  return { reason: "provider_error", quota: false };
+}
+
+export function createLlm(env: LlmEnv, opts: { now?: () => Date } = {}): Llm {
   const now = opts.now ?? (() => new Date());
   const model = env.MALYA_MODEL?.trim() || DEFAULT_MODEL;
-  const budgetEur = Number(env.MALYA_MONTHLY_BUDGET_EUR ?? "15");
-  const cap = capMicro(budgetEur, env.MALYA_FX_USD_PER_EUR ? Number(env.MALYA_FX_USD_PER_EUR) : 1.0);
+  const cap = dailyCapOf(env);
 
   async function plan(): Promise<PlanResult> {
     if (env.MALYA_EMERGENCY_STOP === "true") return { ok: false, reason: "emergency_stop" };
     if (env.MALYA_ENABLED !== "true") return { ok: false, reason: "disabled" };
-    if (!env.ANTHROPIC_API_KEY) return { ok: false, reason: "no_api_key" };
-    if (!priceFor(model)) return { ok: false, reason: "unknown_model" };
+    if (env.MALYA_AI_PROVIDER !== "cloudflare") return { ok: false, reason: "wrong_provider" };
+    if (!env.AI || typeof env.AI.run !== "function") return { ok: false, reason: "no_binding" };
+    if (!rateFor(model)) return { ok: false, reason: "unknown_model" };
     if (!env.DB || cap <= 0) return { ok: false, reason: "budget_unavailable" };
     try {
       const snap = await snapshot(env.DB, now(), cap);
@@ -82,14 +104,13 @@ export function createLlm(env: LlmEnv, opts: { now?: () => Date; messages?: Mess
     const p = await plan();
     if (!p.ok) return p;
     const db = env.DB as D1Database;
+    const ai = env.AI as AiBinding;
     const maxTokens = Math.min(req.limits.maxOutputTokens, p.limits.maxOutputTokens);
-    const worst = costMicro(model, estimateTokens(req.inputChars), maxTokens);
+    const worst = costMilli(model, estimateTokens(req.inputChars), maxTokens);
     if (worst === null) return { ok: false, reason: "unknown_model" };
 
-    let reserved = false;
     try {
-      reserved = await reserve(db, now(), worst, cap);
-      if (!reserved) {
+      if (!(await reserve(db, now(), worst, cap))) {
         await noteBlocked(db, now()).catch(() => {});
         return { ok: false, reason: "budget_exhausted" };
       }
@@ -97,30 +118,31 @@ export function createLlm(env: LlmEnv, opts: { now?: () => Date; messages?: Mess
       return { ok: false, reason: "budget_unavailable" };
     }
 
-    const api = opts.messages ?? (new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 0, timeout: TIMEOUT_MS }).messages as unknown as MessagesApi);
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const res = await api.create(
-        { model, max_tokens: maxTokens, system: req.system, messages: req.messages, output_config: { effort: "low" } },
-        { timeout: TIMEOUT_MS },
-      );
-      const inTok = res.usage.input_tokens;
-      const outTok = res.usage.output_tokens;
-      const refused = res.stop_reason === "refusal";
-      await settle(db, now(), worst, model, inTok, outTok, refused);
-      if (refused) return { ok: false, reason: "refusal" };
-      const text = res.content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
+      const raw = await Promise.race([
+        ai.run(model, { messages: [{ role: "system", content: req.system }, ...req.messages], max_tokens: maxTokens }),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS); }),
+      ]);
+      const out = parseOutput(raw);
+      if (!out) {
+        await settle(db, now(), worst, model, estimateTokens(req.inputChars), maxTokens).catch(() => {}); // appel parti : on garde le pire cas
+        return { ok: false, reason: "invalid_response" };
+      }
+      const inTok = out.inputTokens ?? estimateTokens(req.inputChars);
+      const outTok = out.outputTokens ?? Math.ceil(out.text.length / 2);
+      await settle(db, now(), worst, model, inTok, outTok);
+      const text = out.text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
       if (!text) return { ok: false, reason: "empty_reply" };
       return { ok: true, text, inputTokens: inTok, outputTokens: outTok, state: p.state, model };
     } catch (error) {
-      const status = (error as { status?: number }).status;
-      // Rejet avant traitement (4xx hors délai) : rien n'a été facturé, on libère la réservation.
-      if (typeof status === "number" && status >= 400 && status < 500 && status !== 408 && status !== 409) {
-        await release(db, now(), worst).catch(() => {});
-      } else {
-        await noteError(db, now()).catch(() => {}); // incertain : la réservation reste comptée
-      }
-      const name = (error as { name?: string }).name ?? "";
-      return { ok: false, reason: /timeout/i.test(name) || status === 408 ? "timeout" : "provider_error" };
+      const c = classify(error);
+      if (c.quota) await lockForToday(db, now(), cap).catch(() => {}); // plus aucun appel avant 00:00 UTC
+      else if (c.reason === "model_unavailable") await release(db, now(), worst).catch(() => {}); // rejeté avant traitement
+      else await noteError(db, now()).catch(() => {}); // incertain : la réservation reste comptée
+      return { ok: false, reason: c.reason };
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -130,13 +152,16 @@ export function createLlm(env: LlmEnv, opts: { now?: () => Date; messages?: Mess
 export const REASON_LABEL: Record<LlmFailure, { fr: string; en: string }> = {
   disabled: { fr: "Le service conversationnel n'est pas activé.", en: "The conversational service is not enabled." },
   emergency_stop: { fr: "Le service conversationnel est suspendu (arrêt d'urgence).", en: "The conversational service is suspended (emergency stop)." },
-  no_api_key: { fr: "Le fournisseur d'IA n'est pas configuré.", en: "The AI provider is not configured." },
-  unknown_model: { fr: "Le modèle configuré n'a pas de tarif vérifié.", en: "The configured model has no verified price." },
-  budget_unavailable: { fr: "Le contrôle du budget est indisponible : les appels payants sont suspendus par précaution.", en: "Budget control is unavailable: paid calls are suspended as a precaution." },
-  budget_suspended: { fr: "Le budget mensuel est presque atteint : les nouveaux appels payants sont suspendus.", en: "The monthly budget is nearly reached: new paid calls are suspended." },
-  budget_exhausted: { fr: "Le budget mensuel est atteint : MALYA répond depuis sa base documentaire.", en: "The monthly budget is reached: MALYA answers from its documentary base." },
-  provider_error: { fr: "Le fournisseur d'IA est momentanément indisponible.", en: "The AI provider is temporarily unavailable." },
-  timeout: { fr: "Le fournisseur d'IA a mis trop de temps à répondre.", en: "The AI provider took too long to respond." },
-  refusal: { fr: "Le modèle a décliné cette demande.", en: "The model declined this request." },
-  empty_reply: { fr: "Le modèle n'a pas renvoyé de réponse exploitable.", en: "The model returned no usable reply." },
+  wrong_provider: { fr: "Le fournisseur d'IA configuré n'est pas autorisé.", en: "The configured AI provider is not allowed." },
+  no_binding: { fr: "Le moteur d'IA n'est pas raccordé à cet environnement.", en: "The AI engine is not attached to this environment." },
+  unknown_model: { fr: "Le modèle configuré n'est pas un modèle gratuit à tarif vérifié.", en: "The configured model is not a free model with a verified rate." },
+  budget_unavailable: { fr: "Le contrôle de l'allocation est indisponible : l'IA est suspendue par précaution.", en: "Allocation control is unavailable: AI is suspended as a precaution." },
+  budget_suspended: { fr: "L'allocation gratuite du jour est presque atteinte : l'IA est suspendue.", en: "Today's free allocation is nearly reached: AI is suspended." },
+  budget_exhausted: { fr: "L'allocation gratuite du jour est atteinte : MALYA répond depuis sa base documentaire.", en: "Today's free allocation is reached: MALYA answers from its documentary base." },
+  quota_exhausted: { fr: "L'allocation gratuite du jour est épuisée : MALYA répond depuis sa base documentaire.", en: "Today's free allocation is used up: MALYA answers from its documentary base." },
+  model_unavailable: { fr: "Le modèle d'IA est momentanément indisponible.", en: "The AI model is temporarily unavailable." },
+  provider_error: { fr: "Le moteur d'IA est momentanément indisponible.", en: "The AI engine is temporarily unavailable." },
+  timeout: { fr: "Le moteur d'IA a mis trop de temps à répondre.", en: "The AI engine took too long to respond." },
+  invalid_response: { fr: "Le moteur d'IA a renvoyé une réponse inexploitable.", en: "The AI engine returned an unusable reply." },
+  empty_reply: { fr: "Le moteur d'IA n'a pas renvoyé de réponse exploitable.", en: "The AI engine returned no usable reply." },
 };
