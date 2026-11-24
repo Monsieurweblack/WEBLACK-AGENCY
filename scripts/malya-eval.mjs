@@ -1,15 +1,23 @@
 /**
  * Évaluation conversationnelle de MALYA sur une instance RÉELLE (Pages Functions + Workers AI).
  *   node scripts/malya-eval.mjs http://127.0.0.1:8799 [fichier-sortie.json]
+ * Derrière Cloudflare Access (URL Preview protégée), fournir un jeton de service dans les variables d'environnement
+ * CF_ACCESS_CLIENT_ID et CF_ACCESS_CLIENT_SECRET (jamais en argument, jamais affichés). Sans eux, le script s'arrête
+ * sur un diagnostic clair si l'URL répond par une redirection Access.
  * 15 scénarios (brief V1.3). Les contrôles automatiques portent sur la forme et la sûreté ; la qualité de
  * rédaction est lue par un humain dans le fichier de sortie : aucun score de qualité n'est fabriqué ici.
  */
 import fs from "node:fs";
 const BASE = process.argv[2], OUT = process.argv[3];
 if (!BASE) { console.error("usage: node scripts/malya-eval.mjs <base-url> [sortie.json]"); process.exit(2); }
+const ACCESS = process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET ? { "CF-Access-Client-Id": process.env.CF_ACCESS_CLIENT_ID, "CF-Access-Client-Secret": process.env.CF_ACCESS_CLIENT_SECRET } : {};
+const probe = await fetch(BASE + "/api/malya/status", { headers: ACCESS, redirect: "manual" });
+if (probe.status >= 300 && probe.status < 400) { console.error(`ARRÊT : ${BASE} répond ${probe.status} (Cloudflare Access ?). Fournir CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET.`); process.exit(3); }
+const status = await probe.json().catch(() => ({}));
+console.log("statut:", JSON.stringify({ mode: status.mode, reason: status.reason }));
 const post = async (body) => {
   const t0 = Date.now();
-  const r = await fetch(BASE + "/api/malya/chat", { method: "POST", headers: { "content-type": "application/json", origin: new URL(BASE).origin }, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
+  const r = await fetch(BASE + "/api/malya/chat", { method: "POST", headers: { "content-type": "application/json", origin: new URL(BASE).origin, ...ACCESS }, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
   const j = await r.json().catch(() => ({}));
   return { status: r.status, ms: Date.now() - t0, ...j };
 };
