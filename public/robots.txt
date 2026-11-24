@@ -1,20 +1,29 @@
 # WEBLACK — https://weblack.fr
 #
-# Politique explicite plutôt qu'implicite.
+# Politique explicite plutôt qu'implicite — et une seule voix.
 #
-# Le fichier précédent se contentait d'un « User-agent: * / Allow: / ».
-# Cela autorise déjà tout le monde — mais pas tous les robots ne lisent la
-# règle générique de la même façon, et deux d'entre eux ne la lisent pas du
-# tout : Google-Extended et Applebot-Extended ne gouvernent PAS
-# l'indexation, ils gouvernent le droit d'utiliser le contenu pour
-# alimenter les réponses génératives (AI Overviews, Gemini, Apple
-# Intelligence). Un site qui veut apparaître dans ces réponses doit les
-# nommer. C'est précisément l'objet de ce fichier.
+# Ce fichier n'est pas le seul servi sous /robots.txt : Cloudflare insère
+# en tête un bloc managé (« BEGIN Cloudflare Managed content ») qui déclare
+# un Content-Signal `search=yes,ai-train=no,use=reference` puis interdit
+# nommément une trentaine de robots d'entraînement — Google-Extended,
+# GPTBot, ClaudeBot, CCBot, Applebot-Extended, Amazonbot, Diffbot,
+# cohere-ai, meta-externalagent et d'autres. C'est une réserve de droits
+# volontaire sur les contenus de l'agence (textes, photographies), au titre
+# de l'article 4 de la directive 2019/790.
 #
-# Rien n'est bloqué ici qui ne le soit déjà pour des raisons de fond :
-# l'administration, les API, l'espace membre. Le reste du site est ouvert
-# sans restriction, à tous les robots, de recherche classique comme
-# génératifs.
+# Ce choix étant assumé, ce fichier ne le contredit pas : il n'autorise
+# plus aucun des robots que le bloc managé interdit. Un robots.txt qui dit
+# à la fois « Disallow: / » et « Allow: / » pour un même agent est pire que
+# l'un ou l'autre : chaque robot tranche à sa façon, et la consigne devient
+# illisible. Ne pas réintroduire ici un Allow pour un agent bloqué en amont
+# sans lever d'abord le blocage côté Cloudflare (AI Crawl Control).
+#
+# Restent nommés ci-dessous les robots qui FONT CITER le site dans les
+# réponses génératives sans l'absorber pour entraîner un modèle. Ce sont
+# ceux qui comptent pour la visibilité, et ils ne sont pas bloqués.
+#
+# Rien n'est interdit ici qui ne le soit déjà pour des raisons de fond :
+# l'administration et les API. Le reste du site est ouvert.
 
 # ---------------------------------------------------------------------
 # Règle générale
@@ -44,29 +53,28 @@ Disallow: /api/
 # ---------------------------------------------------------------------
 # Recherche générative et assistants — autorisés nommément.
 #
-# Deux familles à ne pas confondre :
+# Deux familles, utiles l'une comme l'autre :
 #   · les robots qui PARCOURENT le site pour l'indexer et le citer en
 #     réponse (OAI-SearchBot, PerplexityBot, Claude-SearchBot…) ;
 #   · ceux qui récupèrent une page à la demande d'un utilisateur qui l'a
 #     mentionnée (ChatGPT-User, Perplexity-User, Claude-User).
-# Les uns comme les autres sont utiles ici : le premier groupe fait entrer
-# le site dans les réponses, le second le rend consultable en conversation.
+# Le premier groupe fait entrer le site dans les réponses, le second le
+# rend consultable en conversation. Aucun des deux n'alimente
+# l'entraînement d'un modèle : ils lisent pour répondre et citer.
 # ---------------------------------------------------------------------
 
-# OpenAI
+# OpenAI — recherche et consultation à la demande.
+# GPTBot (entraînement) est bloqué en amont : pas de règle ici.
 User-agent: OAI-SearchBot
 Allow: /
 User-agent: ChatGPT-User
 Allow: /
-User-agent: GPTBot
-Allow: /
 
-# Anthropic
+# Anthropic — recherche et consultation à la demande.
+# ClaudeBot et anthropic-ai (entraînement) sont bloqués en amont.
 User-agent: Claude-SearchBot
 Allow: /
 User-agent: Claude-User
-Allow: /
-User-agent: ClaudeBot
 Allow: /
 
 # Perplexity
@@ -75,34 +83,18 @@ Allow: /
 User-agent: Perplexity-User
 Allow: /
 
-# Google — Google-Extended ne concerne QUE l'usage génératif (Gemini, AI
-# Overviews), jamais le classement dans la recherche : le refuser
-# n'améliorerait aucun positionnement et exclurait le site des réponses.
-User-agent: Google-Extended
-Allow: /
-
-# Apple Intelligence / Siri
+# Apple — Applebot indexe (Siri, Spotlight, recherche).
+# Applebot-Extended, qui gouverne l'usage génératif, est bloqué en amont :
+# le site reste donc hors d'Apple Intelligence.
 User-agent: Applebot
-Allow: /
-User-agent: Applebot-Extended
 Allow: /
 
 # Microsoft Copilot
 User-agent: Bingbot
 Allow: /
 
-# Autres moteurs et index génératifs
-User-agent: Amazonbot
-Allow: /
-User-agent: Meta-ExternalAgent
-Allow: /
-User-agent: cohere-ai
-Allow: /
+# Autres moteurs de réponse
 User-agent: YouBot
-Allow: /
-User-agent: Diffbot
-Allow: /
-User-agent: CCBot
 Allow: /
 User-agent: MistralAI-User
 Allow: /
