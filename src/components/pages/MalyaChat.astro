@@ -1,0 +1,110 @@
+---
+import "../../styles/malya.css";
+import type { Lang } from "../../i18n/utils";
+import { malyaCopy, clientCopy, MALYA_SIGNATURE } from "../../lib/malya-copy";
+import { SILHOUETTE_FULL } from "../../lib/malya-silhouette";
+import { PROJECT_KINDS } from "../../../functions/lib/malya/projectBrief";
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = malyaCopy(lang);
+const SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+---
+
+<section class="mly mly-page" data-malya data-lang={lang} data-hints={JSON.stringify(c.hints)} data-copy={JSON.stringify(clientCopy(c))}>
+  <div class="mly-page__grid">
+    <header class="mly-hero">
+      <div class="mly-figwrap" set:html={SILHOUETTE_FULL} />
+      <div>
+        <p class="mly-hero__eyebrow">{c.eyebrow}</p>
+        <h1>MALYA</h1>
+        <p class="mly-hero__sig" lang="en">{MALYA_SIGNATURE}</p>
+        <p class="mly-hero__lead">{c.lead}</p>
+      </div>
+    </header>
+
+    <div class="mly-panel">
+      <div role="tablist" aria-label="MALYA" class="mly-tabs">
+        <button type="button" role="tab" id="tab-chat" aria-selected="true" aria-controls="panel-chat" class="mly-tab" data-tab="chat">{c.tabChat}</button>
+        <button type="button" role="tab" id="tab-builder" aria-selected="false" aria-controls="panel-builder" tabindex="-1" class="mly-tab" data-tab="builder">{c.tabBuilder}</button>
+      </div>
+
+      <div id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" class="mly-body">
+        <div class="mly-bar">
+          <p id="malya-mode" class="mly-status" role="status"><span class="mly-dot" aria-hidden="true"></span></p>
+          <label for="malya-conv" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">{c.conversations}</label>
+          <select id="malya-conv" hidden class="mly-select"></select>
+          <button type="button" id="malya-new" class="mly-link">{c.newConversation}</button>
+        </div>
+        <div id="malya-log" role="log" aria-live="polite" aria-label={c.logLabel} tabindex="0" class="mly-log"></div>
+        <p id="malya-notice" class="mly-notice" role="status" hidden></p>
+        <div id="malya-proposal" class="mly-proposal" role="group" hidden></div>
+        <div id="malya-suggestions" class="mly-chips">
+          {c.suggestions.map((s) => <button type="button" data-suggestion={s} class="mly-chip">{s}</button>)}
+        </div>
+        <form id="malya-form" class="mly-composer" novalidate>
+          <label for="malya-input" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">{c.inputLabel}</label>
+          <div class="mly-field">
+            <textarea id="malya-input" name="message" rows="1" maxlength="2000" required placeholder={c.placeholder}></textarea>
+            <button type="submit" id="malya-send" class="mly-send" aria-label={c.send} set:html={SEND} />
+          </div>
+          <p id="malya-status" class="mly-hint" role="status"></p>
+        </form>
+        <div class="mly-foot">
+          <p>{c.aiNotice}</p>
+          <div class="mly-consent">
+            <input type="checkbox" id="malya-consent" aria-describedby="malya-consent-help" />
+            <div>
+              <label for="malya-consent">{c.consentLabel}</label>
+              <p id="malya-consent-help">{c.consentHelp}</p>
+            </div>
+          </div>
+          <button type="button" id="malya-clear" class="mly-link">{c.clear}</button>
+        </div>
+      </div>
+
+      <div id="panel-builder" role="tabpanel" aria-labelledby="tab-builder" class="mly-builder" hidden>
+        <h2>{c.builder.title}</h2>
+        <p class="lead">{c.builder.lead}</p>
+        <form id="builder-form" class="mly-form" novalidate>
+          <div>
+            <label for="b-kind">{c.builder.kind}</label>
+            <select id="b-kind" name="kind">
+              {PROJECT_KINDS.map((k) => <option value={k}>{c.kinds[k]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label for="b-goal">{c.builder.goal}</label>
+            <textarea id="b-goal" name="goal" rows="3" maxlength="600" required aria-describedby="b-error"></textarea>
+            <p id="b-error" class="mly-err" role="alert"></p>
+          </div>
+          <div class="mly-grid2">
+            <div><label for="b-audience">{c.builder.audience}</label><input id="b-audience" name="audience" maxlength="200" /></div>
+            <div><label for="b-timeline">{c.builder.timeline}</label><input id="b-timeline" name="timeline" maxlength="200" /></div>
+            <div><label for="b-budget">{c.builder.budget}</label><input id="b-budget" name="budget" maxlength="200" /></div>
+            <div><label for="b-location">{c.builder.location}</label><input id="b-location" name="location" maxlength="200" /></div>
+          </div>
+          <div><label for="b-notes">{c.builder.notes}</label><textarea id="b-notes" name="notes" rows="3" maxlength="800"></textarea></div>
+          <div class="mly-actions"><button type="submit" class="mly-btn">{c.builder.generate}</button></div>
+        </form>
+        <div id="builder-result" hidden style="margin-top:1.75rem">
+          <div class="mly-form">
+            <div>
+              <label for="builder-output">{c.builder.result}</label>
+              <textarea id="builder-output" rows="12" readonly></textarea>
+            </div>
+          </div>
+          <div class="mly-actions">
+            <button type="button" id="builder-copy" class="mly-btn mly-btn--ghost">{c.builder.copy}</button>
+            <button type="button" id="builder-send" class="mly-btn">{c.builder.send}</button>
+          </div>
+          <p id="builder-status" class="mly-hint" role="status"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import "../../scripts/malya";
+</script>

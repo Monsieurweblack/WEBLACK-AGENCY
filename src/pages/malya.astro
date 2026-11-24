@@ -1,0 +1,10 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import MalyaChat from "../components/pages/MalyaChat.astro";
+import { malyaCopy } from "../lib/malya-copy";
+const lang = "fr" as const;
+const c = malyaCopy(lang);
+---
+<BaseLayout lang={lang} title={c.seoTitle} description={c.seoDescription} noindex>
+  <MalyaChat lang={lang} />
+</BaseLayout>

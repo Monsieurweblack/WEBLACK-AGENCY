@@ -53,6 +53,18 @@ APP_ENV = "preview"
 SANITY_PROJECT_ID = "pzpm4xjp"
 SANITY_DATASET = "production"
 RESEND_FROM = "WEBLACK TALENTS <talents@weblack.fr>"
+# MALYA (PREVIEW UNIQUEMENT — la production n'a ni variable MALYA ni binding AI : l'API y répond 503).
+# Variables non secrètes : le fichier wrangler.toml fait foi, le tableau de bord ne les lit pas.
+# Secret du tableau de bord (jamais ici) : MALYA_EMERGENCY_STOP. Aucune clé d'API n'existe : l'IA est Workers AI
+# (plan gratuit, 10 000 Neurons/jour ; plafond MALYA 6 000/jour ; aucun fournisseur payant ni tiers).
+MALYA_ENABLED = "true"
+MALYA_AI_PROVIDER = "cloudflare"
+MALYA_MODEL = "@cf/mistralai/mistral-small-3.1-24b-instruct"
+MALYA_DAILY_NEURON_CAP = "6000"
+
+# Binding Workers AI (Pages Functions) — environnement Preview uniquement.
+[env.preview.ai]
+binding = "AI"
 
 [[env.preview.d1_databases]]
 binding = "DB"

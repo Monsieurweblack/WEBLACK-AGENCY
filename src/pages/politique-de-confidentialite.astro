@@ -22,7 +22,7 @@ const mail = `mailto:${CONTACT_EMAIL}`;
     <div class="prose-weblack prose-weblack--ink mx-auto max-w-3xl">
       <h1 class="font-display text-4xl text-(--color-ink) sm:text-5xl">{t("footer.privacy")}</h1>
       <p class="text-sm text-(--color-ink)/60">
-        Dernière mise à jour : 21 octobre 2026 · <a href={localizedPath("en", "/politique-de-confidentialite")} hreflang="en" lang="en">English version</a> ·
+        Dernière mise à jour : 24 novembre 2026 · <a href={localizedPath("en", "/politique-de-confidentialite")} hreflang="en" lang="en">English version</a> ·
         <a href="#donnees-google">Données utilisateur Google</a>
       </p>
 
@@ -266,7 +266,44 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         uniquement chez l'hébergeur. Aucune mesure ne garantit un risque nul.
       </p>
 
-      <h2>9. Vos droits</h2>
+      <h2>9. MALYA, l'assistante conversationnelle</h2>
+      <p>
+        MALYA est une intelligence artificielle proposée sur le site pour présenter WEBLACK et aider à préparer un projet.
+        Elle n'est pas une personne : vérifiez les informations importantes auprès de l'équipe. Ne lui communiquez pas de
+        données sensibles (santé, opinions, situation administrative…) : elles ne sont pas nécessaires.
+      </p>
+      <ul>
+        <li>
+          Données traitées : le message que vous écrivez, les derniers échanges de la conversation en cours et, lorsque la
+          réponse est générée par le modèle d'intelligence artificielle, de courts extraits de la base documentaire de
+          WEBLACK. Lorsque ce mode est actif, ces éléments sont traités par le service d'intelligence
+          artificielle Cloudflare Workers AI (Cloudflare, déjà hébergeur du site), selon ses propres conditions, pour
+          produire la réponse ; ils ne sont pas transmis à un autre fournisseur d'intelligence artificielle. Lorsque ce mode
+          n'est pas actif, MALYA répond depuis sa base documentaire, sans faire appel à ce service ; l'interface indique le
+          mode en cours.
+        </li>
+        <li>
+          Conservation par WEBLACK : le contenu de vos conversations n'est pas enregistré sur nos serveurs, ni dans les
+          journaux. Seuls sont conservés des compteurs techniques sans contenu (nombre d'appels, volume de texte traité,
+          coût, erreurs) et des compteurs de limitation de débit liés à un hachage tronqué de l'adresse IP, purgés
+          automatiquement après 24 heures (la purge s'exécute à l'occasion des requêtes suivantes).
+        </li>
+        <li>
+          Mémoire locale facultative : si, et seulement si, vous cochez « Garder cette conversation sur cet appareil »,
+          vos conversations (cinq au plus) sont conservées dans le navigateur de votre appareil, 30 jours au plus, sans être
+          envoyées à WEBLACK. Vous pouvez les effacer à tout moment, en un clic, ou décocher la case.
+        </li>
+        <li>
+          Transmission à l'équipe : MALYA peut préparer un brouillon de message après votre validation explicite ; il
+          s'ouvre dans votre messagerie et ne part que si vous l'envoyez vous-même. WEBLACK ne reçoit que ce que vous envoyez.
+        </li>
+        <li>
+          Base légale : l'exécution de votre demande (vous initiez la conversation) ; pour la mémoire locale, votre
+          consentement. Vos droits sont ceux décrits à la section suivante.
+        </li>
+      </ul>
+
+      <h2>10. Vos droits</h2>
       <p>
         Conformément au Règlement général sur la protection des données (RGPD), vous disposez d'un droit d'accès, de
         rectification, d'effacement, de limitation, d'opposition et, le cas échéant, de portabilité, ainsi que du droit de
@@ -275,13 +312,13 @@ const mail = `mailto:${CONTACT_EMAIL}`;
         (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).
       </p>
 
-      <h2>10. Mineurs</h2>
+      <h2>11. Mineurs</h2>
       <p>
         Les candidatures WEBLACK TALENTS sont réservées aux personnes de 18 ans et plus ; une candidature d'une personne
         mineure est refusée par le serveur.
       </p>
 
-      <h2>11. Modifications</h2>
+      <h2>12. Modifications</h2>
       <p>
         Cette politique est mise à jour lorsque les traitements, les prestataires ou les obligations évoluent. La date de
         dernière mise à jour figure en haut de la page.
