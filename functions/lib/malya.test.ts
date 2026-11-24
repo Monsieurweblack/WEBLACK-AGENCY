@@ -13,7 +13,7 @@ import { normalizeConsent, pruneMemory, recallable, MEMORY_TTL_DAYS } from "./ma
 import { confirmHandoff, digestOf, proposeHandoff } from "./malya/actions.ts";
 import { buildBrief } from "./malya/projectBrief.ts";
 import { onRequestPost, onRequest, sameOrigin } from "../api/malya/chat.ts";
-import { FakeKV } from "./testDoubles.ts";
+import { SqliteD1 } from "./testDoubles.ts";
 
 // ── 1. Conversations FR/EN naturelles et cohérentes ───────────────────
 test("1. la langue est détectée, et la réponse suit la langue du message", async () => {
@@ -267,11 +267,11 @@ function post(body: unknown, init: { origin?: string | null; type?: string; raw?
   if (init.origin !== null) headers.Origin = init.origin ?? "https://weblack.fr";
   return new Request("https://weblack.fr/api/malya/chat", { method: "POST", headers, body: init.raw ?? JSON.stringify(body) });
 }
-const env = (extra: Record<string, unknown> = {}) => ({ MALYA_ENABLED: "true", PHOTOS: new FakeKV() as unknown as KVNamespace, ...extra });
+const env = (extra: Record<string, unknown> = {}) => ({ MALYA_ENABLED: "true", DB: new SqliteD1() as unknown as D1Database, ...extra });
 const call = (request: Request, e: ReturnType<typeof env>) => onRequestPost({ request, env: e, params: {} });
 
 test("8. le point d'entrée est désactivé par défaut et échoue fermé sans compteur de débit", async () => {
-  assert.equal((await call(post({ message: "Bonjour" }), { PHOTOS: new FakeKV() } as never)).status, 503);
+  assert.equal((await call(post({ message: "Bonjour" }), { DB: new SqliteD1() } as never)).status, 503);
   assert.equal((await call(post({ message: "Bonjour" }), { MALYA_ENABLED: "true" } as never)).status, 503);
   assert.equal((await call(post({ message: "Bonjour" }), env())).status, 200);
 });

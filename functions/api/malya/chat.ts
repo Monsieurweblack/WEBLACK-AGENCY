@@ -11,7 +11,7 @@
  * Aucun secret n'est lu ici : la V1 n'appelle aucun service payant.
  */
 import { json } from "../../lib/json.ts";
-import { checkRateLimit } from "../../lib/rateLimit.ts";
+import { checkMalyaRate, pruneRate } from "../../lib/malya/rateLimit.ts";
 import { handleTurn, type AuditEvent } from "../../lib/malya/orchestrator.ts";
 import type { ChatRequest } from "../../lib/malya/types.ts";
 import { createLlm } from "../../lib/malya/llm.ts";
@@ -27,12 +27,9 @@ interface Env {
   MALYA_MONTHLY_BUDGET_EUR?: string;
   MALYA_FX_USD_PER_EUR?: string;
   DB?: D1Database;
-  PHOTOS?: KVNamespace;
 }
 
 const MAX_BODY_BYTES = 16 * 1024;
-const RATE_LIMIT = 30;
-const RATE_WINDOW_SECONDS = 10 * 60;
 
 function audit(event: AuditEvent): void {
   // Événement seul, jamais le contenu : pas de donnée personnelle dans les journaux.
@@ -53,10 +50,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (env.MALYA_ENABLED !== "true") return json({ error: "suspended" }, 503);
   if (!sameOrigin(request)) return json({ error: "forbidden" }, 403);
   if (!(request.headers.get("Content-Type") ?? "").toLowerCase().startsWith("application/json")) return json({ error: "invalid" }, 415);
-  if (!env.PHOTOS) return json({ error: "suspended" }, 503); // sans compteur de débit, on ne sert pas (échec fermé)
 
-  const rate = await checkRateLimit(env.PHOTOS, request, "malya-chat", RATE_LIMIT, RATE_WINDOW_SECONDS);
-  if (!rate.allowed) return json({ error: "rate_limited" }, 429, { "Retry-After": String(RATE_WINDOW_SECONDS) });
+  // Limitation de débit ATOMIQUE (D1) : par IP hachée puis globale ; échec fermé si la base est illisible.
+  const verdict = await checkMalyaRate(env.DB, request);
+  if (!verdict.ok) {
+    if (verdict.reason === "unavailable") return json({ error: "suspended" }, 503);
+    return json({ error: "rate_limited", scope: verdict.reason }, 429, { "Retry-After": String(verdict.retryAfter) });
+  }
+  // Purge déterministe des fenêtres expirées (toutes les 25 requêtes) : aucune IP hachée ne traîne indéfiniment.
+  if (env.DB && verdict.globalCount % 25 === 1) await pruneRate(env.DB, Date.now()).catch(() => {});
 
   const text = await request.text();
   if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) return json({ error: "too_large" }, 413);
