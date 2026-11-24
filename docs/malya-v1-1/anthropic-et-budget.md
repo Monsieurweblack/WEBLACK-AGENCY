@@ -15,11 +15,11 @@ Les prix vivent dans `functions/lib/malya/pricing.ts` avec `PRICING_VERIFIED_AT`
 | Variable | Rôle |
 |---|---|
 | `ANTHROPIC_API_KEY` | **secret** — clé API, lue seulement par `llm.ts` côté serveur |
-| `MALYA_ENABLED` | `true` pour servir l'API (sinon 503) |
+| `MALYA_ENABLED` | `true` pour servir l'API (sinon 503) — en clair, dans `wrangler.toml` `[env.preview.vars]` |
 | `MALYA_MODEL` | modèle (défaut `claude-haiku-5-5`) |
 | `MALYA_MONTHLY_BUDGET_EUR` | plafond mensuel (défaut 15) |
 | `MALYA_FX_USD_PER_EUR` | hypothèse de change (défaut 1,0 ; voir ci-dessous) |
-| `MALYA_EMERGENCY_STOP` | `true` : coupe Anthropic, transmissions, outils, mémoire serveur ; le documentaire reste servi |
+| `MALYA_EMERGENCY_STOP` | **secret du tableau de bord** ; `true` : coupe Anthropic, transmissions, outils, mémoire serveur ; le documentaire reste servi (effet après nouveau déploiement) |
 | `MALYA_SENSITIVE_SUSPENDED` | `true` : coupe seulement les actions sensibles |
 
 Le binding D1 `DB` est requis pour le registre. Aucune valeur n'est versionnée (un test parcourt le dépôt à la recherche de motifs de clé).
@@ -44,7 +44,7 @@ Une ligne par mois UTC : montant engagé, dépense réconciliée, appels, erreur
 | ≥ 95 % | suspendu | plus aucun appel payant |
 | ≥ 100 % | bloqué | idem jusqu'au mois suivant |
 
-**Change** : la facturation est en USD. Plafond effectif = 15 € × `MALYA_FX_USD_PER_EUR` × 0,90 = **13,50 $** avec le défaut 1,0 (hypothèse volontairement basse : tant que 1 € vaut plus de 1 $, le plafond réel est inférieur à 15 €) ; la marge de 10 % couvre taxes ou frais éventuels. Le taux n'est pas récupéré automatiquement : le vérifier et l'ajuster.
+**Change** (vérifié V1.2 : BCE, 2026-11-23, 1 € = 1,0939 $) : la facturation est en USD. Plafond effectif = 15 € × `MALYA_FX_USD_PER_EUR` × 0,90 = **13,50 $** avec le défaut 1,0 (hypothèse volontairement basse : tant que 1 € vaut plus de 1 $, le plafond réel est inférieur à 15 €) ; la marge de 10 % couvre taxes ou frais éventuels. Le taux n'est pas récupéré automatiquement : le vérifier et l'ajuster.
 
 **Ordres de grandeur (estimations, non mesurées en production)** : un tour typique (≈ 1 200 tokens en entrée, 300 en sortie) coûte ≈ 270 micro-dollars ; le pire cas réservé est ≈ 1,4 millier. À 13,50 $ cela représente de l'ordre de 50 000 tours typiques, ou ≈ 9 600 tours au pire cas.
 
