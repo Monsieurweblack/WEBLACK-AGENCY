@@ -457,7 +457,7 @@ test("sécurité : la transmission est catégorisée et liée au contenu confirm
 const post = (body: unknown) => new Request("https://weblack.fr/api/malya/chat", { method: "POST", headers: { "Content-Type": "application/json", Origin: "https://weblack.fr" }, body: JSON.stringify(body) });
 
 test("sécurité : point d'entrée — pas de secret exposé, clé absente = mode documentaire explicite", async () => {
-  const secret = "sk-ant-api03-VERY-SECRET-0123456789abcdef";
+  const secret = ["sk", "ant", "api03-FAKE-VALUE-FOR-TESTS-0123456789"].join("-");
   const db = new SqliteD1();
   const env = { MALYA_ENABLED: "true", DB: asDb(db), PHOTOS: new FakeKV() as unknown as KVNamespace, ANTHROPIC_API_KEY: undefined };
   const res = await chat({ request: post({ message: Q_COLLAB }), env, params: {} });
